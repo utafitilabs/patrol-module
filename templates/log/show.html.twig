@@ -192,7 +192,9 @@
     <p class="patrol-error" data-patrol-error>{{ error }}</p>
 {% endif %}
 
-<div class="save-row">
+{# The form's actions on one hairline — the shell's `.staddrow`, the house
+   idiom every form in the product ends in. #}
+<div class="staddrow">
     <a class="tgl patrol-cancel" href="{{ path('patrol_dashboard', {uuid: area.uuid}) }}">Cancel</a>
     <button class="cta" type="submit">Save patrol</button>
 </div>

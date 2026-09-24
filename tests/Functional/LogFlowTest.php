@@ -230,8 +230,8 @@ final class LogFlowTest extends WebTestCase
 
         // The design's own controls: add an observation, cancel, save.
         self::assertCount(1, $page->filter('[data-patrol-log] button[name="addObservation"].sadd'));
-        self::assertCount(1, $page->filter('[data-patrol-log] .save-row .cta'));
-        self::assertCount(1, $page->filter('[data-patrol-log] .save-row .tgl'));
+        self::assertCount(1, $page->filter('[data-patrol-log] .staddrow .cta'));
+        self::assertCount(1, $page->filter('[data-patrol-log] .staddrow .tgl'));
         // The route sketch is offered only where step 1 was skipped, which a
         // fresh page is.
         self::assertCount(1, $page->filter('[data-patrol-sketch]'));

@@ -9,7 +9,7 @@
    strip above, so nothing about them is restated here and nothing here links out
    to them: the strip is how a person gets to a section.
 
-   IT SPENDS ONLY THE PLATFORM'S VOCABULARY — .c, .frow, .fld, .save-row — because
+   IT SPENDS ONLY THE PLATFORM'S VOCABULARY — .c, .frow, .fld, .staddrow — because
    the shell's stylesheet is the only one linked on the configure page, and
    because those classes are the shell's to define. A module that redefined one
    would be drift, and the conformance test says so. It is also why there is no
@@ -46,11 +46,12 @@
 </div>
 
 {% if save %}
-    {# THE WAY OUT OF THE FORM THAT IS NOT "SAVE", as the design draws it on all
-       three of its configure pages: back to the screen the module opens on, with
-       nothing written. It is NOT a way back off the section — the strip, the lit
+    {# THE FORM ENDS WITH ITS OWN ACTIONS ON ONE HAIRLINE — the shell's
+       `.staddrow`, the row the area's Stations configure card draws and the one
+       idiom a configure form ends in. The quiet way out comes first and the
+       accent last. It is NOT a way back off the section — the strip, the lit
        Configure and the crumb are those, and there are no others. #}
-    <div class="save-row">
+    <div class="staddrow">
         {% set out = patrol_url('patrol_dashboard', {uuid: area.uuid}) %}
         {% if out %}<a class="tgl" href="{{ out }}">Cancel</a>{% endif %}
         <button class="cta" type="submit">Save settings</button>

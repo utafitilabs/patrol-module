@@ -140,7 +140,7 @@ final class ConfigurePageTest extends WebTestCase
 
         // The same save row its two new siblings draw: a way out of the form that
         // is not "save".
-        $row = $crawler->filter('.save-row');
+        $row = $crawler->filter('.staddrow');
         self::assertSame('Cancel', trim($row->filter('a.tgl')->text()));
         self::assertSame('Save settings', trim($row->filter('button.cta')->text()));
 

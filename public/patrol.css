@@ -365,10 +365,13 @@
 .patrol-inert { opacity: .55; pointer-events: none; }
 .patrol-zone { margin: 22px 0 12px; }
 
-/* ---- save row + validation --------------------------------------------- */
-.patrol-save-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+/* ---- validation --------------------------------------------------------- */
+/* A FORM'S ACTIONS ARE THE SHELL'S `.staddrow`, not a row of this module's. The
+   copy that used to live here restated the house save row under a prefixed
+   name — which is the same rule written twice, rendering differently depending
+   on which sheet loaded last — and its `.cta` reset restated what the shell
+   already ships for every `.btn`, `.cta` and `.tgl`. */
 .patrol-cancel { text-decoration: none; }
-.patrol-save-row .cta { border: 0; cursor: pointer; font-family: inherit; }
 .patrol-error { font-size: 12.5px; line-height: 1.5; color: rgb(var(--c-fail)); margin: 12px 2px 0; }
 
 /* ---- observation cycling (appended block — detail-surfaces work) --------- */

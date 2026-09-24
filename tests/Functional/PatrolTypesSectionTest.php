@@ -277,7 +277,7 @@ final class PatrolTypesSectionTest extends ConfigureSectionTestCase
     }
 
     /** The section is a body: no head, no strip and no way back of its own. */
-    public function testTheSectionDrawsOneCardAndOneSaveRow(): void
+    public function testTheSectionDrawsOneCardAndOneActionRow(): void
     {
         $this->signInAsManager();
         $crawler = $this->client->request('GET', $this->sectionUrl());
@@ -291,7 +291,7 @@ final class PatrolTypesSectionTest extends ConfigureSectionTestCase
         // THE SAVE ROW IS CANCEL AND THE CTA, as the design draws it on all three
         // of its configure pages: a way out of the form that is not "save", back
         // to the screen the module opens on.
-        $row = $crawler->filter('.save-row');
+        $row = $crawler->filter('.staddrow');
         self::assertCount(1, $row);
         self::assertSame('Cancel', trim($row->filter('a.tgl')->text()));
         self::assertSame(

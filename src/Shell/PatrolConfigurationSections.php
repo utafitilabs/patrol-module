@@ -50,7 +50,7 @@ use Uhifadhi\Patrol\Service\PatrolSettingsService;
  * serves — and the stations section would build a map plate on every one.
  *
  * ITS ONE RENDERED SECTION IS BUILT ONLY WHERE IT IS DRAWN. The Settings body
- * spends the shell's vocabulary alone — `.c`, `.frow`, `.fld`, `.save-row` — so it
+ * spends the shell's vocabulary alone — `.c`, `.frow`, `.fld`, `.staddrow` — so it
  * needs no sheet of its own and stays a body the shell renders; its variables are
  * gathered only when the request IS the shell's configure page, and everywhere
  * else the section is declared with its label alone, which is all the strip needs.
