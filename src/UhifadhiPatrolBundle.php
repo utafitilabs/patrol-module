@@ -150,12 +150,11 @@ final class UhifadhiPatrolBundle extends AbstractBundle
         // namespace, exactly as symfony/ux-turbo does (TurboExtension::prepend).
         // The recipe enables them in the host's assets/controllers.json.
         if ($builder->hasExtension('framework') && interface_exists(AssetMapperInterface::class)) {
-            // PREPENDED, THE SHAPE EVERY symfony/ux BUNDLE WRITES. `extension()`
-            // appends even when called from prependExtension(), which puts this
-            // path LAST, where it overrules an installation's own framework
-            // config instead of deferring to it; prepended, "any other settings
-            // done explicitly inside the config/* files would override these
-            // prepended settings".
+            // PREPENDED, THE SHAPE EVERY symfony/ux BUNDLE WRITES — and the one form
+            // every block in this method takes, `prependExtensionConfig()` on the
+            // builder, so this path goes FIRST and an installation's own framework
+            // config wins: \"any other settings done explicitly inside the config/*
+            // files would override these prepended settings\".
             //
             // @see https://symfony.com/doc/current/bundles/prepend_extension.html
             // @see https://symfony.com/doc/current/frontend/create_ux_bundle.html
@@ -186,7 +185,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          * @see vendor/uhifadhi/uhifadhi/src/Uhifadhi/Bundle/ShellBundle/ShellBundle.php
          */
         if ($builder->hasExtension('ux_icons')) {
-            $container->extension('ux_icons', [
+            $builder->prependExtensionConfig('ux_icons', [
                 'icon_sets' => [
                     'patrol' => ['path' => __DIR__.'/../assets/icons/patrol'],
                 ],
@@ -222,17 +221,17 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          * @see vendor/uhifadhi/uhifadhi/src/Uhifadhi/Bundle/AreaBundle/AreaBundle.php
          */
         if ($builder->hasExtension('doctrine_migrations')) {
-            $container->extension('doctrine_migrations', [
+            $builder->prependExtensionConfig('doctrine_migrations', [
                 'migrations_paths' => [
                     'Uhifadhi\\Patrol\\Migrations' => __DIR__.'/../migrations',
                 ],
-            ], prepend: true);
+            ]);
         }
 
         // Zero-config persistence: the bundle maps its own entities, so hosts
         // never write a doctrine mappings block for patrol_* tables.
         if ($builder->hasExtension('doctrine')) {
-            $container->extension('doctrine', [
+            $builder->prependExtensionConfig('doctrine', [
                 'orm' => [
                     'mappings' => [
                         'UhifadhiPatrol' => [
