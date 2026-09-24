@@ -23,8 +23,8 @@ use Uhifadhi\Patrol\Model\PatrolTopicSlice;
  */
 final class PatrolTopicSliceTest extends TestCase
 {
-    private const string NGORONGORO = '0198f0a0-0000-7000-8000-0000000000a1';
-    private const string POLOLETI = '0198f0a0-0000-7000-8000-0000000000a2';
+    private const string KILIMANI = '0198f0a0-0000-7000-8000-0000000000a1';
+    private const string OLKEJU = '0198f0a0-0000-7000-8000-0000000000a2';
 
     public function testTheOrganizationsPageReadsEveryAreaForAnOrganizationWideDepartment(): void
     {
@@ -37,33 +37,33 @@ final class PatrolTopicSliceTest extends TestCase
 
     public function testTheOrganizationsPageReadsOneAreaForADepartmentConfinedToIt(): void
     {
-        $slice = PatrolTopicSlice::of(null, self::NGORONGORO);
+        $slice = PatrolTopicSlice::of(null, self::KILIMANI);
 
         self::assertNotNull($slice);
-        self::assertSame(self::NGORONGORO, $slice->areaUuid);
+        self::assertSame(self::KILIMANI, $slice->areaUuid);
         self::assertFalse($slice->isRollUp());
     }
 
     public function testAnAreasPageNarrowsAnOrganizationWideDepartmentToThatArea(): void
     {
-        $slice = PatrolTopicSlice::of(self::NGORONGORO, null);
+        $slice = PatrolTopicSlice::of(self::KILIMANI, null);
 
         self::assertNotNull($slice);
-        self::assertSame(self::NGORONGORO, $slice->areaUuid, 'An org-wide department reads this area too, but the page is about this area.');
+        self::assertSame(self::KILIMANI, $slice->areaUuid, 'An org-wide department reads this area too, but the page is about this area.');
     }
 
     public function testAnAreasPageReadsTheAreaForItsOwnDepartment(): void
     {
-        $slice = PatrolTopicSlice::of(self::NGORONGORO, self::NGORONGORO);
+        $slice = PatrolTopicSlice::of(self::KILIMANI, self::KILIMANI);
 
         self::assertNotNull($slice);
-        self::assertSame(self::NGORONGORO, $slice->areaUuid);
+        self::assertSame(self::KILIMANI, $slice->areaUuid);
     }
 
     public function testADepartmentConfinedElsewhereIsNoRowOfThisPage(): void
     {
         self::assertNull(
-            PatrolTopicSlice::of(self::NGORONGORO, self::POLOLETI),
+            PatrolTopicSlice::of(self::KILIMANI, self::OLKEJU),
             'A department of another area is not a row with no figures — it is not a row.',
         );
     }

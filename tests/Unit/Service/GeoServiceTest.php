@@ -61,8 +61,8 @@ final class GeoServiceTest extends TestCase
     public function testItWritesALatitudeAndLongitudeAsAGeoJsonPoint(): void
     {
         self::assertSame(
-            '{"type":"Point","coordinates":[35.44,-3.19]}',
-            new GeoService()->pointGeoJson(-3.19, 35.44),
+            '{"type":"Point","coordinates":[-29.44,-3.19]}',
+            new GeoService()->pointGeoJson(-3.19, -29.44),
         );
     }
 
@@ -74,8 +74,8 @@ final class GeoServiceTest extends TestCase
      */
     public static function offTheWorld(): iterable
     {
-        yield 'past the north pole' => [90.5, 35.0];
-        yield 'past the south pole' => [-91.0, 35.0];
+        yield 'past the north pole' => [90.5, -29.0];
+        yield 'past the south pole' => [-91.0, -29.0];
         yield 'past the antimeridian' => [-3.0, 180.5];
         yield 'the other way past it' => [-3.0, -181.0];
     }
@@ -95,7 +95,7 @@ final class GeoServiceTest extends TestCase
      */
     public static function geometries(): iterable
     {
-        yield 'a point is its own middle' => ['{"type":"Point","coordinates":[35.0,-3.0]}', [35.0, -3.0]];
+        yield 'a point is its own middle' => ['{"type":"Point","coordinates":[-29.0,-3.0]}', [-29.0, -3.0]];
         yield 'a polygon ring' => [
             '{"type":"Polygon","coordinates":[[[12.0,-6.0],[14.0,-6.0],[14.0,-4.0],[12.0,-4.0],[12.0,-6.0]]]}',
             [13.0, -5.0],
