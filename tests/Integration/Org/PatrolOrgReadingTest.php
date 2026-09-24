@@ -24,9 +24,9 @@ use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
- * THE ORGANISATION'S READING IS THE AREAS' READINGS, ADDED UP.
+ * THE ORGANIZATION'S READING IS THE AREAS' READINGS, ADDED UP.
  *
- * That is the rule the whole organisation dashboard rests on, and it is the
+ * That is the rule the whole organization dashboard rests on, and it is the
  * only thing worth proving about this service: it counts nothing itself, so
  * what the suite has to hold it to is that its answer is position for
  * position the answer the per-area cards already give — not two numbers that
@@ -69,7 +69,7 @@ final class PatrolOrgReadingTest extends IntegrationTestCase
         $this->aPatrol($this->north, 'walk', '2026-03-12T07:00:00+00:00', '2026-03-12T11:00:00+00:00', distanceKm: 12.0);
     }
 
-    /** Every patrol out in any area is on the organisation's reading, once. */
+    /** Every patrol out in any area is on the organization's reading, once. */
     public function testItHoldsEveryAreasLivePatrols(): void
     {
         self::assertCount(3, $this->reading()->out);
@@ -185,7 +185,7 @@ final class PatrolOrgReadingTest extends IntegrationTestCase
         $service = static::getContainer()->get('test_public.'.PatrolOrgOverviewService::class);
         \assert($service instanceof PatrolOrgOverviewService);
 
-        return $service->forScope($scope ?? Scope::organisation(), new \DateTimeImmutable(self::NOW));
+        return $service->forScope($scope ?? Scope::organization(), new \DateTimeImmutable(self::NOW));
     }
 
     private function overview(): PatrolOverviewService

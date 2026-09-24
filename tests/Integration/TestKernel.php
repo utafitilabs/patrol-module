@@ -299,7 +299,7 @@ final class TestKernel extends Kernel
             \Uhifadhi\Patrol\Overview\PatrolMapLayers::class => 'patrol.overview.map_layers',
             \Uhifadhi\Patrol\Overview\PatrolPulse::class => 'patrol.overview.pulse',
             \Uhifadhi\Patrol\Overview\PatrolOverviewCopy::class => 'patrol.overview.copy',
-            // And the ONE contribution this module makes to the organisation
+            // And the ONE contribution this module makes to the organization
             // dashboard, with the reading behind it — reached by a host through
             // its tag; these aliases only let a test hold them directly.
             \Uhifadhi\Patrol\Service\PatrolOrgOverviewService::class => 'patrol.org_overview',

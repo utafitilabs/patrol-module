@@ -16,7 +16,7 @@ namespace Uhifadhi\Patrol\Model;
 /**
  * ONE PATROL THAT IS OUT, READ ACROSS AREAS.
  *
- * The organisation's reading of "who is out" is the areas' readings
+ * The organization's reading of "who is out" is the areas' readings
  * concatenated, and a row from one area has to be tellable from a row from
  * another — so the area it happened in is a FIELD here where the per-area
  * card has no need of one. Everything else is the same fact the area card
@@ -31,7 +31,7 @@ final readonly class PatrolOutRow
     public function __construct(
         /** The patrol's reference, as every other patrol surface prints it. */
         public string $ref,
-        /** The area it is out in — the column the organisation's reading adds. */
+        /** The area it is out in — the column the organization's reading adds. */
         public string $areaName,
         /** When it opened, or null where the record does not say. */
         public ?\DateTimeImmutable $startedAt,

@@ -14,19 +14,19 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Model;
 
 /**
- * WHAT THE PATROLS MODULE HAS TO SAY AT ORGANISATION SCOPE, at one moment.
+ * WHAT THE PATROLS MODULE HAS TO SAY AT ORGANIZATION SCOPE, at one moment.
  *
  * IT IS THE AREA READING ADDED UP, NEVER A SECOND AGGREGATE. Every field here
  * is the per-area answer the module already publishes on `/areas/{uuid}`,
  * taken over the areas a {@see \Uhifadhi\Contracts\Shell\Scope} names — the
- * rule the organisation dashboard's contract is built on. A figure measured a
+ * rule the organization dashboard's contract is built on. A figure measured a
  * second way would be a second answer to one question, with nothing to say
  * which of them was right.
  *
  * ABSENT IS NOT ZERO, throughout, and at this scope the distinction gets a
  * field of its own: `areasWithRegister` is how many areas have ever opened a
  * patrol. Nought of them means the module has measured nothing, which is a
- * different statement from an organisation that walked nowhere this week.
+ * different statement from an organization that walked nowhere this week.
  */
 final readonly class PatrolOrgReading
 {

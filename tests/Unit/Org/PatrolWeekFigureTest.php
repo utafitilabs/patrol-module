@@ -21,7 +21,7 @@ use Uhifadhi\Patrol\Org\PatrolOrgWidgets;
 use Uhifadhi\Patrol\Overview\PatrolOverviewContributor;
 
 /**
- * THE FIGURE THE MODULE PUTS IN THE ORGANISATION'S FOUR-TO-A-ROW STRIP.
+ * THE FIGURE THE MODULE PUTS IN THE ORGANIZATION'S FOUR-TO-A-ROW STRIP.
  *
  * A pure test of the tile's SHAPE — its label, what it says when the module
  * has measured nothing, and where it sits in the row — with no kernel and no

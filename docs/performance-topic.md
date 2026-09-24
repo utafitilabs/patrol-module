@@ -1,6 +1,6 @@
 # What patrols publishes on the performance page
 
-The organisation's performance page is not a board of everybody's columns
+The organization's performance page is not a board of everybody's columns
 against everybody's departments. Each module publishes **a topic** — its own
 five headline figures, its own charts and a matrix of only the departments that
 read it — through `Contracts\Performance\PerformanceTopicProviderInterface`,
@@ -9,7 +9,7 @@ reusable bundle is not autoconfigured. Adding this module adds a topic and
 changes nothing the host owns.
 
 `Module\PatrolPerformanceTopic` is that topic, and it answers under this
-module's own slug, so the page orders it where the organisation arranged the
+module's own slug, so the page orders it where the organization arranged the
 module and drops it wherever the module is switched off.
 
 ## Contents
@@ -118,8 +118,8 @@ department's (`Model\PatrolTopicSlice`):
 
 | Page | Department | Reads |
 |---|---|---|
-| organisation | org-wide | every area that runs the module |
-| organisation | one area | that area |
+| organization | org-wide | every area that runs the module |
+| organization | one area | that area |
 | one area | org-wide | the page's area |
 | one area | the same area | that area |
 | one area | another area | nothing — it is not a row of that page |
@@ -173,7 +173,7 @@ all still gets the plate.
 
 Both are shares in points (54.0 for 54 %) and both judge **upwards**: a plate
 hues a placing, and hue without polarity is a plate claiming that more is
-better when the figure is incidents. The organisation's page gets no zone
+better when the figure is incidents. The organization's page gets no zone
 series — "the zones of one area" has no answer where there is no one area —
 and an area with no zones publishes none rather than an empty one.
 

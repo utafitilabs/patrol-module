@@ -79,7 +79,7 @@ use Uhifadhi\Patrol\Service\PatrolFigureService;
  *   hide it. Nobody asked it, so it did not fail to answer.
  *
  * SCOPE IS OBEYED, NOT ASSUMED. Every figure is the intersection of the page's
- * scope with the row's, so an area's page never draws the organisation's
+ * scope with the row's, so an area's page never draws the organization's
  * numbers.
  */
 final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderInterface

@@ -469,7 +469,7 @@ class Observation
      * which is the right thing there and useless anywhere else: two patrols both
      * have a third observation. Off its patrol's page — on the Files hub, beside
      * an incident's evidence and a permit's document — a photograph has to name
-     * one record out of every record the organisation holds, and this is that
+     * one record out of every record the organization holds, and this is that
      * name.
      */
     public function getRef(): string

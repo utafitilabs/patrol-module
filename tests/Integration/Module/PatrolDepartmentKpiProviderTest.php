@@ -32,7 +32,7 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
  * A department reads the Patrols module BY SCOPE: every patrol recorded in its area, or across the
- * organisation when it has none — whoever led the patrol, whether they hold a position, and
+ * organization when it has none — whoever led the patrol, whether they hold a position, and
  * whichever department that position is filed under.
  */
 final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
@@ -96,7 +96,7 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
         self::assertEquals($ecology, $protection);
     }
 
-    public function testAnOrganisationWideDepartmentSumsEveryArea(): void
+    public function testAnOrganizationWideDepartmentSumsEveryArea(): void
     {
         $world = $this->world();
         $second = $this->secondArea();
@@ -112,7 +112,7 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
         self::assertSame(4.0, $figures['observations']);
     }
 
-    public function testAnOrganisationWideDepartmentReadsOneShareOfEveryBoundaryWalked(): void
+    public function testAnOrganizationWideDepartmentReadsOneShareOfEveryBoundaryWalked(): void
     {
         $world = $this->world();
         $second = $this->secondArea();
@@ -278,8 +278,8 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
         $area = self::kpi($this->provider()->kpisFor(self::ref($world['ecology'], $world['area']), self::now()), 'patrols');
         self::assertSame('Patrols module · every patrol recorded in Example reserve', $area->caption);
 
-        $organisation = self::kpi($this->provider()->kpisFor(self::ref($world['ecology']), self::now()), 'patrols');
-        self::assertSame('Patrols module · every patrol recorded across the organisation: Example reserve, Second reserve', $organisation->caption);
+        $organization = self::kpi($this->provider()->kpisFor(self::ref($world['ecology']), self::now()), 'patrols');
+        self::assertSame('Patrols module · every patrol recorded across the organization: Example reserve, Second reserve', $organization->caption);
     }
 
     public function testFourFiguresAreReportedOnceWhateverTheScope(): void
@@ -292,7 +292,7 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
         self::assertSame(
             ['patrols', 'distance', 'observations', 'coverage'],
             self::keys($this->provider()->kpisFor(self::ref($world['ecology']), self::now())),
-            'An organisation-wide department reads one roll-up.',
+            'An organization-wide department reads one roll-up.',
         );
         self::assertSame(
             ['patrols', 'distance', 'observations', 'coverage'],
@@ -324,7 +324,7 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
      * renders a performance page.
      *
      * An area handed in confines the department to it; without one the ref is
-     * organisation-wide and the figures roll up across every area.
+     * organization-wide and the figures roll up across every area.
      */
     private static function ref(Department $department, ?AreaOfInterest $area = null): DepartmentRef
     {

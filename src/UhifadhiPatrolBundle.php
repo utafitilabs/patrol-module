@@ -866,7 +866,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          * rather than simply leaving the page a topic short.
          *
          * THE PERFORMANCE TOPIC — this module's whole section of the
-         * organisation's performance page: five headline figures, two charts
+         * organization's performance page: five headline figures, two charts
          * and a matrix of only the departments that read it.
          *
          * A TOPIC, NOT A COLUMN, which is why nothing in the host changes when
@@ -882,7 +882,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          *
          * The slug and the name are the scalars PatrolModuleProvider::slug()/
          * name() return and they must MATCH: the page orders the module topics
-         * by the order the organisation arranged its modules, and finds this
+         * by the order the organization arranged its modules, and finds this
          * one by that slug.
          */
         if (isset($bundles['TeamBundle'])) {
@@ -1003,7 +1003,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
             ->tag(PulseProviderInterface::TAG);
 
         /*
-         * THE ORGANISATION DASHBOARD CONTRIBUTION POINT — the module's
+         * THE ORGANIZATION DASHBOARD CONTRIBUTION POINT — the module's
          * contribution to `/`.
          *
          * A SECOND SEAM BESIDE THE AREA'S, opted into deliberately. The area
@@ -1014,7 +1014,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          *
          * ONE READING BEHIND BOTH HALVES. 'patrol.org_overview' resolves the
          * scope to areas and adds up the readings 'patrol.overview' and
-         * 'patrol.figure_service' already make per area — so the organisation's
+         * 'patrol.figure_service' already make per area — so the organization's
          * answer IS the areas' answers, which is the rule the contract is
          * built on, rather than a second aggregate nobody could reconcile.
          */

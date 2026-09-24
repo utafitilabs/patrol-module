@@ -30,7 +30,7 @@ use Uhifadhi\Patrol\Service\PatrolFigureService;
  *
  * The host asks for these only when a department attaches Patrols, so the department itself is
  * no filter: the figures are attributed by SCOPE, never by who recorded them. A ref carrying an
- * `areaUuid` reads every patrol recorded in that area; a ref without one reads the organisation's
+ * `areaUuid` reads every patrol recorded in that area; a ref without one reads the organization's
  * roll-up across every area. Who led a patrol, whether they hold a position, and which department
  * that position is filed under change nothing — two departments reading the same scope read the
  * same figures.
@@ -92,7 +92,7 @@ final class PatrolDepartmentKpiProvider implements DepartmentKpiProviderInterfac
         $spark = $this->spark($areas, $monthStart);
         $areaNames = array_map(static fn (AreaOfInterest $area): string => (string) $area->getName(), $areas);
         $caption = null === $within
-            ? \sprintf('%s module · every patrol recorded across the organisation: %s', $this->name, implode(', ', $areaNames))
+            ? \sprintf('%s module · every patrol recorded across the organization: %s', $this->name, implode(', ', $areaNames))
             : \sprintf('%s module · every patrol recorded in %s', $this->name, $areaNames[0]);
 
         return [
@@ -198,7 +198,7 @@ final class PatrolDepartmentKpiProvider implements DepartmentKpiProviderInterfac
      *
      * An `$areaUuid` that is not a uuid, or names no area, leaves the list EMPTY and the
      * department reports nothing: a scope nobody can resolve must not silently widen to the whole
-     * organisation.
+     * organization.
      *
      * @return list<AreaOfInterest>
      */

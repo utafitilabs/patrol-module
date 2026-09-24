@@ -28,8 +28,8 @@ namespace Uhifadhi\Patrol\Model;
  *
  * | Page          | Department    | Reads                                   |
  * |---------------|---------------|-----------------------------------------|
- * | organisation  | org-wide      | every area                              |
- * | organisation  | one area      | that area                               |
+ * | organization  | org-wide      | every area                              |
+ * | organization  | one area      | that area                               |
  * | one area      | org-wide      | the page's area — an org-wide department reads it too |
  * | one area      | the same area | that area                               |
  * | one area      | another area  | NOTHING — it is not a row of this page  |
@@ -44,7 +44,7 @@ namespace Uhifadhi\Patrol\Model;
 final readonly class PatrolTopicSlice
 {
     private function __construct(
-        /** The one area this row reads, or NULL for every area of the organisation. */
+        /** The one area this row reads, or NULL for every area of the organization. */
         public ?string $areaUuid,
     ) {
     }
@@ -53,8 +53,8 @@ final readonly class PatrolTopicSlice
      * The ground a department reads on a page of this scope, or NULL where the
      * department is no row of this page at all.
      *
-     * @param string|null $pageAreaUuid       null for the organisation's page
-     * @param string|null $departmentAreaUuid null for an organisation-wide department
+     * @param string|null $pageAreaUuid       null for the organization's page
+     * @param string|null $departmentAreaUuid null for an organization-wide department
      */
     public static function of(?string $pageAreaUuid, ?string $departmentAreaUuid): ?self
     {

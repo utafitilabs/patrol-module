@@ -26,7 +26,7 @@ final class PatrolTopicSliceTest extends TestCase
     private const string NGORONGORO = '0198f0a0-0000-7000-8000-0000000000a1';
     private const string POLOLETI = '0198f0a0-0000-7000-8000-0000000000a2';
 
-    public function testTheOrganisationsPageReadsEveryAreaForAnOrganisationWideDepartment(): void
+    public function testTheOrganizationsPageReadsEveryAreaForAnOrganizationWideDepartment(): void
     {
         $slice = PatrolTopicSlice::of(null, null);
 
@@ -35,7 +35,7 @@ final class PatrolTopicSliceTest extends TestCase
         self::assertTrue($slice->isRollUp());
     }
 
-    public function testTheOrganisationsPageReadsOneAreaForADepartmentConfinedToIt(): void
+    public function testTheOrganizationsPageReadsOneAreaForADepartmentConfinedToIt(): void
     {
         $slice = PatrolTopicSlice::of(null, self::NGORONGORO);
 
@@ -44,7 +44,7 @@ final class PatrolTopicSliceTest extends TestCase
         self::assertFalse($slice->isRollUp());
     }
 
-    public function testAnAreasPageNarrowsAnOrganisationWideDepartmentToThatArea(): void
+    public function testAnAreasPageNarrowsAnOrganizationWideDepartmentToThatArea(): void
     {
         $slice = PatrolTopicSlice::of(self::NGORONGORO, null);
 

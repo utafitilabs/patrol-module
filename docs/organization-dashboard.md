@@ -1,4 +1,4 @@
-# What patrols puts on the organisation dashboard
+# What patrols puts on the organization dashboard
 
 `AreaBundle` ships a dashboard at **`/`** — the area overview one scope wider,
 composed from contributors exactly as an area's is. This module answers there
@@ -19,7 +19,7 @@ autoconfigured:
 
 | Contribution point | Tag | Class |
 |---|---|---|
-| Organisation cells + figures | `uhifadhi.overview.org_widget_provider` | `Org\PatrolOrgWidgets` |
+| Organization cells + figures | `uhifadhi.overview.org_widget_provider` | `Org\PatrolOrgWidgets` |
 
 It carries the same slug as `Overview\PatrolOverviewContributor` (`patrols`), so
 the figure and the cell leave together the day the module is uninstalled — and
@@ -35,7 +35,7 @@ The cell's template is this bundle's:
 
 | | id | what it says |
 |---|---|---|
-| Figure (the four-to-a-row strip) | `PL·G1` | **Patrols this week** — how many the organisation has logged since monday, with how many are out right now beside it. |
+| Figure (the four-to-a-row strip) | `PL·G1` | **Patrols this week** — how many the organization has logged since monday, with how many are out right now beside it. |
 | Cell | `patrols` | **Patrols out right now** — who is out, in which area, since when, on what kind of round, and how old their last ping is. |
 
 The row is the **modules'** — the host's own "Areas" tile only fills a slot no
@@ -60,7 +60,7 @@ readings are actually made — `PatrolOverviewService` for the morning and
 `PatrolFigureService` for the week — once per area, and adds the answers up.
 
 That is the contract's own rule, and writing it this way is the only way to
-keep it: the organisation's "3 out" cannot disagree with the areas' because it
+keep it: the organization's "3 out" cannot disagree with the areas' because it
 **is** the areas', concatenated. `tests/Integration/Org/PatrolOrgReadingTest`
 asserts that property against the per-area service rather than against a number
 written into the test.
@@ -68,12 +68,12 @@ written into the test.
 ## Where the door goes
 
 The design's cell carries a `Patrols →` door. This module offers it **only
-where one page answers for every row on the cell** — an organisation patrolling
-in a single area. An organisation patrolling in four has four such pages and
+where one page answers for every row on the cell** — an organization patrolling
+in a single area. An organization patrolling in four has four such pages and
 none above them, so the cell states how many areas it is reading instead of
 picking one.
 
-**Reopen when** this module ships its organisation-level page set through
+**Reopen when** this module ships its organization-level page set through
 `Contracts\Shell\OrgPagesInterface` (ruled, not built). That page is the door's
 unconditional target, and this branch goes away.
 

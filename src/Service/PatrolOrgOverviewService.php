@@ -22,15 +22,15 @@ use Uhifadhi\Patrol\Model\PatrolOrgReading;
 use Uhifadhi\Patrol\Model\PatrolOutRow;
 
 /**
- * WHAT PATROLS TELLS THE ORGANISATION DASHBOARD — the area reading, one scope
+ * WHAT PATROLS TELLS THE ORGANIZATION DASHBOARD — the area reading, one scope
  * wider, and nothing else.
  *
  * THIS CLASS COUNTS NOTHING ITSELF. It resolves the scope to areas and then
  * asks {@see PatrolOverviewService} and {@see PatrolFigureService} — the two
  * places this module's readings are actually made — once per area, and adds
- * the answers up. That is the contract's own rule for an organisation-level
+ * the answers up. That is the contract's own rule for an organization-level
  * figure, and writing it this way is the only way to keep it: the
- * organisation's "3 out" cannot disagree with the areas' because it IS the
+ * organization's "3 out" cannot disagree with the areas' because it IS the
  * areas', concatenated.
  *
  * SO THERE IS NO SECOND QUERY AND NO SECOND THRESHOLD. What counts as out,
@@ -50,7 +50,7 @@ final readonly class PatrolOrgOverviewService
     }
 
     /**
-     * THE WHOLE OF THIS MODULE'S ORGANISATION-LEVEL READING, at one moment.
+     * THE WHOLE OF THIS MODULE'S ORGANIZATION-LEVEL READING, at one moment.
      *
      * One call per cell and per figure would measure the same morning twice
      * and let two cards on one page disagree, so the contributor asks this
@@ -101,7 +101,7 @@ final readonly class PatrolOrgOverviewService
             areasWithRegister: \count($withRegister),
             areasInScope: \count($areas),
             // THE DOOR OPENS A PAGE, so it is offered only where ONE page
-            // answers for every row on the cell. An organisation patrolling in
+            // answers for every row on the cell. An organization patrolling in
             // four areas has four such pages and no page above them; the cell
             // says how many areas it is reading instead of picking one.
             dashboardUrl: 1 === \count($withRegister) ? $this->overview->dashboardUrl($withRegister[0]) : null,
@@ -121,7 +121,7 @@ final readonly class PatrolOrgOverviewService
      */
     private function areasIn(Scope $scope): array
     {
-        if ($scope->isOrganisation()) {
+        if ($scope->isOrganization()) {
             return $this->areas->findAllOrdered();
         }
 
@@ -136,7 +136,7 @@ final readonly class PatrolOrgOverviewService
     }
 
     /**
-     * One row of the per-area reading, restated as the organisation's own row
+     * One row of the per-area reading, restated as the organization's own row
      * — the same facts, plus the area they came from.
      *
      * @param array{patrol: Patrol, url: string, outSeconds: int|null, outLabel: string|null, lastPingAt: \DateTimeImmutable|null, pingSeconds: int|null, pingLabel: string|null, stale: bool, line: string|null, point: string|null} $row

@@ -57,7 +57,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $kpis = $this->topic()->kpis(PerformanceScope::organisation(), self::period());
+        $kpis = $this->topic()->kpis(PerformanceScope::organization(), self::period());
 
         self::assertSame(
             ['patrols.patrols', 'patrols.distance', 'patrols.coverage', 'patrols.observations'],
@@ -83,15 +83,15 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
 
         self::assertNotContains(
             'patrols.out_now',
-            self::keys($this->topic()->kpis(PerformanceScope::organisation(), self::period())),
+            self::keys($this->topic()->kpis(PerformanceScope::organization(), self::period())),
         );
     }
 
-    public function testTheFourFiguresAreTheOrganisationsOwn(): void
+    public function testTheFourFiguresAreTheOrganizationsOwn(): void
     {
         $this->world();
 
-        $figures = self::figures($this->topic()->kpis(PerformanceScope::organisation(), self::period()));
+        $figures = self::figures($this->topic()->kpis(PerformanceScope::organization(), self::period()));
 
         // Five patrols of 112 km in the first area, one of 7 km in the second.
         self::assertSame(6.0, $figures['patrols.patrols']);
@@ -125,7 +125,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
 
         self::assertSame(
             ['Ecology', 'Protection Service'],
-            self::names($this->topic()->matrix(PerformanceScope::organisation(), self::period())->rows),
+            self::names($this->topic()->matrix(PerformanceScope::organization(), self::period())->rows),
         );
         self::assertNotSame([], $world);
     }
@@ -134,7 +134,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $rows = self::rows($this->topic()->matrix(PerformanceScope::organisation(), self::period()));
+        $rows = self::rows($this->topic()->matrix(PerformanceScope::organization(), self::period()));
 
         // Ecology is org-wide: both areas, six patrols of 119 km.
         self::assertSame('Org-wide', $rows['Ecology']->band);
@@ -158,7 +158,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
 
         $here = self::names($this->topic()->matrix(self::scopeOf($world['area']), self::period())->rows);
 
-        self::assertContains('Second Protection', self::names($this->topic()->matrix(PerformanceScope::organisation(), self::period())->rows));
+        self::assertContains('Second Protection', self::names($this->topic()->matrix(PerformanceScope::organization(), self::period())->rows));
         self::assertNotContains('Second Protection', $here, 'A department of another area is not a row of this area\'s page.');
         self::assertSame(['Ecology', 'Protection Service'], $here);
     }
@@ -167,15 +167,15 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $world = $this->world();
 
-        $organisation = self::figures($this->topic()->kpis(PerformanceScope::organisation(), self::period()));
+        $organization = self::figures($this->topic()->kpis(PerformanceScope::organization(), self::period()));
         $area = self::figures($this->topic()->kpis(self::scopeOf($world['area']), self::period()));
 
-        self::assertSame(6.0, $organisation['patrols.patrols']);
+        self::assertSame(6.0, $organization['patrols.patrols']);
         self::assertSame(5.0, $area['patrols.patrols'], 'The second area\'s patrol is not this area\'s.');
         self::assertSame(112.0, $area['patrols.distance']);
     }
 
-    public function testAnAreasPageNarrowsAnOrganisationWideDepartmentsRowToo(): void
+    public function testAnAreasPageNarrowsAnOrganizationWideDepartmentsRowToo(): void
     {
         $world = $this->world();
 
@@ -189,7 +189,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $patrols = self::kpi($this->topic()->kpis(PerformanceScope::organisation(), self::period()), 'patrols.patrols');
+        $patrols = self::kpi($this->topic()->kpis(PerformanceScope::organization(), self::period()), 'patrols.patrols');
 
         // Six months ending August; the module was installed over the first
         // area in June, so March, April and May are periods nobody recorded.
@@ -204,7 +204,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $coverage = self::kpi($this->topic()->kpis(PerformanceScope::organisation(), self::period()), 'patrols.coverage');
+        $coverage = self::kpi($this->topic()->kpis(PerformanceScope::organization(), self::period()), 'patrols.coverage');
 
         self::assertNull($coverage->value, 'No track was recorded, so the share is unknown rather than nought.');
         self::assertFalse($coverage->isKnown());
@@ -221,7 +221,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
         $orphan->attachModule($world['module']);
         $this->em->flush();
 
-        $rows = self::rows($this->topic()->matrix(PerformanceScope::organisation(), self::period()));
+        $rows = self::rows($this->topic()->matrix(PerformanceScope::organization(), self::period()));
 
         self::assertArrayHasKey('Orphan', $rows, 'Attaching a module and running it nowhere is a fact the page states, not one it hides.');
         foreach ($rows['Orphan']->cells as $key => $cell) {
@@ -240,7 +240,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
 
         self::assertNotContains(
             'Tourism',
-            self::names($this->topic()->matrix(PerformanceScope::organisation(), self::period())->rows),
+            self::names($this->topic()->matrix(PerformanceScope::organization(), self::period())->rows),
             'The topic is not about a department that does not lead with this module.',
         );
     }
@@ -253,7 +253,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
         $this->department('Orphan', $unserved)->attachModule($world['module']);
         $this->em->flush();
 
-        $distance = $this->topic()->charts(PerformanceScope::organisation(), self::period())[0];
+        $distance = $this->topic()->charts(PerformanceScope::organization(), self::period())[0];
 
         self::assertSame(['Ecology', 'Protection Service'], array_map(
             static fn (ChartSeries $series): string => $series->label,
@@ -265,7 +265,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $rows = self::rows($this->topic()->matrix(PerformanceScope::organisation(), self::period()));
+        $rows = self::rows($this->topic()->matrix(PerformanceScope::organization(), self::period()));
 
         self::assertSame('EC', $rows['Ecology']->mark);
         self::assertSame('PS', $rows['Protection Service']->mark);
@@ -275,7 +275,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $matrix = $this->topic()->matrix(PerformanceScope::organisation(), self::period());
+        $matrix = $this->topic()->matrix(PerformanceScope::organization(), self::period());
 
         self::assertEquals(PatrolPerformanceTopic::columns(), $matrix->columns);
         self::assertFalse($matrix->isEmpty());
@@ -303,7 +303,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
         $topics = static::getContainer()->get('test_public.'.PerformanceTopics::class);
         \assert($topics instanceof PerformanceTopics);
 
-        $collected = $topics->byKey('patrols', PerformanceScope::organisation(), self::period());
+        $collected = $topics->byKey('patrols', PerformanceScope::organization(), self::period());
 
         self::assertInstanceOf(PatrolPerformanceTopic::class, $collected);
         self::assertSame(PatrolModuleProvider::SLUG, $collected->moduleSlug(), 'A topic is ordered and switched off by the module\'s own slug.');
@@ -313,7 +313,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     {
         $this->world();
 
-        $charts = $this->topic()->charts(PerformanceScope::organisation(), self::period());
+        $charts = $this->topic()->charts(PerformanceScope::organization(), self::period());
 
         self::assertCount(2, $charts);
         foreach ($charts as $chart) {
@@ -331,7 +331,7 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
     }
 
     /**
-     * ONE ORGANISATION: two areas that run Patrols, an org-wide Ecology and a
+     * ONE ORGANIZATION: two areas that run Patrols, an org-wide Ecology and a
      * Protection Service confined to the first, five counted patrols of 112 km
      * and three observations in the first area, one of 7 km in the second, and
      * one patrol still out.

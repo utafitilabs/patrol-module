@@ -30,7 +30,7 @@ use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 /**
  * WHAT THIS MODULE PUTS ON `/`, ASKED OF THE REAL PAGE.
  *
- * The host composes the organisation dashboard from whatever is tagged, so
+ * The host composes the organization dashboard from whatever is tagged, so
  * the only honest test of a contribution is the rendered page: the cell drawn
  * from THIS bundle's partial, the figure in the host's four-to-a-row strip,
  * and the sheet in the head. A test of the contributor class alone would pass
@@ -74,11 +74,11 @@ final class OrgDashboardContributionTest extends WebTestCase
     /** THE CELL IS ON THE GRID, and it is drawn from this bundle's own template. */
     public function testTheCellIsDrawnFromThisModulesPartial(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         $cell = $this->dashboard()->filter('[data-w="patrols"]');
 
-        self::assertCount(1, $cell, 'The contributed cell is on the organisation dashboard.');
+        self::assertCount(1, $cell, 'The contributed cell is on the organization dashboard.');
         self::assertStringContainsString('Patrols out right now', $cell->text());
         // Columns only this module's partial writes — the host's templates
         // contain no widget markup at all.
@@ -88,7 +88,7 @@ final class OrgDashboardContributionTest extends WebTestCase
     /** AND IT NAMES ITSELF, so the day the module goes its cell going reads as the system working. */
     public function testTheCellStatesWhoseFigureItIs(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         self::assertStringContainsString('patrols', $this->dashboard()->filter('[data-w="patrols"] .ao-by')->text());
     }
@@ -96,7 +96,7 @@ final class OrgDashboardContributionTest extends WebTestCase
     /** Every area's live patrols, on one cell, with the area named on each row. */
     public function testItReadsEveryAreaAtOnce(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         $rows = $this->dashboard()->filter('[data-w="patrols"] table.tbl tr');
 
@@ -110,7 +110,7 @@ final class OrgDashboardContributionTest extends WebTestCase
     /** The tab states what the cell is a reading of: how many are out, and the day's walking. */
     public function testTheTabStatesTheDaysWalking(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         self::assertStringContainsString('96 km walked today', $this->dashboard()->filter('[data-w="patrols"] .tab')->text());
     }
@@ -147,7 +147,7 @@ final class OrgDashboardContributionTest extends WebTestCase
      */
     public function testTheFigureLandsInTheStrip(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         $tile = $this->figure();
 
@@ -157,14 +157,14 @@ final class OrgDashboardContributionTest extends WebTestCase
     }
 
     /**
-     * THE PREVIEW IS THE WIDGET. The organisation's widget library renders
+     * THE PREVIEW IS THE WIDGET. The organization's widget library renders
      * every contributed partial on real data at full size, so what somebody
      * arranges there is exactly what they get — and a cell that fataled off
      * the dashboard would take the library with it.
      */
     public function testTheLibraryOffersTheCellAndDrawsTheRealThing(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         $crawler = $this->client->request('GET', '/widgets');
 
@@ -176,7 +176,7 @@ final class OrgDashboardContributionTest extends WebTestCase
     /** A contributed cell brings its own stylesheet, and the page links it. */
     public function testThePageLinksThisModulesSheet(): void
     {
-        $this->aLiveOrganisation();
+        $this->aLiveOrganization();
 
         self::assertStringContainsString(
             'bundles/uhifadhipatrol/patrol-',
@@ -225,7 +225,7 @@ final class OrgDashboardContributionTest extends WebTestCase
     }
 
     /** Two areas that patrol and one that does not, on the saturday the design describes. */
-    private function aLiveOrganisation(): void
+    private function aLiveOrganization(): void
     {
         $north = $this->anArea('Northern Reserve');
         $south = $this->anArea('Southern Reserve');
@@ -283,7 +283,7 @@ final class OrgDashboardContributionTest extends WebTestCase
     }
 
     /**
-     * Somebody who may read the organisation. `area.view` is the HOST's
+     * Somebody who may read the organization. `area.view` is the HOST's
      * permission and the host's voter decides it; a tier that stands above the
      * matrix is how an installation's first account holds it.
      */

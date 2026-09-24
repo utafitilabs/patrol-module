@@ -22,7 +22,7 @@ use Uhifadhi\Contracts\Kpi\FigurePeriod;
  *
  * WHY "SINCE WHEN" TRAVELS WITH IT. Every period before the module was
  * installed over this ground is a period nobody was recording, and a figure
- * drawn as nought there is a collapse the organisation never had. The
+ * drawn as nought there is a collapse the organization never had. The
  * distinction has to be made wherever a run of periods is built, so the fact
  * that decides it rides along with the ground rather than being fetched again
  * at each call site.

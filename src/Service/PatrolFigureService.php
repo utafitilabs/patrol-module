@@ -29,7 +29,7 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
  * for the same month is the defect this class is shaped to make impossible.
  *
  * NOTHING HERE DECIDES WHOSE FIGURES THEY ARE. A caller hands in the ground and
- * the window; who reads that ground — a department, a zone, the organisation —
+ * the window; who reads that ground — a department, a zone, the organization —
  * is the caller's question, and this answers the same way for all of them.
  */
 final readonly class PatrolFigureService

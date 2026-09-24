@@ -26,7 +26,7 @@ use Uhifadhi\Contracts\Entity\UserInterface;
  * that is what the web module has always shown.
  *
  * An id that resolves to nobody is kept, not dropped. A team member who has
- * since left the organisation was still on that patrol, and silently shortening
+ * since left the organization was still on that patrol, and silently shortening
  * the roster would misreport who was in the field that day.
  */
 final class RangerResolver

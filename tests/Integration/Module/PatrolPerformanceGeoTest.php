@@ -56,11 +56,11 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
     /** A line down the middle of the north strip, and nowhere near the south one. */
     private const string TRACK = '{"type":"LineString","coordinates":[[-29.98,-2.91],[-29.92,-2.91]]}';
 
-    public function testTheOrganisationGetsOneFigurePerAreaThatRunsTheModule(): void
+    public function testTheOrganizationGetsOneFigurePerAreaThatRunsTheModule(): void
     {
         $this->world();
 
-        $series = $this->only($this->geo()->geo(PerformanceScope::organisation(), self::period()));
+        $series = $this->only($this->geo()->geo(PerformanceScope::organization(), self::period()));
 
         self::assertSame(PatrolPerformanceGeo::BY_AREA, $series->key);
         self::assertSame([self::QUIET, self::WALKED], self::labels($series), 'By name, and only the areas running the module.');
@@ -70,7 +70,7 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
     {
         $this->world();
 
-        $series = $this->only($this->geo()->geo(PerformanceScope::organisation(), self::period()));
+        $series = $this->only($this->geo()->geo(PerformanceScope::organization(), self::period()));
 
         self::assertNotContains(self::OUTSIDE, self::labels($series), 'Nobody was recording there, so there is nothing to shade and no blank to draw.');
     }
@@ -79,7 +79,7 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
     {
         $this->world();
 
-        $figures = self::byLabel($this->only($this->geo()->geo(PerformanceScope::organisation(), self::period())));
+        $figures = self::byLabel($this->only($this->geo()->geo(PerformanceScope::organization(), self::period())));
 
         self::assertNotNull($figures[self::WALKED]->value);
         self::assertGreaterThan(0.0, (float) $figures[self::WALKED]->value);
@@ -90,7 +90,7 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
     {
         $world = $this->world();
 
-        $figures = self::byLabel($this->only($this->geo()->geo(PerformanceScope::organisation(), self::period())));
+        $figures = self::byLabel($this->only($this->geo()->geo(PerformanceScope::organization(), self::period())));
 
         self::assertSame((string) $world[self::WALKED]->getUuidString(), $figures[self::WALKED]->uuid);
         self::assertTrue(Uuid::isValid($figures[self::QUIET]->uuid), 'Every figure addresses its ground by uuid; no geometry leaves this module.');
@@ -101,7 +101,7 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
     {
         $this->world();
 
-        $series = $this->only($this->geo()->geo(PerformanceScope::organisation(), self::period()));
+        $series = $this->only($this->geo()->geo(PerformanceScope::organization(), self::period()));
 
         self::assertSame(GeoSeries::OVER_AREAS, $series->over);
         self::assertNull($series->areaUuid, 'A series over areas belongs to no one area.');
@@ -142,13 +142,13 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
         self::assertSame(0.0, $zones[self::SOUTH]->value, 'The area recorded tracks: this strip was measured and none of it was covered.');
     }
 
-    public function testTheOrganisationsPageGetsNoZoneSeries(): void
+    public function testTheOrganizationsPageGetsNoZoneSeries(): void
     {
         $this->world();
 
         self::assertSame(
             [PatrolPerformanceGeo::BY_AREA],
-            array_map(static fn (GeoSeries $series): string => $series->key, $this->geo()->geo(PerformanceScope::organisation(), self::period())),
+            array_map(static fn (GeoSeries $series): string => $series->key, $this->geo()->geo(PerformanceScope::organization(), self::period())),
             '"The zones of one area" has no answer where there is no one area.',
         );
     }
@@ -164,7 +164,7 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
     {
         $this->world();
 
-        $series = $this->only($this->geo()->geo(PerformanceScope::organisation(), self::period('2026-05-15 09:00:00')));
+        $series = $this->only($this->geo()->geo(PerformanceScope::organization(), self::period('2026-05-15 09:00:00')));
 
         self::assertCount(2, $series->figures, 'The ground is still published — the page decides whether a plate of blanks is drawn.');
         self::assertTrue($series->isEmpty());

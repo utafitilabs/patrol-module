@@ -29,7 +29,7 @@ use Uhifadhi\Patrol\Service\PatrolFigureService;
 
 /**
  * WHAT THE PATROLS MODULE HAS TO SAY ABOUT THE GROUND — coverage, per area
- * across the organisation, and per zone once the page is about one area.
+ * across the organization, and per zone once the page is about one area.
  *
  * SEPARATE FROM THE TOPIC, AND OPTIONAL, which is why it is its own class
  * beside {@see PatrolPerformanceTopic} rather than another method on it. Most
@@ -44,9 +44,9 @@ use Uhifadhi\Patrol\Service\PatrolFigureService;
  *
  * TWO PLATES, BECAUSE THEY ARE TWO PLATES. A series says what it is over, so
  * the page never has to match uuids against two tables to find out: the
- * organisation's page gets one figure per area, an area's page gets that one
+ * organization's page gets one figure per area, an area's page gets that one
  * area AND a figure per zone of it, carrying the area's uuid so the plate knows
- * whose zones they are. The organisation's page gets no zone series at all —
+ * whose zones they are. The organization's page gets no zone series at all —
  * "the zones of one area" has no answer when there is no one area.
  *
  * COVERAGE IS THE SAME SHARE THE TOPIC PUBLISHES, made in the same place
@@ -110,7 +110,7 @@ final readonly class PatrolPerformanceGeo implements PerformanceGeoProviderInter
 
         $series = [$this->coverageByArea($areas, $period)];
 
-        if (!$scope->isOrganisation()) {
+        if (!$scope->isOrganization()) {
             $zones = $this->coverageByZone($areas[0], $period);
             if (null !== $zones) {
                 $series[] = $zones;

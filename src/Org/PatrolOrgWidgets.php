@@ -26,7 +26,7 @@ use Uhifadhi\Patrol\Service\PatrolOverviewService;
 use Uhifadhi\Patrol\UhifadhiPatrolBundle;
 
 /**
- * WHAT PATROLS PUTS ON THE ORGANISATION DASHBOARD — a transcription of the
+ * WHAT PATROLS PUTS ON THE ORGANIZATION DASHBOARD — a transcription of the
  * design's own surface declaration for `/` (index.html and org.widgets.js),
  * which is the spec.
  *
@@ -37,7 +37,7 @@ use Uhifadhi\Patrol\UhifadhiPatrolBundle;
  *
  * A SECOND INTERFACE, NOT A WIDER FIRST ONE. {@see PatrolOverviewContributor}
  * answers for one area and is asked only where this module is switched on
- * there; this answers for the organisation and is asked once. The slug is the
+ * there; this answers for the organization and is asked once. The slug is the
  * same, so both disappear together the day the module is uninstalled, and the
  * cell's contributor tag is what makes that disappearance read as the system
  * working rather than as a bug.
@@ -59,7 +59,7 @@ final class PatrolOrgWidgets implements ContributesStylesheetInterface, OrgOverv
     /**
      * HOW MANY ROWS THE CELL DRAWS BEFORE IT STOPS.
      *
-     * A dashboard cell's height may not grow with its data: an organisation
+     * A dashboard cell's height may not grow with its data: an organization
      * with thirty patrols out would otherwise push every cell under it off
      * the screen. The rest are reached through the door, and the cell says
      * how many there are so the bound never hides a total.
@@ -95,7 +95,7 @@ final class PatrolOrgWidgets implements ContributesStylesheetInterface, OrgOverv
         return new WidgetGroup(
             PatrolOverviewContributor::SLUG,
             'Patrols · uhifadhi/patrol-module',
-            'Who is out right now, across every area, and how far the organisation walked today. Not the module\'s own dashboard at organisation scope — the one live reading somebody watching the whole organisation needs before opening any area.',
+            'Who is out right now, across every area, and how far the organization walked today. Not the module\'s own dashboard at organization scope — the one live reading somebody watching the whole organization needs before opening any area.',
         );
     }
 
@@ -139,13 +139,13 @@ final class PatrolOrgWidgets implements ContributesStylesheetInterface, OrgOverv
     }
 
     /**
-     * THE STRIP'S THIRD FIGURE — how many patrols this organisation has logged
+     * THE STRIP'S THIRD FIGURE — how many patrols this organization has logged
      * since monday.
      *
      * A PERIOD, NOT AN INSTANT, and deliberately so: the area strip already
      * carries "Patrols out" as a live tile, and repeating it here would spend
-     * the organisation's one slot on a number the cell beneath it states in
-     * full. The week is what an organisation is asked about.
+     * the organization's one slot on a number the cell beneath it states in
+     * full. The week is what an organization is asked about.
      *
      * COUNTED BY THE MODULE'S OWN RULE — a discarded outing did not happen and
      * one still recording has not finished happening — so this figure and the
