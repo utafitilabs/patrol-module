@@ -19,40 +19,51 @@ oversight.
 
 ## 1 · A station is a record the area keeps
 
-`Patrol.stationRecord` is a `ManyToOne` to `Station`, and `Patrol.patrolType` a
-`ManyToOne` to `PatrolType`. Both are the AREA's own lists, and both are edited
-on the configure page's Patrol types and Stations sections.
+`Patrol.stationRecord` is a `ManyToOne` to the AREA's `Station` — the core's
+own record (`Uhifadhi\Bundle\AreaBundle\Entity\Station`), recorded, moved and
+retired under the area's Configure › Stations — and `Patrol.patrolType` a
+`ManyToOne` to `PatrolType`, the module's own word list edited on its configure
+page's Patrol types section. This module keeps no station list: a station is a
+place the area runs, and one area's post is not one module's word.
 
-**Why records and not strings:** the three things the configure design asks for
-are the three a string cannot do — rename a post without rewriting every patrol
-filed against it, retire one the area has closed, and count how many patrols
-each carries. And they are the AREA's: one area closing a post is not a reason
-for another to lose it.
+**Why the area's record and not the module's:** a station has a point, a code,
+a zone derived from where it stands, the people stationed at it and a duty
+roster around it, and every module that says "at the gate" means the same gate.
+A second list of the same places, spelt slightly differently, is exactly what
+counted patrols nowhere on the station's own dock; one record is what makes the
+count honest.
 
-**What a word is:** a stable `key` — the wire value a saved filter, an export
-column and an offline handset hold, derived once from the first label and never
-touched by a rename — plus a `label`, `active`, `position` and `updatedAt`. The
-handset reads all of it through `GET /api/patrols/vocabulary`.
+**What the wire carries:** the station's uuid is the key a saved filter, an
+export column and the handset hold; the label is its name. The handset reads
+the area's stations through `GET /api/patrols/vocabulary`, ordered as the
+register orders them.
 
-**Retire, never delete.** Patrols are filed against both, so neither has a
-delete control: retiring dims the row on Settings, takes the word off the
-handset at the next sync, and leaves every record intact.
+**A word the area does not keep stays a word.** A handset that names a place the
+area has no station for is neither refused nor obeyed: the patrol is kept, the
+word is kept on it (`Patrol::$station`), and no station is made of it — a
+station needs a point nobody on a handset was asked for, and the handset
+collects while the office configures. The office sees the word on the patrol
+and records the station if it is real.
+
+**On the map:** a station is drawn where the area put it. A word with no record
+is drawn at the FIRST recorded point of the patrol that carried it
+(`PatrolDashboardService::coveragePayload`) — the best evidence the module holds,
+never an invented position — and a word whose patrol recorded no track gets no
+marker at all.
+
+**Retire, never delete.** Patrols are filed against types, so a type has no
+delete control: retiring dims the row, takes the word off the handset at the
+next sync, and leaves every record intact. A station's life is the area's to
+decide, on the area's own screens.
 
 **`patrol.types` is a SEED, not a source.** An area with no types yet is given
 the installation's configured list the first time its Settings section or its
 log form is opened. After that the two are unrelated, and a config change never
 reaches back into a list somebody has curated.
 
-**On the map:** a station may say where it stands (`Station::$point`), and the
-coverage marker is drawn there. Where nobody has said, the marker is placed at
-the FIRST recorded point of a patrol that set out from it
-(`PatrolDashboardService::coveragePayload`) — the best evidence the bundle
-holds, and never an invented position; a station whose patrols were all
-hand-logged gets no marker at all.
-
-**Revisit when:** a platform-wide stations module exists. That is a change of
-owner rather than of shape: these rows already carry the key, the label and the
-geometry such a module would want.
+**What 0.8 left for a later release:** `patrol_patrol.station_id` and the
+`patrol_station` table it points at. Nothing writes them; the version that drops
+them carries an `@destructive` marker.
 
 ## 2 · Team is free text
 

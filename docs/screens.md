@@ -25,12 +25,9 @@
 | Export the filtered log (`csv`) or its tracks (`gpx`) | `patrol_export` |
 | Log a patrol — the one entry flow | `patrol_log` |
 | Patrol types (configure section) | `patrol_types` |
-| Stations (configure section) | `patrol_stations` |
 | Observation kinds (configure section) | `patrol_kinds` |
 | Save the Patrol types section | `patrol_types_save` |
 | Rename / retire / reactivate one patrol type | `patrol_type_act` |
-| Save the Stations section | `patrol_stations_save` |
-| Rename / retire / reactivate one station | `patrol_station_act` |
 | Save the module's thresholds | `patrol_settings_save` |
 
 `patrol_taxonomy` (`…/patrols/taxonomy`) still answers, permanently redirecting to
@@ -231,28 +228,10 @@ because each is a decision on its own.
 
 ## Stations
 
-`patrol_stations` (`/areas/{uuid}/modules/patrols/stations`), saved by one POST to
-the same address, read under the same policy as the types section. The same row
-for the places a patrol sets off from, plus the one thing a station has that a
-type does not: a **point**.
-
-**A point is a geometry, not a label.** A rename does not move it, it is what a
-track is measured against, and it is what draws the station on every map the area
-shows. A station with none asks for one on its row (`set point`); nothing is
-blocked while it has none, and nothing is ever cleared — the section draws no
-control that takes a point back off.
-
-**One plate serves the whole section, whichever row asked.** The picker is the
-atlas's plate inside the add panel: the area's boundary under it, the stations
-that already have a point drawn quietly for bearings, and ONE marker to drag —
-the only accented thing on it, because it is the only thing being changed. A
-row's control links to `?point={uuid}`, and the plate comes back bound to that
-station. The marker is made draggable by one controller of this module's, which
-listens for the markers UX Map hands over once it has created them; nothing here
-builds a map.
-
-A pair off the world (|lat| > 90, |lon| > 180) is refused with a sentence rather
-than clamped: a station filed at the pole would read as placed.
+There is no stations section here. A station is the AREA's record, recorded and
+moved under the area's own Configure › Stations, and a patrol points at one of
+those; the log form's station chips are the area's active stations, keyed by
+their uuid. See [design-decisions.md](design-decisions.md) § 1.
 
 ## Observation kinds
 
@@ -313,8 +292,6 @@ for the two thresholds:
 |---|---|---|
 | `patrol_types_save` | POST | `…/patrols/types` |
 | `patrol_type_act` | POST | `…/patrols/types/{uuid}/{rename\|retire\|reactivate}` |
-| `patrol_stations_save` | POST | `…/patrols/stations` |
-| `patrol_station_act` | POST | `…/patrols/stations/{uuid}/{rename\|retire\|reactivate}` |
 | `patrol_settings_save` | POST | `…/configure/settings` |
 
 **Nothing is ever deleted:** retiring flips a flag, and the patrols filed under a

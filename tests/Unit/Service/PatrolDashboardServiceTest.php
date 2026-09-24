@@ -140,7 +140,7 @@ final class PatrolDashboardServiceTest extends TestCase
             $dashboard->weeklySeries,
         )));
         self::assertSame(
-            [['station' => 'north-post', 'label' => 'North post', 'count' => 1], ['station' => 'jetty', 'label' => 'Jetty', 'count' => 1]],
+            [['station' => Vocabulary::stationKey('north-post'), 'label' => 'North post', 'count' => 1], ['station' => Vocabulary::stationKey('jetty'), 'label' => 'Jetty', 'count' => 1]],
             $dashboard->stationSeries,
         );
     }
@@ -161,7 +161,7 @@ final class PatrolDashboardServiceTest extends TestCase
             self::TYPES,
             $this->now,
             null,
-            new PatrolFilter($march, station: 'north-post'),
+            new PatrolFilter($march, station: Vocabulary::stationKey('north-post')),
             $zones,
         );
         self::assertCount(1, $byStation->patrols);
@@ -203,11 +203,11 @@ final class PatrolDashboardServiceTest extends TestCase
             self::TYPES,
             $this->now,
             null,
-            new PatrolFilter(new \DateTimeImmutable('2026-03-01T00:00:00Z'), station: 'north-post'),
+            new PatrolFilter(new \DateTimeImmutable('2026-03-01T00:00:00Z'), station: Vocabulary::stationKey('north-post')),
             $zones,
         );
 
-        self::assertSame(['jetty' => 'Jetty', 'north-post' => 'North post'], $dashboard->stations);
+        self::assertSame([Vocabulary::stationKey('jetty') => 'Jetty', Vocabulary::stationKey('north-post') => 'North post'], $dashboard->stations);
         self::assertSame(['Basin floor', 'Highland'], $dashboard->zones);
     }
 
@@ -327,10 +327,10 @@ final class PatrolDashboardServiceTest extends TestCase
             $this->patrol('walk', '2026-03-16T06:00:00Z', 1.0, null), // no station — grouped as unassigned
         ], self::TYPES, $this->now);
 
-        self::assertSame([['station' => 'north-post', 'label' => 'North post', 'count' => 2], ['station' => 'jetty', 'label' => 'Jetty', 'count' => 1]], $dashboard->stationSeries);
+        self::assertSame([['station' => Vocabulary::stationKey('north-post'), 'label' => 'North post', 'count' => 2], ['station' => Vocabulary::stationKey('jetty'), 'label' => 'Jetty', 'count' => 1]], $dashboard->stationSeries);
         // The CHART is ranked; the MENU is sorted, because a list somebody has to
         // find a name in is read alphabetically, not by how busy the month was.
-        self::assertSame(['jetty' => 'Jetty', 'north-post' => 'North post'], $dashboard->stations);
+        self::assertSame([Vocabulary::stationKey('jetty') => 'Jetty', Vocabulary::stationKey('north-post') => 'North post'], $dashboard->stations);
     }
 
     public function testCalendarPlacesPatrolsOnTheirDays(): void
@@ -497,7 +497,12 @@ final class PatrolDashboardServiceTest extends TestCase
         self::assertSame([], $payload['stations']);
     }
 
-    public function testCoveragePayloadPlacesEachStationAtWhereItsPatrolsSetOut(): void
+    /**
+     * A STATION STANDS WHERE THE AREA PUT IT — its record carries a point. A
+     * station the area does not keep is only a word on the patrol, and the map
+     * draws the word where that patrol set out, the best evidence there is.
+     */
+    public function testCoveragePayloadPlacesAStationWhereItStandsAndAWordWhereItsPatrolSetOut(): void
     {
         $service = new PatrolDashboardService();
         $north = $this->patrol('walk', '2026-03-20T06:00:00Z', 10.0, 'North post');
@@ -505,13 +510,16 @@ final class PatrolDashboardServiceTest extends TestCase
         // A second patrol from the same station: one marker, not two.
         $northAgain = $this->patrol('boat', '2026-03-18T06:00:00Z', 5.0, 'North post');
         $northAgain->setTrack('{"type":"LineString","coordinates":[[-29.45,-3.25],[-29.3,-3.4]]}');
-        $jetty = $this->patrol('boat', '2026-03-19T06:00:00Z', 4.0, 'Jetty');
+        // A word off a handset, no record: placed at its patrol's first fix.
+        $jetty = $this->patrol('boat', '2026-03-19T06:00:00Z', 4.0);
+        $jetty->setStationWord('Jetty');
         $jetty->setTrack('{"type":"LineString","coordinates":[[-29.9,-3.1],[-29.8,-3.15]]}');
-        // No station, and a station whose patrol recorded no track: neither can
+        // No station, and a word whose patrol recorded no track: neither can
         // be placed on a map, so neither is invented.
         $anonymous = $this->patrol('walk', '2026-03-17T06:00:00Z', 2.0);
         $anonymous->setTrack('{"type":"LineString","coordinates":[[-29.1,-3.9],[-29.05,-3.95]]}');
-        $unplaceable = $this->patrol('walk', '2026-03-16T06:00:00Z', 2.0, 'Sketch camp');
+        $unplaceable = $this->patrol('walk', '2026-03-16T06:00:00Z', 2.0);
+        $unplaceable->setStationWord('Sketch camp');
 
         $payload = $service->coveragePayload(
             null,
@@ -519,13 +527,14 @@ final class PatrolDashboardServiceTest extends TestCase
             self::TYPES,
         );
 
+        [$lon, $lat] = Vocabulary::stationPoint('north-post');
         self::assertSame([
-            ['name' => 'North post', 'lon' => -29.5, 'lat' => -3.2],
+            ['name' => 'North post', 'lon' => $lon, 'lat' => $lat],
             ['name' => 'Jetty', 'lon' => -29.9, 'lat' => -3.1],
         ], $payload['stations']);
         // Each track states its station too, so the station filter can drive the
         // map the same way the type chips do.
-        self::assertSame('north-post', $payload['patrols'][0]['station']);
+        self::assertSame(Vocabulary::stationKey('north-post'), $payload['patrols'][0]['station']);
         self::assertSame('', $payload['patrols'][3]['station']);
     }
 
@@ -554,7 +563,7 @@ final class PatrolDashboardServiceTest extends TestCase
         self::assertSame(['walk' => 1], $dashboard->monthTypeCounts);
         self::assertSame(['walk' => 1, 'boat' => 0], $dashboard->typeCounts);
         self::assertSame(1, $dashboard->totalCount);
-        self::assertSame([['station' => 'north-post', 'label' => 'North post', 'count' => 1]], $dashboard->stationSeries);
+        self::assertSame([['station' => Vocabulary::stationKey('north-post'), 'label' => 'North post', 'count' => 1]], $dashboard->stationSeries);
 
         // The last-patrol line names the last patrol that COUNTS, even though
         // the discarded one started later.

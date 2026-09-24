@@ -14,15 +14,16 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
+use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Enum\ObservationPlacementEnum;
 use Uhifadhi\Patrol\Enum\PatrolBaseEnum;
 use Uhifadhi\Patrol\Exception\VocabularyConflictException;
 use Uhifadhi\Patrol\Model\PatrolBaseDefaults;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
-use Uhifadhi\Patrol\Repository\StationRepository;
 
 /**
  * THE TWO WORD-LISTS AN AREA OWNS — its patrol types and its stations, a
@@ -69,7 +70,7 @@ final class PatrolVocabularyService
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly PatrolTypeRepository $types,
-        private readonly StationRepository $stations,
+        private readonly AreaStationRepository $areaStations,
         private readonly array $configuredTypes,
     ) {
     }
@@ -293,144 +294,44 @@ final class PatrolVocabularyService
 
     // ── stations ──────────────────────────────────────────────────────────────
 
-    /** @throws VocabularyConflictException on a blank or duplicate label */
-    public function addStation(AreaOfInterest $area, string $label, string $key = '', ?string $point = null): Station
-    {
-        $label = $this->cleanLabel($label);
-        if ('' === $label) {
-            throw VocabularyConflictException::label('A station needs a name.');
-        }
-        if ($this->stations->labelExistsInArea($area, $label)) {
-            throw VocabularyConflictException::label(\sprintf('This area already has a station called "%s".', $label));
-        }
-
-        $station = new Station($area, $this->freeStationKey($area, '' !== $key ? $key : $label), $label);
-        $station->setPosition($this->stations->maxPositionByArea($area) + 1);
-        $station->setPoint($point);
-
-        $this->entityManager->persist($station);
-        $this->entityManager->flush();
-
-        return $station;
-    }
-
     /**
-     * WHERE A STATION STANDS — the place its patrols set off from, as the section's
-     * plate placed it.
-     *
-     * A GEOMETRY AND NEVER A LABEL: a rename does not move it, it is what a track
-     * is measured against, and it is what draws the station on every map this area
-     * shows. Which is also why it is only ever MOVED and never cleared: the design
-     * draws a row that asks for a point and a row that carries one, and no control
-     * that takes one back off.
+     * THE AREA'S STATION BEHIND A WIRE VALUE. The handset holds the station's
+     * uuid, which is what the vocabulary sync hands it; a value that is not a
+     * uuid is tried as a name, case-folded, for handsets that synced before
+     * stations had one. Null where nothing matches — and the caller keeps the
+     * word on the patrol ({@see Patrol::setStationWord()}) rather than making a
+     * station of it: the handset collects, the office configures, and an
+     * area's station needs a point nobody on a handset was asked for.
      */
-    public function setStationPoint(Station $station, string $point): Station
+    public function resolveStation(AreaOfInterest $area, ?string $value): ?AreaStation
     {
-        $station->setPoint($point);
-        $this->entityManager->flush();
-
-        return $station;
-    }
-
-    /** @throws VocabularyConflictException on a blank or duplicate label */
-    public function renameStation(Station $station, string $label): Station
-    {
-        $label = $this->cleanLabel($label);
-        if ('' === $label) {
-            throw VocabularyConflictException::label('A station needs a name.');
-        }
-        if ($this->stations->labelExistsInArea($station->getArea(), $label, $station)) {
-            throw VocabularyConflictException::label(\sprintf('This area already has a station called "%s".', $label));
-        }
-
-        $station->setLabel($label);
-        $this->entityManager->flush();
-
-        return $station;
-    }
-
-    public function retireStation(Station $station): Station
-    {
-        $station->deactivate();
-        $this->entityManager->flush();
-
-        return $station;
-    }
-
-    public function reactivateStation(Station $station): Station
-    {
-        $station->reactivate();
-        $this->entityManager->flush();
-
-        return $station;
-    }
-
-    /**
-     * The record behind a wire string — see the class docblock for why an
-     * unknown one is CREATED RETIRED rather than refused. Null only where the
-     * caller named no station at all, which is a real state: plenty of patrols
-     * set off from nowhere in particular.
-     */
-    public function resolveStation(AreaOfInterest $area, ?string $value): ?Station
-    {
-        $value = $this->cleanLabel($value ?? '');
+        $value = trim($value ?? '');
         if ('' === $value) {
             return null;
         }
 
-        $found = $this->stations->findOneByAreaAndKey($area, $value) ?? $this->findStationByLabel($area, $value);
-        if (null !== $found) {
-            return $found;
+        if (Uuid::isValid($value)) {
+            $byUuid = $this->areaStations->findOneBy(['area' => $area, 'uuid' => Uuid::fromString($value)]);
+            if ($byUuid instanceof AreaStation) {
+                return $byUuid;
+            }
         }
 
-        $station = new Station($area, $this->freeStationKey($area, $value), $value);
-        $station->setPosition($this->stations->maxPositionByArea($area) + 1)->deactivate();
-
-        $this->entityManager->persist($station);
-        $this->entityManager->flush();
-
-        return $station;
-    }
-
-    /**
-     * Give an area a starting set of stations, skipping any it already has.
-     *
-     * Unlike {@see self::resolveStation()} these arrive ACTIVE: they are words
-     * somebody chose for this area, not words that turned up on a handset.
-     *
-     * @param list<string> $labels
-     *
-     * @return list<Station> the records, in the order the labels were given
-     */
-    public function seedStations(AreaOfInterest $area, array $labels): array
-    {
-        $seeded = [];
-        foreach ($labels as $label) {
-            $existing = $this->findStationByLabel($area, $this->cleanLabel($label));
-            $seeded[] = $existing ?? $this->addStation($area, $label);
-        }
-
-        return $seeded;
-    }
-
-    // ── keys ──────────────────────────────────────────────────────────────────
-
-    private function findTypeByLabel(AreaOfInterest $area, string $label): ?PatrolType
-    {
-        foreach ($this->types->findByArea($area) as $type) {
-            if (mb_strtolower($type->getLabel()) === mb_strtolower($label)) {
-                return $type;
+        $wanted = mb_strtolower($value);
+        foreach ($this->areaStations->findByArea($area) as $station) {
+            if (mb_strtolower(trim((string) $station->getName())) === $wanted) {
+                return $station;
             }
         }
 
         return null;
     }
 
-    private function findStationByLabel(AreaOfInterest $area, string $label): ?Station
+    private function findTypeByLabel(AreaOfInterest $area, string $label): ?PatrolType
     {
-        foreach ($this->stations->findByArea($area) as $station) {
-            if (mb_strtolower($station->getLabel()) === mb_strtolower($label)) {
-                return $station;
+        foreach ($this->types->findByArea($area) as $type) {
+            if (mb_strtolower($type->getLabel()) === mb_strtolower($label)) {
+                return $type;
             }
         }
 
@@ -450,20 +351,7 @@ final class PatrolVocabularyService
         return $key;
     }
 
-    private function freeStationKey(AreaOfInterest $area, string $source): string
-    {
-        $base = $this->slug($source, 60, 'station');
-        $key = $base;
-        $n = 2;
-        while (null !== $this->stations->findOneByAreaAndKey($area, $key)) {
-            $key = $this->slug($base.'-'.$n, 60, 'station');
-            ++$n;
-        }
-
-        return $key;
-    }
-
-    /** A wire key from a label: lowercase, hyphen-joined, ascii-safe. */
+    /** A wire-safe key from a label: lower-case, dashes, bounded, never empty. */
     private function slug(string $value, int $limit, string $fallback): string
     {
         $value = mb_strtolower(trim($value));

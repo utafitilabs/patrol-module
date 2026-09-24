@@ -30,16 +30,12 @@ use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Enum\ObservationPlacementEnum;
 use Uhifadhi\Patrol\Enum\PatrolBaseEnum;
 use Uhifadhi\Patrol\Exception\VocabularyConflictException;
 use Uhifadhi\Patrol\Model\PatrolBaseDefaults;
 use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
-use Uhifadhi\Patrol\Repository\StationRepository;
-use Uhifadhi\Patrol\Service\GeoService;
-use Uhifadhi\Patrol\Service\PatrolMapService;
 use Uhifadhi\Patrol\Service\PatrolScreenAccessService;
 use Uhifadhi\Patrol\Service\PatrolVocabularyService;
 
@@ -102,8 +98,6 @@ final readonly class PatrolVocabularyController
      */
     public const string TYPES_ROUTE = 'patrol_types';
 
-    public const string STATIONS_ROUTE = 'patrol_stations';
-
     /** What a row's buttons may ask for. Anything else is not a button we drew. */
     private const array ACTIONS = ['rename', 'retire', 'reactivate'];
 
@@ -111,16 +105,11 @@ final readonly class PatrolVocabularyController
      * What a point off the world is told. It names the plate rather than the
      * fields, because the fields are hidden and the plate is what a person used.
      */
-    private const string POINT_SENTENCE = 'That is not a place on the map. Nothing was saved — drag the marker on the plate and save again.';
-
     public function __construct(
         private Environment $twig,
         private UrlGeneratorInterface $router,
         private PatrolVocabularyService $vocabulary,
-        private PatrolMapService $maps,
-        private GeoService $geo,
         private PatrolTypeRepository $types,
-        private StationRepository $stations,
         private PatrolScreenAccessService $screens,
         private CsrfTokenManagerInterface $csrfTokenManager,
     ) {
@@ -267,170 +256,6 @@ final readonly class PatrolVocabularyController
         }
 
         return $this->back($request, $area, self::TYPES_ROUTE, 'success', $message);
-    }
-
-    // ── the Stations section ──────────────────────────────────────────────────
-
-    /**
-     * THE SECTION, READ — and the plate its point is picked on.
-     *
-     * ONE PLATE FOR THE WHOLE SECTION, whichever row asked, and the design is why:
-     * it draws the picker inside the add panel with a marker whose own title names
-     * an EXISTING station, because a point is a point whichever row asked for it.
-     * So a row's control names itself in `?point=` and the plate comes back bound
-     * to that station — one map on the page rather than one per row, and the state
-     * the design drew rather than a component it did not.
-     *
-     * WHERE THE MARKER STARTS: on the station's own point if it has one, else in
-     * the middle of the area, which is the only honest answer to "we do not know".
-     */
-    #[Route(
-        '/areas/{uuid}/modules/patrols/stations',
-        name: 'patrol_stations',
-        requirements: ['uuid' => Requirement::UUID],
-        methods: ['GET'],
-        priority: 2,
-    )]
-    #[IsGranted('patrol-stations.read', subject: 'area')]
-    public function stations(
-        Request $request,
-        #[MapEntity(mapping: ['uuid' => 'uuid'])] AreaOfInterest $area,
-    ): Response {
-        $stations = $this->stations->findByArea($area);
-
-        $asked = $request->query->getString('point');
-        $placing = '' !== $asked ? $this->stations->findOneByAreaAndUuid($area, $asked) : null;
-
-        $placed = [];
-        $points = [];
-        foreach ($stations as $station) {
-            $point = $station->getPoint();
-            if (null === $point) {
-                continue;
-            }
-
-            [$lon, $lat] = $this->geo->coordinates($point);
-            $points[$station->getUuid()->toRfc4122()] = $this->geo->formatDms($lon, $lat);
-            // The station being placed IS the marker, so it is not also drawn as
-            // one of the quiet ones underneath it.
-            if ($station !== $placing) {
-                $placed[] = ['name' => $station->getLabel(), 'lon' => $lon, 'lat' => $lat];
-            }
-        }
-
-        $boundary = $area->getGeom();
-        $own = $placing?->getPoint();
-        $start = null !== $own
-            ? $this->geo->coordinates($own)
-            : (null !== $boundary ? $this->geo->centre($boundary) : null);
-        [$lon, $lat] = $start ?? [0.0, 0.0];
-        $label = $placing?->getLabel() ?? 'the new station';
-
-        return new Response($this->twig->render('@UhifadhiPatrol/stations/show.html.twig', [
-            'area' => $area,
-            'stations' => $stations,
-            'stationCounts' => $this->stations->countPatrolsByArea($area),
-            'stationPoints' => $points,
-            'placing' => $placing,
-            'placingLabel' => $label,
-            'plate' => $this->maps->stationPoint($boundary, $placed, $lat, $lon, $label),
-            'plateCoordinate' => $this->geo->formatDms($lon, $lat),
-            // The two the marker's position travels in, and what a save reads back.
-            'plateLat' => $lat,
-            'plateLng' => $lon,
-            ...$this->chrome($area, $this->screens->mayConfigureStations($area)),
-        ]));
-    }
-
-    #[Route(
-        '/areas/{uuid}/modules/patrols/stations',
-        name: 'patrol_stations_save',
-        requirements: ['uuid' => Requirement::UUID],
-        methods: ['POST'],
-    )]
-    #[IsGranted('patrol-stations.configure', subject: 'area')]
-    public function saveStations(
-        Request $request,
-        #[MapEntity(mapping: ['uuid' => 'uuid'])] AreaOfInterest $area,
-    ): RedirectResponse {
-        $this->guard($request);
-
-        /*
-         * WHERE THE PLATE LEFT ITS MARKER. Null where the two fields hold nothing
-         * a map could have produced — a coordinate off the world, or a value typed
-         * into a hidden field by hand — and that is told rather than clamped: a
-         * station filed at the pole would read as placed.
-         */
-        $point = $this->geo->pointGeoJson(
-            (float) $request->request->getString('point_lat'),
-            (float) $request->request->getString('point_lng'),
-        );
-        if (null === $point) {
-            return $this->back($request, $area, self::STATIONS_ROUTE, 'error', self::POINT_SENTENCE);
-        }
-
-        $label = trim($request->request->getString('label'));
-        if ('' !== $label) {
-            try {
-                $created = $this->vocabulary->addStation($area, $label, point: $point);
-            } catch (VocabularyConflictException $conflict) {
-                return $this->back($request, $area, self::STATIONS_ROUTE, 'error', $conflict->getMessage());
-            }
-
-            return $this->back($request, $area, self::STATIONS_ROUTE, 'success', \sprintf(
-                '"%s" is a station in this area now.',
-                $created->getLabel(),
-            ));
-        }
-
-        // A POINT WITHOUT A NAME BELONGS TO THE ROW THAT ASKED, which is the uuid
-        // the plate was bound to. A save that names neither is somebody pressing
-        // Save with nothing changed, and that is not an error.
-        $asked = $request->request->getString('point');
-        $station = '' !== $asked ? $this->stations->findOneByAreaAndUuid($area, $asked) : null;
-        if ($station instanceof Station) {
-            $this->vocabulary->setStationPoint($station, $point);
-
-            return $this->back($request, $area, self::STATIONS_ROUTE, 'success', \sprintf(
-                '"%s" sets off from there now.',
-                $station->getLabel(),
-            ));
-        }
-
-        return $this->back($request, $area, self::STATIONS_ROUTE, 'success', 'Saved. These are this area’s stations.');
-    }
-
-    #[Route(
-        '/areas/{uuid}/modules/patrols/stations/{station}/{action}',
-        name: 'patrol_station_act',
-        requirements: ['uuid' => Requirement::UUID, 'station' => Requirement::UUID],
-        methods: ['POST'],
-    )]
-    #[IsGranted('patrol-stations.configure', subject: 'area')]
-    public function actOnStation(
-        Request $request,
-        #[MapEntity(mapping: ['uuid' => 'uuid'])] AreaOfInterest $area,
-        string $station,
-        string $action,
-    ): RedirectResponse {
-        $this->guard($request);
-
-        $record = $this->stations->findOneByAreaAndUuid($area, $station);
-        if (!$record instanceof Station || !\in_array($action, self::ACTIONS, true)) {
-            throw new NotFoundHttpException('No such station in this area.');
-        }
-
-        try {
-            $message = match ($action) {
-                'rename' => \sprintf('Renamed to "%s".', $this->vocabulary->renameStation($record, $request->request->getString('label'))->getLabel()),
-                'retire' => \sprintf('"%s" is retired. Every patrol filed against it keeps it.', $this->vocabulary->retireStation($record)->getLabel()),
-                default => \sprintf('"%s" is back in use.', $this->vocabulary->reactivateStation($record)->getLabel()),
-            };
-        } catch (VocabularyConflictException $conflict) {
-            return $this->back($request, $area, self::STATIONS_ROUTE, 'error', $conflict->getMessage());
-        }
-
-        return $this->back($request, $area, self::STATIONS_ROUTE, 'success', $message);
     }
 
     // ── what every section's template is given besides its own rows ───────────

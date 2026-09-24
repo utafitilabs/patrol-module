@@ -122,10 +122,11 @@ release:
 **A word the handset sends that this area has never heard of is never a
 refusal.** The contract names no error code for an unknown type or an unknown
 station, and refusing would throw away a real patrol because a settings screen
-and an app build disagreed about a word. The sync creates the word as a
-**retired** record instead: the patrol is kept, and the disagreement shows up
-dimmed on the module's Stations section for somebody to rename into an existing
-post or reactivate.
+and an app build disagreed about a word. The sync keeps the word ON THE PATROL
+instead: the patrol is kept, no station is made of a word (a station is the
+area's record, and needs a point the handset was never asked for), and the
+disagreement shows up on the patrol for somebody in the office to settle by
+recording the station under the area's Configure › Stations.
 
 ## What an observation is filed under
 

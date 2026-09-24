@@ -70,8 +70,6 @@ final readonly class PatrolConfigurationSections implements ConfigurationSection
      */
     public const string TYPES = 'types';
 
-    public const string STATIONS = 'stations';
-
     public function __construct(
         private RequestStack $requests,
         private AreaOfInterestRepository $areas,
@@ -121,11 +119,6 @@ final readonly class PatrolConfigurationSections implements ConfigurationSection
                 self::TYPES,
                 'Patrol types',
                 PatrolVocabularyController::TYPES_ROUTE,
-            ),
-            ConfigurationSection::screen(
-                self::STATIONS,
-                'Stations',
-                PatrolVocabularyController::STATIONS_ROUTE,
             ),
             // THE WORD IS THIS MODULE'S. The shell prints "Observation kinds"
             // because this line says so; the frame has no vocabulary to impose.

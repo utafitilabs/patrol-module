@@ -19,6 +19,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\Trait\TimestampableTrait;
 use Uhifadhi\Patrol\Enum\PatrolEventKindEnum;
@@ -95,13 +96,27 @@ class Patrol
     private PatrolType $patrolType;
 
     /**
-     * WHERE IT SET OFF FROM — one of the area's own {@see Station} records.
-     * Null is a real state: plenty of patrols set off from nowhere in
-     * particular.
+     * WHERE IT SET OFF FROM — one of the AREA's stations, the core's own
+     * record (ruled 2026-09-18: a station belongs to the area module, one
+     * source, and every module points at it). Null is a real state: plenty of
+     * patrols set off from nowhere in particular, and so is a patrol whose
+     * handset named a place the area does not keep — {@see $station} holds
+     * the word then, and nothing is invented for it.
+     */
+    #[ORM\ManyToOne(targetEntity: AreaStation::class)]
+    #[ORM\JoinColumn(name: 'area_station_id', nullable: true, onDelete: 'SET NULL')]
+    private ?AreaStation $stationRecord = null;
+
+    /**
+     * The module's OWN station record this patrol pointed at before stations
+     * became the area's (0.7). KEPT FOR ONE RELEASE, never written: the 0.8
+     * migration moved every one it could onto {@see $stationRecord}, and the
+     * column and its table go with a later release under an `@destructive`
+     * marker. Read by nothing but a rollback.
      */
     #[ORM\ManyToOne(targetEntity: Station::class)]
     #[ORM\JoinColumn(name: 'station_id', nullable: true, onDelete: 'RESTRICT')]
-    private ?Station $stationRecord = null;
+    private ?Station $formerStation = null; // @phpstan-ignore property.unusedType, property.onlyWritten (the shadow relation a rollback reads, never this code)
 
     /**
      * The type as a bare string, which is what this column held before the
@@ -126,9 +141,14 @@ class Patrol
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $name = null;
 
-    /** The station as a bare string — kept for one release, like {@see $type}. */
-    #[ORM\Column(length: 80, nullable: true)]
-    private ?string $station = null; // @phpstan-ignore property.onlyWritten (the shadow column a rollback reads, never this code)
+    /**
+     * The station AS A WORD: the area station's name where the patrol points
+     * at one, else whatever the handset called the place it set off from. It
+     * is what a screen prints when {@see $stationRecord} is null, and what a
+     * rollback reads; the record is the truth wherever there is one.
+     */
+    #[ORM\Column(length: 128, nullable: true)]
+    private ?string $station = null;
 
     #[ORM\ManyToOne(targetEntity: UserInterface::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -383,29 +403,53 @@ class Patrol
         return $this->name ?? $this->getStation();
     }
 
-    public function getStationRecord(): ?Station
+    public function getStationRecord(): ?AreaStation
     {
         return $this->stationRecord;
     }
 
-    public function setStationRecord(?Station $station): static
+    /** The area's station this patrol set off from; its name becomes the word. */
+    public function setStationRecord(?AreaStation $station): static
     {
         $this->stationRecord = $station;
-        $this->station = $station?->getLabel();
+        if (null !== $station) {
+            $this->station = $station->getName();
+        }
 
         return $this;
     }
 
-    /** What a screen prints. */
-    public function getStation(): ?string
+    /**
+     * The place as the handset named it, where the area keeps no such station:
+     * the word is kept, the record stays null, and nobody makes a station out
+     * of it — the handset collects, the office configures.
+     */
+    public function setStationWord(?string $word): static
     {
-        return $this->stationRecord?->getLabel();
+        $word = null === $word ? null : trim($word);
+        $this->station = '' === $word ? null : $word;
+        if (null !== $this->station && null !== $this->stationRecord && $this->station !== $this->stationRecord->getName()) {
+            $this->stationRecord = null;
+        }
+
+        return $this;
     }
 
-    /** The wire value — what a filter, an export and the handset hold. */
+    /** What a screen prints: the station's name, or the word the handset sent. */
+    public function getStation(): ?string
+    {
+        return $this->stationRecord?->getName() ?? $this->station;
+    }
+
+    /**
+     * What a filter, an export column and the map key a station by: the area
+     * station's uuid, or — for a patrol that carries only a word — the word
+     * itself, so the word can still be chosen, counted and drawn. Only records
+     * ever go out to a handset ({@see VocabularySyncService}), never a word.
+     */
     public function getStationKey(): ?string
     {
-        return $this->stationRecord?->getKey();
+        return $this->stationRecord?->getUuid()?->toRfc4122() ?? $this->station;
     }
 
     public function getLead(): ?UserInterface

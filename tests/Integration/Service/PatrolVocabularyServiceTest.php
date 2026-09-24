@@ -14,12 +14,12 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Integration\Service;
 
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Exception\VocabularyConflictException;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
-use Uhifadhi\Patrol\Repository\StationRepository;
 use Uhifadhi\Patrol\Service\PatrolVocabularyService;
+use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -41,14 +41,6 @@ final class PatrolVocabularyServiceTest extends IntegrationTestCase
     {
         $repository = $this->em->getRepository(PatrolType::class);
         self::assertInstanceOf(PatrolTypeRepository::class, $repository);
-
-        return $repository;
-    }
-
-    private function stations(): StationRepository
-    {
-        $repository = $this->em->getRepository(Station::class);
-        self::assertInstanceOf(StationRepository::class, $repository);
 
         return $repository;
     }
@@ -137,76 +129,48 @@ final class PatrolVocabularyServiceTest extends IntegrationTestCase
         $this->vocabulary()->addType($area, '   ');
     }
 
-    // ── stations ──────────────────────────────────────────────────────────────
-
-    public function testAddingAStationSlugsItsKey(): void
-    {
-        $area = $this->anArea();
-
-        $station = $this->vocabulary()->addStation($area, 'River Post');
-
-        self::assertSame('river-post', $station->getKey());
-        self::assertSame('River Post', $station->getLabel());
-        self::assertTrue($station->isActive());
-    }
-
-    public function testAStationIsRenamedRetiredAndBroughtBack(): void
-    {
-        $area = $this->anArea();
-        $station = $this->vocabulary()->addStation($area, 'River Post');
-
-        $this->vocabulary()->renameStation($station, 'Ridge Camp');
-        self::assertSame('Ridge Camp', $station->getLabel());
-        self::assertSame('river-post', $station->getKey(), 'The wire value survives a rename.');
-
-        $this->vocabulary()->retireStation($station);
-        self::assertFalse($station->isActive());
-        self::assertCount(1, $this->stations()->findByArea($area));
-
-        $this->vocabulary()->reactivateStation($station);
-        self::assertTrue($station->isActive());
-    }
-
-    public function testASecondStationWithTheSameNameIsRefused(): void
-    {
-        $area = $this->anArea();
-        $this->vocabulary()->addStation($area, 'River Post');
-
-        $this->expectException(VocabularyConflictException::class);
-        $this->vocabulary()->addStation($area, 'river post');
-    }
-
-    // ── resolving a wire string ───────────────────────────────────────────────
+    // ── stations: the area's, resolved and never written here ────────────────
 
     /**
-     * WHAT THE HANDSET'S STRING BECOMES. It still sends a station as a string,
-     * and a string this area has never heard of becomes a RETIRED record rather
-     * than a refusal — see the service's own reasoning.
+     * WHAT THE HANDSET'S STRING BECOMES. The vocabulary sync hands it the area
+     * station's uuid; a handset that synced before stations had one still sends
+     * the name. Both find the area's record; nothing here makes one.
      */
-    public function testAnUnknownStationFromTheFieldIsCreatedRetired(): void
+    public function testAKnownStationIsResolvedByUuidAndByName(): void
     {
         $area = $this->anArea();
+        $configured = Vocabulary::station($this->em, $area, 'River Post', 'river-post');
+        $this->em->flush();
+        self::assertInstanceOf(Station::class, $configured);
 
-        $station = $this->vocabulary()->resolveStation($area, 'North Gate');
-
-        self::assertInstanceOf(Station::class, $station);
-        self::assertSame('north-gate', $station->getKey());
-        self::assertFalse($station->isActive(), 'A word nobody configured arrives retired, so it is seen and settled.');
+        self::assertSame($configured, $this->vocabulary()->resolveStation($area, (string) $configured->getUuid()?->toRfc4122()));
+        self::assertSame($configured, $this->vocabulary()->resolveStation($area, 'river post'));
+        self::assertSame($configured, $this->vocabulary()->resolveStation($area, '  River Post '));
     }
 
-    public function testAKnownStationIsResolvedByKeyAndByLabel(): void
+    public function testAStationOfAnotherAreaIsNotThisAreasStation(): void
+    {
+        $here = $this->anArea('Here');
+        $there = $this->anArea('There');
+        $elsewhere = Vocabulary::station($this->em, $there, 'River Post', 'river-post');
+        $this->em->flush();
+
+        self::assertNull($this->vocabulary()->resolveStation($here, (string) $elsewhere?->getUuid()?->toRfc4122()));
+        self::assertNull($this->vocabulary()->resolveStation($here, 'River Post'));
+    }
+
+    public function testAnUnknownStationFromTheFieldResolvesToNothingAndMakesNothing(): void
     {
         $area = $this->anArea();
-        $configured = $this->vocabulary()->addStation($area, 'River Post');
 
-        self::assertSame($configured, $this->vocabulary()->resolveStation($area, 'river-post'));
-        self::assertSame($configured, $this->vocabulary()->resolveStation($area, 'River Post'));
-        self::assertCount(1, $this->stations()->findByArea($area));
+        self::assertNull($this->vocabulary()->resolveStation($area, 'North Gate'));
+        self::assertSame([], $this->em->getRepository(Station::class)->findBy(['area' => $area]), 'a word off a handset never becomes a station');
     }
 
     public function testABlankStationResolvesToNothing(): void
     {
         self::assertNull($this->vocabulary()->resolveStation($this->anArea(), null));
+        self::assertNull($this->vocabulary()->resolveStation($this->anArea(), '   '));
     }
 
     public function testAnUnknownTypeFromTheFieldIsCreatedRetired(): void

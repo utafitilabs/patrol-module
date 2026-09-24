@@ -29,13 +29,14 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station;
+use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Entity\PatrolDraft;
 use Uhifadhi\Patrol\Entity\PatrolDraftFile;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Entity\TaxonomyKind;
 use Uhifadhi\Patrol\Exception\InvalidGpxException;
 use Uhifadhi\Patrol\Exception\InvalidPatrolTimesException;
@@ -44,7 +45,6 @@ use Uhifadhi\Patrol\Model\LoggedObservation;
 use Uhifadhi\Patrol\Model\LoggedPatrol;
 use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
-use Uhifadhi\Patrol\Repository\StationRepository;
 use Uhifadhi\Patrol\Repository\TaxonomyKindRepository;
 use Uhifadhi\Patrol\Service\PatrolDraftService;
 use Uhifadhi\Patrol\Service\PatrolMapService;
@@ -221,7 +221,7 @@ final class PatrolRecordController
                 'photoKind' => PatrolObservationPhotoTarget::KIND,
                 'track' => $track,
                 'types' => $this->offeredTypes($area),
-                'stations' => $this->stations->findByAreaActive($area),
+                'stations' => array_values(array_filter($this->stations->findByArea($area), static fn (Station $s): bool => $s->isActive())),
                 'kinds' => $this->kinds->forArea($area),
                 'users' => $this->users(),
                 'form' => $form,
@@ -584,9 +584,10 @@ final class PatrolRecordController
      * does not offer is treated as one: the chips only ever submit a live key,
      * so anything else is a stale form rather than somebody's intent.
      */
+    /** The area's station the form named, by its uuid; null for none. */
     private function chosenStation(AreaOfInterest $area, ?string $key): ?Station
     {
-        return null === $key ? null : $this->stations->findOneByAreaAndKey($area, $key);
+        return $this->vocabulary->resolveStation($area, $key);
     }
 
     /** No-op when the request has no session (stateless calls). */

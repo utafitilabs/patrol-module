@@ -27,19 +27,17 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
  * the number of complete patrols in the period that STARTED at the post, with
  * the kilometres they covered said in the caption rather than in a second key.
  *
- * WHAT "STARTED HERE" MEANS TODAY. A station is the area module's record and a
- * patrol still points at this module's own station vocabulary, so the join is
- * the honest one the module can make now:
+ * WHAT "STARTED HERE" MEANS. A patrol points at the area's station by id
+ * (0.8), and that is the join. Two fallbacks remain for patrols that carry no
+ * id — rows recorded before 0.8 whose module station had no point, and rows
+ * whose handset named a place the area does not keep:
  *
- *  - the patrol's station text equals the post's name, trimmed and case-folded;
+ *  - the patrol's station word equals the post's name, trimmed and case-folded;
  *  - failing that — and only where the patrol names no station at all — its
  *    track begins within {@see self::PROXIMITY_M} of the post's point.
  *
  * A patrol that named a post is attributed to THAT post even when it set off
- * beside another, because a person's word beats a coordinate. Both rules are
- * written down in `docs/area-overview.md` together with the follow-up that
- * retires them: a patrol referencing the area's station by id, which the two
- * modules have to land together.
+ * beside another, because a person's word beats a coordinate.
  *
  * ZERO AND UNKNOWN ARE DIFFERENT FACTS. A post that launched nothing in a month
  * its area patrolled reads zero — the month was measured there. Every post of

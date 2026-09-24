@@ -13,9 +13,9 @@ declare(strict_types=1);
 
 namespace Uhifadhi\Patrol\Model;
 
+use Uhifadhi\Bundle\AreaBundle\Entity\Station;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 
 /**
  * ONE SUBMISSION OF THE ENTRY FLOW — everything the page posted, resolved to

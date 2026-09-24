@@ -89,7 +89,7 @@ final class PatrolTypesSectionTest extends ConfigureSectionTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['Widget library', 'Patrol types', 'Stations', 'Observation kinds', 'Settings'],
+            ['Widget library', 'Patrol types', 'Observation kinds', 'Settings'],
             $crawler->filter('.atabs a')->each(static fn (Crawler $a): string => trim($a->text())),
         );
         self::assertSame('Patrol types', trim($crawler->filter('.atabs a.on')->text()));

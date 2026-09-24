@@ -66,11 +66,13 @@ final class PatrolStationFigureProviderTest extends IntegrationTestCase
         self::assertSame(1.0, $headlines[self::CAMP]);
     }
 
+    /** A patrol that carries only a word — no id — still counts for the post of that name. */
     public function testTheNameIsMatchedWithoutRegardToCaseOrSurroundingSpace(): void
     {
         $area = $this->area();
         $this->station($area, self::GATE, self::GATE_LON, self::GATE_LAT);
-        $this->patrolFrom($area, '  gate ONE ');
+        $wordOnly = $this->patrolFrom($area, null);
+        $wordOnly->setStationWord('  gate ONE ');
         $this->em->flush();
 
         self::assertSame(1.0, $this->headlines($area)[self::GATE]);
@@ -312,8 +314,16 @@ final class PatrolStationFigureProviderTest extends IntegrationTestCase
     ): Patrol {
         $patrol = new Patrol($area, Vocabulary::type($this->em, $area, 'walk'))
             ->setStartedAt(new \DateTimeImmutable($startedAt))
-            ->setStationRecord(Vocabulary::station($this->em, $area, $stationLabel))
             ->setTrack($track);
+        // The post the test made, by name — the area's record; a name the area
+        // does not keep stays a word on the patrol, as a stale handset leaves it.
+        $post = null;
+        foreach ($this->em->getRepository(AreaStation::class)->findBy(['area' => $area]) as $candidate) {
+            if (null !== $stationLabel && mb_strtolower(trim((string) $candidate->getName())) === mb_strtolower(trim($stationLabel))) {
+                $post = $candidate;
+            }
+        }
+        null !== $post ? $patrol->setStationRecord($post) : $patrol->setStationWord($stationLabel);
         $this->em->persist($patrol);
 
         return $patrol;

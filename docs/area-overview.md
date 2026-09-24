@@ -91,14 +91,13 @@ counted at no post at all. Three hundred metres is the yard rather than the
 neighbourhood: a fix taken at the barrier or across the compound is inside it,
 the next post along a road is not.
 
-**The follow-up that retires both.** Neither rule is the model anybody wants to
-keep: a patrol should reference the area's `Station` by id, which is one
-coordinated change across the two modules — the area module owning the post,
-this module pointing at it and migrating its own station records onto it,
-falling back on the name only for rows recorded before the change. Until that
-lands, an installation that spells a post differently in the two lists sees its
-patrols counted nowhere, which is why both rules are written here rather than
-left to be discovered.
+**Since 0.8 the join is by id.** A patrol points at the area's `Station`, and
+that is what a post counts. The two rules above are what remains for a patrol
+that carries no id — a row recorded before 0.8 whose module station had no point,
+or a row whose handset named a place the area does not keep: the word on the
+patrol, matched to the post's name, else the track's first fix within the yard.
+`patrol_station` stays for one release, unwritten, and goes with a later,
+marked version.
 
 **Zero and unknown are different facts.** A post that launched nothing in a
 month its area patrolled reads zero — the month was measured there. Every post

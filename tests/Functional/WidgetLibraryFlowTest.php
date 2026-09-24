@@ -180,7 +180,7 @@ final class WidgetLibraryFlowTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(
-            ['Widget library', 'Patrol types', 'Stations', 'Observation kinds', 'Settings'],
+            ['Widget library', 'Patrol types', 'Observation kinds', 'Settings'],
             $crawler->filter('.atabs a')->each(static fn (Crawler $a): string => trim($a->text())),
         );
         self::assertSame('Widget library', trim($crawler->filter('.atabs a.on')->text()));

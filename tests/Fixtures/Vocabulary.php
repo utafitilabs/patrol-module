@@ -14,9 +14,10 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Fixtures;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Entity\TaxonomyKind;
 use Uhifadhi\Patrol\Entity\TaxonomySubcategory;
 
@@ -65,6 +66,27 @@ final class Vocabulary
         return $type;
     }
 
+    /**
+     * THE WIRE KEY A FIXTURE STATION CARRIES: the area station's uuid, minted
+     * from the handle so a unit test with no database can still say which
+     * station it means — the same handle is the same uuid in every area.
+     */
+    public static function stationKey(string $key): string
+    {
+        return Uuid::v5(Uuid::fromString('6ba7b810-9dad-11d1-80b4-00c04fd430c8'), 'uhifadhi-patrol-fixture-station:'.$key)->toRfc4122();
+    }
+
+    /**
+     * WHERE A FIXTURE STATION STANDS, from its handle: distinct handles stand
+     * apart, and the same handle stands in the same place in every area.
+     *
+     * @return array{float, float} lon, lat
+     */
+    public static function stationPoint(string $key): array
+    {
+        return [35.0 + (crc32($key) % 1000) / 1000, -3.0 - (crc32('lat:'.$key) % 500) / 1000];
+    }
+
     public static function station(?EntityManagerInterface $em, AreaOfInterest $area, ?string $label, ?string $key = null): ?Station
     {
         if (null === $label || '' === $label) {
@@ -79,9 +101,17 @@ final class Vocabulary
             return $found;
         }
 
-        $station = new Station($area, $key, $label);
+        // THE AREA'S STATION, as the office would record it: a name and a point.
+        // The key a caller passes is only the fixture's own handle; the wire key
+        // is the station's uuid, which the entity mints for itself.
+        $station = new Station()
+            ->setUuid(Uuid::fromString(self::stationKey($key)))
+            ->setArea($area)
+            ->setName($label)
+            ->setCode(strtoupper(substr($key, 0, 8)))
+            ->setPoint((string) json_encode(['type' => 'Point', 'coordinates' => self::stationPoint($key)], \JSON_THROW_ON_ERROR));
         $em?->persist($station);
-        self::remember($area, $station);
+        self::remember($area, $station, $key);
 
         return $station;
     }
@@ -124,14 +154,14 @@ final class Vocabulary
         return self::$known[$area] ?? ['types' => [], 'stations' => []];
     }
 
-    private static function remember(AreaOfInterest $area, PatrolType|Station $record): void
+    private static function remember(AreaOfInterest $area, PatrolType|Station $record, ?string $key = null): void
     {
         /** @var array{types: array<string, PatrolType>, stations: array<string, Station>} $known */
         $known = self::forArea($area);
         if ($record instanceof PatrolType) {
             $known['types'][$record->getKey()] = $record;
         } else {
-            $known['stations'][$record->getKey()] = $record;
+            $known['stations'][$key ?? (string) $record->getName()] = $record;
         }
         self::$known[$area] = $known;
     }

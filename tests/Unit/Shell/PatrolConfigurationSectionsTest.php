@@ -75,7 +75,7 @@ final class PatrolConfigurationSectionsTest extends TestCase
      * only the vocabulary the SHELL's sheet ships, and each of those four draws
      * families of its own. Settings spends the shell's alone, so it stays a body.
      */
-    public function testItDeclaresTheLibraryTheTypesTheStationsTheKindsAndTheSettings(): void
+    public function testItDeclaresTheLibraryTheTypesTheKindsAndTheSettings(): void
     {
         $sections = $this->declaration()->sections();
 
@@ -83,21 +83,19 @@ final class PatrolConfigurationSectionsTest extends TestCase
             [
                 ConfigurationSection::WIDGETS,
                 PatrolConfigurationSections::TYPES,
-                PatrolConfigurationSections::STATIONS,
                 'kinds',
                 ConfigurationSection::SETTINGS,
             ],
             array_map(static fn (ConfigurationSection $s): string => $s->id, $sections),
         );
         self::assertSame(
-            ['Widget library', 'Patrol types', 'Stations', 'Observation kinds', 'Settings'],
+            ['Widget library', 'Patrol types', 'Observation kinds', 'Settings'],
             array_map(static fn (ConfigurationSection $s): string => $s->label, $sections),
         );
         self::assertFalse($sections[0]->isRendered());
         self::assertFalse($sections[1]->isRendered());
         self::assertFalse($sections[2]->isRendered());
-        self::assertFalse($sections[3]->isRendered());
-        self::assertTrue($sections[4]->isRendered(), 'Settings is the one body the shell renders.');
+        self::assertTrue($sections[3]->isRendered(), 'Settings is the one body the shell renders.');
     }
 
     /**

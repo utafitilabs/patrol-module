@@ -15,14 +15,14 @@ namespace Uhifadhi\Patrol\Service\Api;
 
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
 use Uhifadhi\Bundle\AreaBundle\Repository\AreaOfInterestRepository;
+use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
 use Uhifadhi\Patrol\Api\PatrolApiException;
 use Uhifadhi\Patrol\Entity\PatrolType;
-use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Entity\TaxonomyKind;
 use Uhifadhi\Patrol\Entity\TaxonomySubcategory;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
-use Uhifadhi\Patrol\Repository\StationRepository;
 use Uhifadhi\Patrol\Repository\TaxonomyKindRepository;
 
 /**
@@ -56,7 +56,7 @@ final readonly class VocabularySyncService
     public function __construct(
         private AreaOfInterestRepository $areas,
         private PatrolTypeRepository $types,
-        private StationRepository $stations,
+        private AreaStationRepository $stations,
         private TaxonomyKindRepository $kinds,
     ) {
     }
@@ -114,14 +114,15 @@ final readonly class VocabularySyncService
             'stations' => $this->rows(
                 $this->stations->findByArea($area),
                 $changedSince,
-                static fn (Station $station): array => [
-                    'key' => $station->getKey(),
-                    'label' => $station->getLabel(),
+                // THE AREA'S STATIONS, as the office keeps them (core AreaBundle
+                // Station): the key the handset sends back is the station's uuid,
+                // the label its name, and the order the register's — by name.
+                static fn (AreaStation $station, int $position): array => [
+                    'key' => (string) $station->getUuid()?->toRfc4122(),
+                    'label' => (string) $station->getName(),
                     'active' => $station->isActive(),
-                    'position' => $station->getPosition(),
+                    'position' => $position,
                     'updatedAt' => self::stamp($station->getUpdatedAt()),
-                    // Null where nobody has said where it stands, which is a
-                    // real state and not a zero.
                     'point' => $station->getPoint(),
                 ],
             ),
@@ -154,22 +155,22 @@ final readonly class VocabularySyncService
     }
 
     /**
-     * @template T of PatrolType|Station|TaxonomyKind
+     * @template T of PatrolType|AreaStation|TaxonomyKind
      *
-     * @param list<T>                           $records
-     * @param \Closure(T): array<string, mixed> $row
+     * @param list<T>                                $records
+     * @param \Closure(T, int): array<string, mixed> $row     the record and its position in the list
      *
      * @return list<array<string, mixed>>
      */
     private function rows(array $records, ?\DateTimeImmutable $changedSince, \Closure $row): array
     {
         $rows = [];
-        foreach ($records as $record) {
+        foreach ($records as $position => $record) {
             $updatedAt = $record->getUpdatedAt();
             if (null !== $changedSince && null !== $updatedAt && $updatedAt < $changedSince) {
                 continue;
             }
-            $rows[] = $row($record);
+            $rows[] = $row($record, $position);
         }
 
         return $rows;

@@ -89,7 +89,10 @@ final class PatrolUpsertService
             ->setStatus(PatrolStatusEnum::Recording)
             ->setSource(PatrolSourceEnum::Api)
             ->setLead($recorder)
+            // The area's station the handset named — or, where the area keeps
+            // no such station, the word alone (§ stations: nothing is invented).
             ->setStationRecord($this->vocabulary->resolveStation($area, Payload::string($data, 'stationId')))
+            ->setStationWord(Payload::string($data, 'stationId'))
             ->setStartedAt(Payload::timestamp($data, 'startedAt'))
             // Null is legal and meaningful: a live upload of a patrol still
             // under way (§4). It is not backfilled with "now".

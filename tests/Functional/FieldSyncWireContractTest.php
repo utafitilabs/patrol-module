@@ -14,10 +14,10 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Functional;
 
 use Symfony\Component\Routing\RouterInterface;
-use Uhifadhi\Patrol\Entity\Station;
+use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolBaseEnum;
-use Uhifadhi\Patrol\Repository\StationRepository;
 use Uhifadhi\Patrol\Service\PatrolVocabularyService;
+use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 
 /**
  * THE WIRE IS FROZEN — the eight addresses, the five documents and the statuses,
@@ -90,7 +90,9 @@ final class FieldSyncWireContractTest extends FieldSyncTestCase
     public function testTheVocabularyDocumentCarriesKeysLabelsActivePositionAndUpdatedAt(): void
     {
         $this->actingAs($this->recorder);
-        $this->vocabulary()->addStation($this->area, 'River Post');
+        // THE STATION IS THE AREA'S: the office records it, the handset reads it.
+        $riverPost = Vocabulary::station($this->em, $this->area, 'River Post', 'river-post');
+        $this->em->flush();
         $retired = $this->vocabulary()->addType($this->area, 'Horseback');
         $this->vocabulary()->retireType($retired);
         $this->vocabulary()->addType($this->area, 'Drone sortie', base: PatrolBaseEnum::Aerial, glyph: 'truck');
@@ -147,7 +149,7 @@ final class FieldSyncWireContractTest extends FieldSyncTestCase
         $station = $document['stations'][0];
         self::assertIsArray($station);
         self::assertSame(['active', 'key', 'label', 'point', 'position', 'updatedAt'], self::sortedKeys($station));
-        self::assertSame('river-post', $station['key']);
+        self::assertSame($riverPost?->getUuid()?->toRfc4122(), $station['key'], 'the wire key is the area station\'s uuid');
         self::assertSame('River Post', $station['label']);
     }
 
@@ -155,7 +157,8 @@ final class FieldSyncWireContractTest extends FieldSyncTestCase
     public function testASinceInTheFutureAnswersAnEmptyDelta(): void
     {
         $this->actingAs($this->recorder);
-        $this->vocabulary()->addStation($this->area, 'River Post');
+        Vocabulary::station($this->em, $this->area, 'River Post', 'river-post');
+        $this->em->flush();
 
         $this->client->request(
             'GET',
@@ -170,24 +173,26 @@ final class FieldSyncWireContractTest extends FieldSyncTestCase
     }
 
     /**
-     * AN UNKNOWN STATION IS NEVER A REFUSAL. The contract names no error code for
-     * one, so a word this area has not heard of becomes a RETIRED record and the
-     * patrol is kept — the disagreement between a settings screen and an app
-     * build is made visible on the Stations section rather than paid for with a lost patrol.
+     * AN UNKNOWN STATION IS NEVER A REFUSAL, AND NEVER A STATION EITHER. The
+     * contract names no error code for one, so a word this area has not heard
+     * of is kept ON THE PATROL as the word it is, and the patrol is kept; no
+     * station is made of it, because a station is the area's record — it needs
+     * a point and it is the office that records one (ruled 2026-09-18), while
+     * the handset collects and never configures.
      */
-    public function testAStationTheAreaHasNeverHeardOfIsAcceptedAndArrivesRetired(): void
+    public function testAStationTheAreaHasNeverHeardOfIsKeptAsAWordOnThePatrol(): void
     {
         $this->actingAs($this->recorder);
 
-        $this->createPatrol(['stationId' => 'somewhere-nobody-configured']);
+        $clientUuid = $this->createPatrol(['stationId' => 'somewhere-nobody-configured']);
 
         self::assertResponseStatusCodeSame(201);
 
-        $stations = static::getContainer()->get('test_public.'.StationRepository::class);
-        self::assertInstanceOf(StationRepository::class, $stations);
-        $station = $stations->findOneByAreaAndKey($this->area, 'somewhere-nobody-configured');
-        self::assertInstanceOf(Station::class, $station);
-        self::assertFalse($station->isActive(), 'A word nobody configured arrives retired, so it is seen and settled.');
+        $patrol = $this->em->getRepository(Patrol::class)->findOneBy(['clientUuid' => $clientUuid]);
+        self::assertInstanceOf(Patrol::class, $patrol);
+        self::assertNull($patrol->getStationRecord(), 'no station is invented for a word the area does not keep');
+        self::assertSame('somewhere-nobody-configured', $patrol->getStation(), 'the word itself is kept on the patrol');
+        self::assertSame('somewhere-nobody-configured', $patrol->getStationKey(), 'the word is what a filter and an export key it by');
     }
 
     private function vocabulary(): PatrolVocabularyService

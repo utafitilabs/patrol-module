@@ -204,7 +204,7 @@ final class PatrolDashboardService
             // evidence there is and beats an invented coordinate.
             $start = self::pointOf($record?->getPoint()) ?? self::firstPoint($track);
             if (null !== $start) {
-                $stations[$station] = ['name' => $record?->getLabel() ?? $station, 'lon' => $start[0], 'lat' => $start[1]];
+                $stations[$station] = ['name' => $record?->getName() ?? $station, 'lon' => $start[0], 'lat' => $start[1]];
             }
         }
 

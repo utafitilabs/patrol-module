@@ -125,7 +125,6 @@ final class FixedRecordVoter extends Voter
             self::pair(PatrolConcerns::PATROLS, Verb::Configure),
             self::pair(PatrolConcerns::PATROLS, Verb::Export),
             self::pair(PatrolConcerns::TYPES, Verb::Configure),
-            self::pair(PatrolConcerns::STATIONS, Verb::Configure),
             self::pair(PatrolConcerns::OBSERVATION_KINDS, Verb::Configure),
         ];
 
@@ -148,7 +147,6 @@ final class FixedRecordVoter extends Voter
         return [
             self::pair(PatrolConcerns::PATROLS, Verb::Read),
             self::pair(PatrolConcerns::TYPES, Verb::Read),
-            self::pair(PatrolConcerns::STATIONS, Verb::Read),
             self::pair(AreaConcerns::AREAS, Verb::Read),
         ];
     }

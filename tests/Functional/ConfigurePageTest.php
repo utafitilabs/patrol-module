@@ -114,7 +114,7 @@ final class ConfigurePageTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertStringContainsString('demo reserve — Patrols · configure', $crawler->filter('h1.pg')->text());
         self::assertSame(
-            ['Widget library', 'Patrol types', 'Stations', 'Observation kinds', 'Settings'],
+            ['Widget library', 'Patrol types', 'Observation kinds', 'Settings'],
             $crawler->filter('.atabs a')->each(static fn (Crawler $a): string => trim($a->text())),
         );
         self::assertSame('Settings', trim($crawler->filter('.atabs a.on')->text()));

@@ -158,7 +158,6 @@ final class RouteByComposedPositionTest extends WebTestCase
         yield 'the widget library' => ['/widgets', [self::pair(PatrolConcerns::PATROLS, Verb::Read)]];
         yield 'the export' => ['/export.csv', [self::pair(PatrolConcerns::PATROLS, Verb::Export)]];
         yield 'the patrol types section' => ['/types', [self::pair(PatrolConcerns::TYPES, Verb::Read)]];
-        yield 'the stations section' => ['/stations', [self::pair(PatrolConcerns::STATIONS, Verb::Read)]];
         yield 'the observation kinds section' => ['/kinds', [self::pair(PatrolConcerns::OBSERVATION_KINDS, Verb::Configure)]];
     }
 

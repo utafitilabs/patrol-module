@@ -17,6 +17,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
+use Uhifadhi\Bundle\AreaBundle\Service\StationService as AreaStationService;
 use Uhifadhi\Contracts\Devkit\ContentProviderInterface;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\Observation;
@@ -151,6 +153,8 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
         private PhotoSyncService $photoSync,
         private TaxonomyAdminService $taxonomy,
         private PatrolVocabularyService $vocabulary,
+        private AreaStationService $areaStations,
+        private AreaStationRepository $areaStationRepository,
         private array $types,
         private array $categories,
     ) {
@@ -216,18 +220,18 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
         // set out from. Both arrive ACTIVE — they are the area's vocabulary,
         // not strays off a handset — and a second run finds them already there.
         $this->vocabulary->seedTypes($area);
+        // The posts are the AREA's stations (core AreaBundle), recorded through
+        // the area's own service where the demo's month names one the area
+        // does not keep yet; a second run finds them by name.
         $stations = [];
-        foreach ($month->stations() as $post) {
-            $station = $this->vocabulary->seedStations($area, [$post['name']])[0];
-            // The demo knows where each post stands, so the coverage map draws
-            // its marker there rather than guessing from a patrol's first fix.
-            $station->setPoint(json_encode(
-                ['type' => 'Point', 'coordinates' => [$post['lon'], $post['lat']]],
-                \JSON_THROW_ON_ERROR,
-            ));
-            $stations[$post['name']] = $station;
+        $known = [];
+        foreach ($this->areaStationRepository->findByArea($area) as $existing) {
+            $known[mb_strtolower(trim((string) $existing->getName()))] = $existing;
         }
-        $this->entityManager->flush();
+        foreach ($month->stations() as $post) {
+            $stations[$post['name']] = $known[mb_strtolower(trim($post['name']))]
+                ?? $this->areaStations->add($area, $post['name'], (float) $post['lon'], (float) $post['lat']);
+        }
 
         $roster = $this->roster();
         $recorder = $roster[0] ?? null;

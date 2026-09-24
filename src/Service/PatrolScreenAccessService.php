@@ -72,12 +72,6 @@ final readonly class PatrolScreenAccessService
         return $this->door->opensFor(PatrolConcerns::TYPES, Verb::Configure, $area);
     }
 
-    /** Naming the places an area patrols from. */
-    public function mayConfigureStations(AreaInterface $area): bool
-    {
-        return $this->door->opensFor(PatrolConcerns::STATIONS, Verb::Configure, $area);
-    }
-
     /** Naming the words a ranger logs an observation against. */
     public function mayConfigureObservationKinds(AreaInterface $area): bool
     {

@@ -123,17 +123,17 @@ final class PatrolExportTest extends WebTestCase
         // Three patrols, newest first — the hand-logged one included: it is a
         // row of the log, and the CSV is the log.
         self::assertCount(4, $lines);
-        self::assertStringContainsString('walk,"Walking round",river-post,"River Post"', $lines[1]);
+        self::assertStringContainsString('walk,"Walking round",'.Vocabulary::stationKey('river-post').',"River Post"', $lines[1]);
 
         // The WIRE key and the LABEL are both there, and they are not the same
         // thing: the key is what a saved filter holds, the label what a person
         // reads.
-        self::assertStringContainsString('boat,Boat,ridge-camp,"Ridge Camp"', $lines[2]);
+        self::assertStringContainsString('boat,Boat,'.Vocabulary::stationKey('ridge-camp').',"Ridge Camp"', $lines[2]);
     }
 
     public function testTheCsvCarriesTheFilterOnScreenAndNothingElse(): void
     {
-        $this->client->request('GET', $this->exportUrl('csv', '&station=ridge-camp'));
+        $this->client->request('GET', $this->exportUrl('csv', '&station='.Vocabulary::stationKey('ridge-camp')));
 
         self::assertResponseIsSuccessful();
         $lines = array_values(array_filter(explode("\n", trim($this->body()))));

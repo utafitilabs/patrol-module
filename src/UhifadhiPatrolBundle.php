@@ -26,6 +26,7 @@ use Uhifadhi\Bundle\AreaBundle\Overview\OverviewContributorInterface;
 use Uhifadhi\Bundle\AreaBundle\Overview\OverviewCopyProviderInterface;
 use Uhifadhi\Bundle\AreaBundle\Overview\PulseProviderInterface;
 use Uhifadhi\Bundle\AreaBundle\Repository\AreaOfInterestRepository;
+use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
 use Uhifadhi\Bundle\ShellBundle\Widget\Registry\WidgetSurfaceInterface;
 use Uhifadhi\Contracts\Kpi\DepartmentKpiProviderInterface;
 use Uhifadhi\Contracts\Kpi\StationFigureProviderInterface;
@@ -74,7 +75,6 @@ use Uhifadhi\Patrol\Repository\PatrolDraftFileRepository;
 use Uhifadhi\Patrol\Repository\PatrolEventRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
-use Uhifadhi\Patrol\Repository\StationRepository;
 use Uhifadhi\Patrol\Repository\TaxonomyKindRepository;
 use Uhifadhi\Patrol\Repository\TaxonomySubcategoryRepository;
 use Uhifadhi\Patrol\Repository\TrackBatchRepository;
@@ -461,7 +461,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                     service('router'),
                     service('doctrine.orm.entity_manager'),
                     service(PatrolTypeRepository::class),
-                    service(StationRepository::class),
+                    service(AreaStationRepository::class),
                     service(TaxonomyKindRepository::class),
                     service('patrol.vocabulary'),
                     service('patrol.map'),
@@ -587,10 +587,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                     service('twig'),
                     service('router'),
                     service('patrol.vocabulary'),
-                    service('patrol.map'),
-                    service('patrol.geo'),
                     service(PatrolTypeRepository::class),
-                    service(StationRepository::class),
                     service('patrol.screen_access'),
                     service('security.csrf.token_manager'),
                 ])
@@ -700,7 +697,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 ->args([
                     service(AreaOfInterestRepository::class),
                     service(PatrolTypeRepository::class),
-                    service(StationRepository::class),
+                    service(AreaStationRepository::class),
                     service(TaxonomyKindRepository::class),
                 ]);
 
@@ -772,6 +769,8 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 service('patrol.api.photo_sync'),
                 service('patrol.taxonomy_admin'),
                 service('patrol.vocabulary'),
+                service('area.stations'),
+                service(AreaStationRepository::class),
                 param('patrol.types'),
                 param('patrol.observation_categories'),
             ])

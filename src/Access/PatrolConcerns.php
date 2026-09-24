@@ -63,7 +63,6 @@ final readonly class PatrolConcerns implements ConcernSourceInterface
     /** The keys, spelt once, so a gate, a door and a test cannot disagree. */
     public const string PATROLS = 'patrols';
     public const string TYPES = 'patrol-types';
-    public const string STATIONS = 'patrol-stations';
     public const string OBSERVATION_KINDS = 'observation-kinds';
 
     public function declaredBy(): string
@@ -96,15 +95,6 @@ final readonly class PatrolConcerns implements ConcernSourceInterface
             key: self::TYPES,
             label: 'Patrol types',
             description: 'The kinds of patrol an area runs — what each one is based on, and the tunables that go with it.',
-            verbs: [Verb::Read, Verb::Configure],
-            scopeKinds: $ground,
-            moduleSlug: PatrolModuleProvider::SLUG,
-        );
-
-        yield new Concern(
-            key: self::STATIONS,
-            label: 'Patrol stations',
-            description: 'The places an area patrols from, and where each one sits on the map.',
             verbs: [Verb::Read, Verb::Configure],
             scopeKinds: $ground,
             moduleSlug: PatrolModuleProvider::SLUG,

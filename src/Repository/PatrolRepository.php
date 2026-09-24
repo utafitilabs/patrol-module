@@ -944,7 +944,6 @@ final class PatrolRepository extends ServiceEntityRepository
         $entityManager = $this->getEntityManager();
         $patrol = $this->getClassMetadata();
         $stationMeta = $entityManager->getClassMetadata(AreaStation::class);
-        $ownStation = $entityManager->getClassMetadata(Station::class);
 
         // The uuid is compared as TEXT so the column may be a native uuid or a
         // string: which one it is belongs to whoever mapped it, not here.
@@ -970,17 +969,21 @@ final class PatrolRepository extends ServiceEntityRepository
                            SUM(COALESCE(p.%11$s, 0)) AS km
                     FROM asked a
                     INNER JOIN %8$s p ON p.%7$s = a.area_id
-                    LEFT JOIN %12$s ps ON ps.%13$s = p.%14$s
                     WHERE p.%9$s = :counted
                       AND p.%10$s >= :from
                       AND p.%10$s < :until
                       AND (
-                          LOWER(BTRIM(COALESCE(ps.%15$s, ''))) = LOWER(BTRIM(a.name))
+                          p.%12$s = a.id
                           OR (
-                              COALESCE(BTRIM(ps.%15$s), '') = ''
-                              AND p.%16$s IS NOT NULL
+                              p.%12$s IS NULL
+                              AND LOWER(BTRIM(COALESCE(p.%13$s, ''))) = LOWER(BTRIM(a.name))
+                          )
+                          OR (
+                              p.%12$s IS NULL
+                              AND COALESCE(BTRIM(p.%13$s), '') = ''
+                              AND p.%14$s IS NOT NULL
                               AND ST_DWithin(
-                                  ST_StartPoint(ST_GeometryN(p.%16$s, 1))::geography,
+                                  ST_StartPoint(ST_GeometryN(p.%14$s, 1))::geography,
                                   a.point::geography,
                                   :metres
                               )
@@ -1007,10 +1010,8 @@ final class PatrolRepository extends ServiceEntityRepository
             $patrol->getColumnName('status'),
             $patrol->getColumnName('startedAt'),
             $patrol->getColumnName('distanceKm'),
-            $ownStation->getTableName(),
-            $ownStation->getSingleIdentifierColumnName(),
             $patrol->getSingleAssociationJoinColumnName('stationRecord'),
-            $ownStation->getColumnName('label'),
+            $patrol->getColumnName('station'),
             $patrol->getColumnName('track'),
         );
 

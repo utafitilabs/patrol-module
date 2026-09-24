@@ -15,17 +15,19 @@ A [uhifadhi](https://github.com/uhifadhilabs) module bundle.
 ## What it is
 
 - **Patrols** — a patrol is a typed, timed record (who led it, which station,
-  when, how far) with an optional geometry track. The type and the station are
-  each one of the AREA's own records, added, renamed and retired on the module's
-  configure page — never hardcoded, and never deleted, because patrols are filed
-  against them. `patrol.types` is the list a new area starts from.
+  when, how far) with an optional geometry track. The type is one of the AREA's
+  own words, added, renamed and retired on the module's configure page — never
+  hardcoded, and never deleted, because patrols are filed against it;
+  `patrol.types` is the list a new area starts from. The station is the AREA's
+  station, the core's own record kept under the area's Configure › Stations: a
+  patrol points at it, and this module keeps no station list of its own.
 - **A type says what it records** — `surface`, where the recorder's own position
   IS the track, or `aerial`, a flight log where it is not. The base prefills the
   pace band the patrol is expected to keep, how wide its track counts as covered
   and where an observation goes, each then the type's own; all of it travels on
   the vocabulary read, so a field client builds its screen from the base instead
-  of guessing at the name. A **station** carries a point, picked on the area's own
-  map plate, which is what a track is measured against.
+  of guessing at the name. The area's **station** carries the point a track is
+  measured against.
 - **One entry flow** — every patrol is written by one page, in three steps: drop
   the track if there is one, confirm what the patrol was, record what was seen.
   A patrol somebody walked with a handset and a patrol somebody walked with a
@@ -162,7 +164,8 @@ Name the patrol types and observation categories this deployment uses in
 `config/packages/patrol.yaml`; the full key list is in
 [docs/configuration.md](docs/configuration.md). `types` is the SEED a NEW area
 starts from — after that each area owns its own list, edited on the configure
-page's own `Patrol types` and `Stations` sections.
+page's own `Patrol types` section. Stations are the area's, recorded under the
+area's Configure › Stations, and a patrol points at one of those.
 
 ```yaml
 patrol:
@@ -229,13 +232,13 @@ module's, and from here on it is the module that changes them.
 | `Uhifadhi\Patrol\Migrations\Version20260910044923` | The module's eleven tables. |
 | `Uhifadhi\Patrol\Migrations\Version20260911090000` | `patrol_settings` — what one area runs patrols on. |
 | `Uhifadhi\Patrol\Migrations\Version20260911120000` | `patrol_type` and `patrol_station`, with every existing patrol carried onto them. |
+| `Uhifadhi\Patrol\Migrations\Version20260925090000` | A patrol points at the AREA's station (`area_station_id`); the module's own stations are moved onto the area's by name, made where the area has none and the module's carried a point, and kept as a word on the patrol otherwise. |
 
-The last one is the only one an existing installation has to think about, and
-the answer is still `doctrine:migrations:migrate`: it reads each area's patrol
-types and stations out of the strings that area's own patrols already carry, so
-every row matches and nothing is left behind. `patrol_patrol.type` and
-`patrol_patrol.station` stay in place for this release; the version that drops
-them rides a later one. See [docs/development.md](docs/development.md).
+The answer to every one of them is `doctrine:migrations:migrate`. What is
+kept for one release and dropped by a later, marked version: `patrol_patrol.type`
+and `patrol_patrol.station` as the words a rollback reads, and — since 0.8 —
+`patrol_patrol.station_id` with the `patrol_station` table it points at, which
+this module no longer writes. See [docs/development.md](docs/development.md).
 
 ## Learn more
 
