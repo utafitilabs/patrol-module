@@ -56,10 +56,11 @@ there is no doctrine block and no asset wiring to write.
 ```console
 php bin/console cache:clear --no-warmup
 php bin/console doctrine:migrations:migrate
+php bin/console registry:sync
 php bin/console cache:warmup
 ```
 
-Those are the installation's three commands, the same three after every change to it. The middle one is the whole of this module's schema step. This module ships the SQL for the eleven `patrol_*`
+Those are the installation's four commands, the same four after every change to it. The second is the whole of this module's schema step, and the third enters the module in the catalogue — `registry:sync` gives every area its row and prints what it added, kept and retired. This module ships the SQL for the eleven `patrol_*`
 tables it owns, under its own namespace, and registers the path itself — an
 installation writes no version for them, exactly as it writes none for the core.
 
