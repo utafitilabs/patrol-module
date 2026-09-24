@@ -30,19 +30,6 @@ final class PatrolModuleProviderTest extends TestCase
         self::assertSame('patrol_dashboard', $provider->entryRoute());
     }
 
-    /**
-     * THE MODULE DECLARES NO FLAT PERMISSIONS ANY MORE. What it lets somebody
-     * act on is declared as concerns, through the access seam
-     * ({@see \Uhifadhi\Patrol\Access\PatrolConcerns}) — a thing to act on
-     * with the verbs it supports, instead of one string per action. Two
-     * catalogues naming the same power would let an organization grant it
-     * twice and revoke it once, so this one is empty on purpose.
-     */
-    public function testDeclaresNoFlatPermissionsBecauseItDeclaresConcerns(): void
-    {
-        self::assertSame([], new PatrolModuleProvider('operations')->permissions());
-    }
-
     public function testCategoryIsDeploymentConfigured(): void
     {
         self::assertSame('biodiversity', new PatrolModuleProvider('biodiversity')->category());

@@ -69,13 +69,11 @@ final class PatrolModuleProvider implements ModuleProviderInterface
     }
 
     /*
-     * NO permissions() HERE. What this module lets somebody act on is
-     * declared as CONCERNS — {@see \Uhifadhi\Patrol\Access\PatrolConcerns},
-     * tagged `uhifadhi.access.concerns` — a thing to act on with the verbs it
-     * supports and the scopes it offers, rather than one flat permission
-     * string per action. The trait answers the deprecated question with an
-     * empty list so this module declares its powers in exactly one place: two
-     * catalogues naming the same power would let an administrator grant it
-     * twice and revoke it once.
+     * WHAT THIS MODULE LETS SOMEBODY ACT ON is declared as CONCERNS —
+     * {@see \Uhifadhi\Patrol\Access\PatrolConcerns}, tagged
+     * `uhifadhi.access.concerns` — a thing to act on with the verbs it
+     * supports and the scopes it offers, and nowhere else: two catalogues
+     * naming the same power would let an administrator grant it twice and
+     * revoke it once.
      */
 }
