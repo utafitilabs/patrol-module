@@ -53,11 +53,13 @@ there is no doctrine block and no asset wiring to write.
 
 ### The tables
 
-```bash
+```console
+php bin/console cache:clear --no-warmup
 php bin/console doctrine:migrations:migrate
+php bin/console cache:warmup
 ```
 
-That is the whole step. This module ships the SQL for the eleven `patrol_*`
+Those are the installation's three commands, the same three after every change to it. The middle one is the whole of this module's schema step. This module ships the SQL for the eleven `patrol_*`
 tables it owns, under its own namespace, and registers the path itself — an
 installation writes no version for them, exactly as it writes none for the core.
 
@@ -74,26 +76,13 @@ default target is not necessarily yours. After installing or updating this
 package that command must report no changes; if it wants to create a
 `patrol_*` table, the migrate above has not been run.
 
-### The two repositories an installation names
+### What it requires
 
-This module requires the uhifadhi core (`uhifadhi/uhifadhi`) and the evidence
-store (`uhifadhi/storage-module`), and neither is on Packagist. **Composer does
-not inherit a dependency's `repositories`**, so an installation names both at
-its own root or `composer require` cannot find them:
+This module requires the core (`uhifadhi/uhifadhi`) and the evidence store (`uhifadhi/storage-module`); both are on Packagist and resolve from the caret constraints in this package's manifest, so an installation names nothing.
 
-```jsonc
-// composer.json (the installation)
-"repositories": [
-    { "type": "vcs", "url": "https://github.com/utafitilabs/uhifadhi" },
-    { "type": "vcs", "url": "https://github.com/utafitilabs/storage-module" }
-]
-```
+### Switching it on
 
-Both are public, so nothing has to be authenticated. While they are untagged an
-installation also needs `"minimum-stability": "dev"` with
-`"prefer-stable": true` — composer will not resolve a transitive dev dependency
-under a stable floor, and root-requiring a dependency's dependencies is a trap
-rather than a workaround.
+A module is installed but **parked**: every page of it answers 404 in an area that has not taken it. An administrator switches it on per area from that area's module grid, and grants the module's permissions to the positions that need them from the positions screen. Reading needs the module's `read` grant; nothing else is required to see it.
 
 ### Who the records point at
 
