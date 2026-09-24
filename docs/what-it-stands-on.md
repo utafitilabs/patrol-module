@@ -68,7 +68,7 @@ Two things about the KPI contract are worth stating plainly:
 `Uhifadhi\Contracts\Entity\AreaInterface` so a module can point at an area
 *without* naming the bundle that owns one — the way `TeamBundle`'s `Department`
 does, and the mechanism is documented in
-[the area contract](https://github.com/uhifadhilabs/uhifadhi/blob/main/src/Uhifadhi/Contracts/docs/area-contract.md).
+[the area contract](https://github.com/utafitilabs/uhifadhi/blob/main/src/Uhifadhi/Contracts/docs/area-contract.md).
 This module takes the other path deliberately: `Patrol::$area` and the
 area-scoped `TaxonomyKind` are mapped to the concrete `AreaOfInterest`, because a
 patrol is drawn on the area's boundary and reads its zones. Type-hinting the

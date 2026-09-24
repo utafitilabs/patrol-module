@@ -84,8 +84,8 @@ its own root or `composer require` cannot find them:
 ```jsonc
 // composer.json (the installation)
 "repositories": [
-    { "type": "vcs", "url": "https://github.com/uhifadhilabs/uhifadhi" },
-    { "type": "vcs", "url": "https://github.com/uhifadhilabs/storage-module" }
+    { "type": "vcs", "url": "https://github.com/utafitilabs/uhifadhi" },
+    { "type": "vcs", "url": "https://github.com/utafitilabs/storage-module" }
 ]
 ```
 

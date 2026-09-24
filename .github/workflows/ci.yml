@@ -4,7 +4,7 @@ name: CI
 # (code style -> static analysis -> tests) before it is valid for review.
 on:
   push:
-    branches: [main]
+    branches: ['**']   # every version line (0.1, 0.2, …) and every feature branch
   pull_request:
 
 permissions:
