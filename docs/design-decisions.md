@@ -15,6 +15,7 @@ oversight.
 - [7 · The filter is a query, not a conversation](#7--the-filter-is-a-query-not-a-conversation)
 - [8 · A patrol being written is a row](#8--a-patrol-being-written-is-a-row)
 - [9 · Adding an observation is a submit, not a clone](#9--adding-an-observation-is-a-submit-not-a-clone)
+- [10 · The charts are the atlas's too, and the module states them](#10--the-charts-are-the-atlass-too-and-the-module-states-them)
 
 ## 1 · A station is a record the area keeps
 
@@ -248,3 +249,49 @@ received is on the draft, and everything typed is posted and rendered back.
 **Reopen if:** the storage module publishes a supported way to mint a component
 at a new target from the page — then the clone becomes the component's business
 rather than this module's, and the trip can go.
+
+## 10 · The charts are the atlas's too, and the module states them
+
+**The decision.** The three chart widgets — "Patrols per week", "Patrols by
+station" and "Effort by ranger" — state an `AtlasChart` and call
+`atlas_chart()`. `Model/PatrolDashboard` says which series there are, what each
+is called, which category it wears and what the figures are; the box, the axis,
+the gridlines, the bar geometry, the colours, the legend and the height are the
+component's. The module's stylesheet says nothing about any of them.
+
+```twig
+<div class="c" data-patrol-weekly>
+    <span class="tab">Patrols per week<span class="src">· by type</span></span>
+    {{ atlas_chart(dashboard.weeklyChart(types, typeCat)) }}
+</div>
+```
+
+**Why.** Each of the three used to be a hand-built `<svg>` with its own axis
+rule, its own gridline geometry and its own annotation styles — three private
+answers to a question the platform had already settled, and three sheets of
+label rules this module had to ship to dress them. None of them turned over with
+the palette the way the atlas's charts do, and a fourth chart added here would
+have been a fourth answer again. The atlas is the component library for EVERY
+module visual: maps (§6), months, and charts. A module feeds it data.
+
+A series is a CATEGORY, not a colour, for the same reason a track is: the
+position comes from `PatrolDashboardService::typePositions()`, the one map the
+chips, the legend, the tracks and now the charts all read, so nothing on the
+screen can disagree about what a patrol type looks like.
+
+**What the rule is enforced by.** `Tests\Unit\VocabularyConformanceTest::
+testNoTemplateDrawsAVisualOfItsOwn` fails on any template that contains an
+`<svg>`, names Leaflet, or builds a month grid of its own. A mark comes from
+lucide through `ux_icon()` and a chart from `atlas_chart()`; neither leaves
+markup in a template, so the rule is exact.
+
+**What was given up, deliberately.** The design draws these three as SVG: a
+horizontal ranked bar for the station and effort charts, an axis rounded up to
+the smallest covering multiple of three, and a per-bar value annotation. The
+component draws vertical bars against its own ticks and answers a hover instead.
+The rule that a module cannot invent a fifth look is worth more than three
+charts matching a drawing of them; the differences belong in the atlas if they
+are wanted, where every chart in the product would get them.
+
+**Reopen if:** the atlas grows a horizontal bar kind or a stated axis step — then
+these three take it, and the design's shape comes back for everybody at once.

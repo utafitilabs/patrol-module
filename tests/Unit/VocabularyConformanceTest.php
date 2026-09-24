@@ -143,6 +143,65 @@ final class VocabularyConformanceTest extends VocabularyConformanceTestCase
     }
 
     /**
+     * AND DRAWS NO CHART, NO MONTH AND NO MARK OF ITS OWN EITHER.
+     *
+     * THE ATLAS IS THE COMPONENT LIBRARY FOR EVERY MODULE VISUAL — charts,
+     * calendars, map plates and their legends. A module states what is on one
+     * in PHP and calls `atlas_chart()`, `atlas_calendar()` or `render_map()`;
+     * what a bar chart, a month or a line looks like is decided once, where it
+     * is drawn, for the whole product.
+     *
+     * THIS IS THE RULE THAT KEEPS IT THAT WAY, and it is a template rule
+     * because that is where the drift starts. Three widgets here carried a
+     * hand-built `<svg>` apiece — their own axis maths, their own gridlines,
+     * their own bar geometry and three label styles this sheet had to ship to
+     * dress them. Each was a private answer to a settled question, and none of
+     * them turned over with the palette the way the atlas's do.
+     *
+     * THREE THINGS ARE REFUSED, each the start of a second answer:
+     *
+     *  - `<svg>` typed into a template. A mark comes from lucide through
+     *    `ux_icon()`, which renders one from a file rather than from markup in
+     *    the page; a chart comes from `atlas_chart()`. Neither leaves an
+     *    `<svg>` in a template's source, so the rule is exact.
+     *  - a Leaflet init. Every map is the atlas's plate (see the two tests
+     *    above); this catches the library being reached for by name.
+     *  - a month grid built by hand. `atlas_calendar()` ships the grid, the
+     *    day head, the fixed cell, the count and the "+N more"; a module that
+     *    loops 42 cells of its own is a calendar that grows with a busy week.
+     *
+     * Comments are stripped first, so a note explaining where the chart comes
+     * from is not read as a chart.
+     */
+    public function testNoTemplateDrawsAVisualOfItsOwn(): void
+    {
+        $offenders = [];
+        foreach (self::templateFiles() as $file) {
+            $markup = (string) preg_replace('/\{#.*?#\}/s', '', (string) file_get_contents($file));
+            $name = basename($file);
+
+            if (str_contains($markup, '<svg')) {
+                $offenders[] = $name.': <svg — a mark is ux_icon(), a chart is atlas_chart()';
+            }
+
+            // Leaflet by name: `L.map(`, `new L.…`, or the bridge's own import.
+            if (preg_match('/\bL\.map\s*\(|\bnew\s+L\.|leaflet/i', $markup, $matches)) {
+                $offenders[] = $name.': '.$matches[0];
+            }
+
+            // A MONTH BUILT BY HAND. The atlas's grid is reached by calling
+            // atlas_calendar(); a template that loops days or weeks into cells
+            // of its own is building a second one.
+            if (preg_match('/\{%\s*for\s+\w*(day|week|cell)\w*\s+in\b/i', $markup, $matches)
+                && !str_contains($markup, 'atlas_calendar(')) {
+                $offenders[] = $name.': '.trim($matches[0]).' — the month grid is atlas_calendar()';
+            }
+        }
+
+        self::assertSame([], $offenders, 'every chart, month and mark in the product is the atlas\'s or ux-icons\'; a module states one and never draws it');
+    }
+
+    /**
      * @return list<string>
      */
     private static function templateFiles(): array

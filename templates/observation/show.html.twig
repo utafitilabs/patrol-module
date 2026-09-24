@@ -310,10 +310,10 @@
             {# PL·07 — worth saying out loud rather than showing an empty box. On
                a record that may be read back to somebody, "never corrected" is a
                fact about the record, not an absence of one. #}
-            {# Inline Lucide, as everywhere else in this bundle: a module screen
-               must not render a blank square on a host that wires icons
-               differently. #}
-            <div class="patrol-amd-empty"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/></svg><div><b>Nothing has been corrected.</b> This observation reads exactly as it was recorded in the field on {{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }}.</div></div>
+            {# The mark is lucide's, drawn through ux-icons from this bundle's own
+               `patrol:` set — never typed into the page, so a module template
+               carries no `<svg>` of its own. #}
+            <div class="patrol-amd-empty">{{ ux_icon('patrol:file-check') }}<div><b>Nothing has been corrected.</b> This observation reads exactly as it was recorded in the field on {{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }}.</div></div>
         {% endif %}
 
         {% if canAmend %}

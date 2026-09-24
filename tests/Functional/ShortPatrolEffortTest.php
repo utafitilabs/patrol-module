@@ -27,10 +27,10 @@ use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
  * A MONTH WHOSE LONGEST PATROL IS SHORTER THAN AN HOUR STILL DRAWS.
  *
  * "Effort by ranger" plots hours, and hours are a float — the only chart on the
- * surface whose maximum can be a fraction. Its axis has to round that maximum
- * UP to a multiple of three, so a month of one-minute patrols gets an axis of
- * three hours and a bar of a couple of pixels; an axis that rounded a fraction
- * DOWN would be zero, and every bar on the chart a division by it.
+ * surface whose figures are not whole numbers. The axis, the grid and the bar
+ * geometry are the atlas's now; what this module still has to get right is the
+ * FIGURE, and a minute on the track is a real fraction of an hour rather than
+ * the nought a credited ranger would otherwise wear.
  *
  * The library previews the whole catalogue, so it renders the effort widget
  * whatever the reader's own composition says — which makes it the one page that
@@ -96,7 +96,7 @@ final class ShortPatrolEffortTest extends WebTestCase
         }
     }
 
-    public function testTheEffortChartDrawsAMeasurableBarForAOneMinutePatrol(): void
+    public function testTheEffortChartCreditsAMeasurableFigureForAOneMinutePatrol(): void
     {
         $this->client->loginUser($this->ranger);
         $crawler = $this->client->request(
@@ -110,18 +110,19 @@ final class ShortPatrolEffortTest extends WebTestCase
         self::assertCount(1, $effort);
         self::assertStringContainsString('Effort by ranger', $effort->html());
 
-        // The axis rounds a fraction of an hour up to three, so the bar is a real
-        // width: a positive number of pixels, inside the plot's 315.
-        $widths = $effort->filter('rect')->each(static fn (Crawler $rect): string => (string) $rect->attr('width'));
-        self::assertCount(1, $widths, 'one credited ranger, one bar.');
-        self::assertTrue(is_numeric($widths[0]), 'the bar width is a number: '.$widths[0]);
-        self::assertGreaterThan(0, (float) $widths[0]);
-        self::assertLessThanOrEqual(315.0, (float) $widths[0]);
+        // THE PREVIEW IS MARKUP INSIDE A <template>, so it is parsed on its own
+        // to be read. What is asserted is the chart this module STATED: one
+        // credited ranger, named the way a patrol row names one, carrying a
+        // fraction of an hour rather than a nought.
+        $chart = new Crawler($effort->html())->filter('.chart-plate canvas');
+        self::assertCount(1, $chart, 'the widget draws the atlas\'s chart, not one of its own.');
 
-        // And the axis it was measured against is labelled in whole hours.
-        self::assertSame(
-            ['0', '1', '2', '3'],
-            $effort->filter('text[text-anchor="middle"]')->each(static fn (Crawler $t): string => trim($t->text())),
-        );
+        /** @var array{data: array{labels: list<string>, datasets: list<array{data: list<float>}>}} $view */
+        $view = json_decode((string) $chart->attr('data-symfony--ux-chartjs--chart-view-value'), true, 512, \JSON_THROW_ON_ERROR);
+
+        self::assertSame(['A. Alpha'], $view['data']['labels'], 'one credited ranger, one bar.');
+        self::assertCount(1, $view['data']['datasets']);
+        self::assertGreaterThan(0.0, $view['data']['datasets'][0]['data'][0], 'a minute on the track is not a nought.');
+        self::assertLessThan(1.0, $view['data']['datasets'][0]['data'][0]);
     }
 }

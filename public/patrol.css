@@ -1,9 +1,10 @@
 /* Patrol screen styles — the widget-dashboard additions on top of the shell's
    design system. What ShellBundle ships (.page, .c/.tab, .kpi, .chip, .mchip,
    .tbl, .crumb/.pghead/.open-btn, .map-frame/.map-btn, plus the token channels
-   --c-*, --shadow and --font-mono) is REUSED, never redefined here. The design
-   vocabulary shell.css does not carry — the .ch chart text/lines — is this
-   module's own; the grouped dropdown the filter bar wears is the shell's. The way back off a screen is the
+   --c-*, --shadow and --font-mono) is REUSED, never redefined here. The charts,
+   the months and the maps are the atlas's components and this sheet says
+   nothing about any of them; the grouped dropdown the filter bar wears is the
+   shell's. The way back off a screen is the
    shell's own .backbtn, not a pill of ours. Every other class is
    patrol-prefixed so it can never collide with a shell class (the shell owns
    .page, .thumb, .map-legend, .who — none of them is touched).
@@ -55,17 +56,11 @@
    and a hover fill over an outline is not this module's to add. */
 .mchip.add { border-style: dashed; border-color: rgb(var(--c-acc)); color: rgb(var(--c-acc)); cursor: pointer; }
 
-/* The two dashboard charts ("Patrols per week", "Patrols by station").
-
-   THE FURNITURE IS THE SHELL'S. The frame, the tick labels, the gridlines and
-   the axis were restated here while the chain did not ship them; core f77b375
-   collected them, so the four rules that said the same thing are gone. What is
-   left is the three kinds of LABEL this module's charts add on top of the
-   shared ones — a chart title, an annotation in ink, and its smaller second
-   line. Bars carry an inline fill, so nothing here colours a series. */
-.ch text.ttl { font-size: 8px; fill: rgb(var(--c-tx)); font-weight: 600; }
-.ch text.anno { fill: rgb(var(--c-tx)); font-size: 7.5px; }
-.ch text.annoS { fill: rgb(var(--c-fog)); font-size: 6.9px; }
+/* THE DASHBOARD CHARTS ARE THE ATLAS'S, so this sheet says nothing about
+   them. "Patrols per week", "Patrols by station" and "Effort by ranger" are
+   stated in PHP and drawn by `atlas_chart()`; the box, the axis, the grid, the
+   colours and the legend are the component's, and the three label rules that
+   used to sit here dressed an `<svg>` this module no longer draws. */
 
 /* ---- filter chip row + station menu ----------------------------------- */
 .patrol-chiprow { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 12px; align-items: center; }
@@ -107,11 +102,9 @@
    which category a type is can only be answered per element — and the hue that
    category wears is the shell's, never this sheet's. */
 .patrol-tchip { color: var(--cat); border-color: color-mix(in srgb, var(--cat) 45%, transparent); }
-/* The legend's station key wears the marker's own square, so the legend and the
-   map cannot describe stations differently. */
-/* The chart legends' row of type chips. The MAP's legend is the atlas's and is
-   drawn by the plate; this is the one under a chart. */
-.patrol-legend { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+/* A CHART'S LEGEND IS THE ATLAS'S TOO, drawn under the component's own box —
+   so the row of type chips that used to sit under the weekly chart is gone
+   rather than restated here. */
 .patrol-note { font: 500 9.5px var(--font-mono); color: rgb(var(--c-dim)); margin: 10px 0 0; }
 
 /* THE CAPTION ROW a detail plate puts above its map — the design's two overlay
@@ -544,7 +537,7 @@
     display: flex; gap: 12px; align-items: flex-start; padding: 14px 2px 2px;
     font-size: 12.5px; line-height: 1.6; color: rgb(var(--c-fog));
 }
-.patrol-amd-empty svg { flex: none; margin-top: 2px; color: rgb(var(--c-fog)); }
+.patrol-amd-empty svg { flex: none; width: 17px; height: 17px; margin-top: 2px; color: rgb(var(--c-fog)); }
 .patrol-amd-empty b { display: block; color: rgb(var(--c-tx)); margin-bottom: 2px; }
 
 .patrol-amd-intro { margin: 2px 2px 4px; }

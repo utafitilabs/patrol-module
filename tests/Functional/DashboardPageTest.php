@@ -187,11 +187,26 @@ final class DashboardPageTest extends WebTestCase
         // dashboard renders no feed at all; the register carries the recent window.
         self::assertCount(0, $crawler->filter('[data-patrol-feed]'));
 
-        // Charts: five week groups (two bars each, one per type) and one bar per
-        // station, ranked.
-        self::assertCount(5 * 2, $crawler->filter('[data-patrol-weekly] svg rect'));
-        self::assertCount(2, $crawler->filter('[data-patrol-stations] svg rect'));
-        self::assertStringContainsString('North post', (string) $crawler->filter('[data-patrol-stations]')->text());
+        // CHARTS: THE ATLAS'S, NOT THIS MODULE'S. Both widgets render the
+        // component's plate with the library's canvas in it — no `<svg>` of
+        // this module's anywhere on the page — and what is asserted here is
+        // what this module PUT IN one: the five week labels with one series
+        // per configured type, and the station ranking by name.
+        $weekly = $crawler->filter('[data-patrol-weekly] .chart-plate canvas');
+        self::assertCount(1, $weekly);
+        /** @var array{data: array{labels: list<string>, datasets: list<array{label: string, data: list<float>}>}} $view */
+        $view = json_decode((string) $weekly->attr('data-symfony--ux-chartjs--chart-view-value'), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame(['W1', 'W2', 'W3', 'W4', 'W5'], $view['data']['labels']);
+        self::assertCount(2, $view['data']['datasets']);
+
+        $stations = $crawler->filter('[data-patrol-stations] .chart-plate canvas');
+        self::assertCount(1, $stations);
+        /** @var array{data: array{labels: list<string>}} $stationView */
+        $stationView = json_decode((string) $stations->attr('data-symfony--ux-chartjs--chart-view-value'), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertContains('North post', $stationView['data']['labels']);
+
+        // And no module-drawn chart is left anywhere on the page.
+        self::assertCount(0, $crawler->filter('svg.ch'));
 
         // Calendar: the HOUSE month — whole weeks, today ringed, one mark per
         // patrol on its day. The grid is the atlas's `atlas_calendar()`, so what

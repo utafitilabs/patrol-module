@@ -1,33 +1,18 @@
-{# Widget "chweek" — patrols per week, grouped by type (PL·09). #}
-{% import '@UhifadhiPatrol/dashboard/_ui.html.twig' as ui %}
+{# Widget "chweek" — patrols per week, grouped by type (PL·09).
+
+   THE CHART IS THE ATLAS'S AND NOT THIS MODULE'S. The axis, the gridlines, the
+   bar geometry, the colours, the legend and the height all come out of
+   `atlas_chart()`; this module says only which series there are, what they are
+   called, what category each wears and what the counts were
+   (Uhifadhi\Patrol\Model\PatrolDashboard::weeklyChart). This was a hand-built
+   `<svg>` with its own axis maths — a fourth answer to what a bar chart is,
+   beside the one every other chart in the product draws with.
+
+   THE CARD IS THIS MODULE'S. The `.c` shell and its tab are the dashboard card
+   every widget wears; everything below the tab is the component's — the legend
+   included, which is why the row of type chips that used to sit under the SVG
+   is gone. #}
 <div class="c" data-patrol-weekly>
     <span class="tab">Patrols per week<span class="src">· by type</span></span>
-    {# Grouped bars, one per configured type, five Monday-start weeks.
-       Geometry is the design's: baseline y=152, top y=24, group pitch 82 from
-       x=60; the axis maximum rounds up to a multiple of three so the three
-       gridlines land on whole numbers. #}
-    {% set weekMax = types|length ? max(dashboard.weeklySeries|map(week => week.counts|length ? max(week.counts) : 0)) : 0 %}
-    {% set weekAxis = max(3, (weekMax / 3)|round(0, 'ceil') * 3) %}
-    {% set barW = min(16, max(4, (60 // (types|length ?: 1)) - 4)) %}
-    {% set pitch = barW + 4 %}
-    <svg class="ch" viewBox="0 0 470 176" xmlns="http://www.w3.org/2000/svg">
-        {% for i in 0..3 %}
-            {% set gy = (152 - i * 128 / 3)|round(1) %}
-            <line class="grid" x1="44" y1="{{ gy }}" x2="460" y2="{{ gy }}"/>
-            <text x="39" y="{{ (gy + 2.5)|round(1) }}" text-anchor="end">{{ (weekAxis * i / 3)|round }}</text>
-        {% endfor %}
-        <text class="annoS" x="14" y="14">patrols</text>
-        {% for week in dashboard.weeklySeries %}
-            {% set x0 = 60 + 82 * loop.index0 %}
-            {% for key, count in week.counts %}
-                {% set h = (count / weekAxis * 128)|round(1) %}
-                <rect x="{{ x0 + pitch * loop.index0 }}" y="{{ (152 - h)|round(1) }}" width="{{ barW }}" height="{{ h }}" rx="1.2" data-cat="{{ ui.cat(typeCat, key) }}" style="fill: var(--cat)"><title>{{ week.label }} · {{ types[key].label|default(key)|lower }}: {{ count }}</title></rect>
-            {% endfor %}
-            <text x="{{ (x0 + (types|length * pitch - 4) / 2)|round(1) }}" y="168" text-anchor="middle">{{ week.label }}</text>
-        {% endfor %}
-        <line class="ax" x1="44" y1="152" x2="460" y2="152"/>
-    </svg>
-    <div class="patrol-legend">
-        {% for key in types|keys %}{{ ui.type_chip(key, types, typeCat) }}{% endfor %}
-    </div>
+    {{ atlas_chart(dashboard.weeklyChart(types, typeCat)) }}
 </div>

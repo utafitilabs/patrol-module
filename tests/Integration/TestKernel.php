@@ -24,6 +24,7 @@ use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Loader\Configurator\RoutingConfigurator;
+use Symfony\UX\Chartjs\ChartjsBundle;
 use Symfony\UX\Icons\UXIconsBundle;
 use Symfony\UX\Map\UXMapBundle;
 use Symfony\UX\StimulusBundle\StimulusBundle;
@@ -82,6 +83,12 @@ final class TestKernel extends Kernel
         // UX Map and its Leaflet bridge: the atlas's plates are built on them,
         // and every patrol screen that draws a map renders through them.
         yield new UXMapBundle();
+        // And Chart.js, the library the atlas's CHART stands on. The atlas
+        // registers `atlas_chart()` only where this bundle is (AtlasBundle::
+        // loadExtension), so an installation without it draws no chart — and
+        // the three chart widgets on this module's dashboard are exactly what
+        // that function renders.
+        yield new ChartjsBundle();
         yield new DoctrineBundle();
         // An installation has this, and this module ships a history for it to run.
         // Without it the bundle's migrations_paths block is guarded out and
