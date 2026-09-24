@@ -14,7 +14,10 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Model;
 
 use Uhifadhi\Bundle\AtlasBundle\Model\AtlasChart;
+use Uhifadhi\Bundle\AtlasBundle\Model\AxisScale;
+use Uhifadhi\Bundle\AtlasBundle\Model\ChartFigures;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartKind;
+use Uhifadhi\Bundle\AtlasBundle\Model\ChartLegend;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartSeries;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\Patrol;
@@ -117,7 +120,30 @@ final readonly class PatrolDashboard
             );
         }
 
-        return new AtlasChart(ChartKind::Bar, $labels, $series, unit: 'patrols');
+        // THE LEGEND IS THE ROW OF TYPE CHIPS UNDER THE PLATE, the design's
+        // (PL·09), drawn by the atlas from the series so a chip and its bars
+        // wear one category; the axis is the three-gridline rule below.
+        return new AtlasChart(
+            ChartKind::Bar,
+            $labels,
+            $series,
+            unit: 'patrols',
+            axis: self::axis(array_merge(...array_map(static fn (ChartSeries $s): array => $s->points, $series))),
+            legend: ChartLegend::Chips,
+        );
+    }
+
+    /**
+     * THE THREE BAR CHARTS SHARE ONE AXIS RULE, and it is the design's: the
+     * top of the axis is the smallest multiple of three that still covers the
+     * largest bar, never less than three — so the three gridlines land on
+     * whole numbers and an empty month still has a width to measure against.
+     *
+     * @param list<float|null> $points
+     */
+    private static function axis(array $points): AxisScale
+    {
+        return AxisScale::covering((float) max([0.0, ...array_filter($points, static fn (?float $p): bool => null !== $p)]), 3);
     }
 
     /**
@@ -131,12 +157,17 @@ final readonly class PatrolDashboard
     public function stationChart(): AtlasChart
     {
         $rows = \array_slice($this->stationSeries, 0, self::STATION_ROWS);
+        $counts = array_map(static fn (array $row): float => (float) $row['count'], $rows);
 
+        // A RANKING READS SIDEWAYS (PL·10): the station on the left, the bar
+        // running right, the count written at its end, the axis in thirds.
         return new AtlasChart(
-            ChartKind::Bar,
+            ChartKind::Ranked,
             array_map(static fn (array $row): string => $row['label'], $rows),
-            [new ChartSeries('Patrols', array_map(static fn (array $row): float => (float) $row['count'], $rows))],
+            [new ChartSeries('Patrols', $counts)],
             unit: 'patrols',
+            axis: self::axis($counts),
+            figures: new ChartFigures(),
         );
     }
 
@@ -154,12 +185,17 @@ final readonly class PatrolDashboard
     public function effortChart(): AtlasChart
     {
         $rows = \array_slice($this->effortSeries, 0, self::EFFORT_ROWS);
+        $hours = array_map(static fn (array $row): float => $row['hours'], $rows);
 
+        // THE SAME RANKING "BY STATION" DRAWS (PL·17), the figure in hours —
+        // "128 h" — at the end of each bar.
         return new AtlasChart(
-            ChartKind::Bar,
+            ChartKind::Ranked,
             array_map(static fn (array $row): string => self::leadName($row['lead']), $rows),
-            [new ChartSeries('Patrol-hours', array_map(static fn (array $row): float => $row['hours'], $rows))],
+            [new ChartSeries('Patrol-hours', $hours)],
             unit: 'patrol-hours',
+            axis: self::axis($hours),
+            figures: new ChartFigures(unit: 'h'),
         );
     }
 

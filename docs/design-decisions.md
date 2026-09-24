@@ -285,13 +285,19 @@ testNoTemplateDrawsAVisualOfItsOwn` fails on any template that contains an
 lucide through `ux_icon()` and a chart from `atlas_chart()`; neither leaves
 markup in a template, so the rule is exact.
 
-**What was given up, deliberately.** The design draws these three as SVG: a
-horizontal ranked bar for the station and effort charts, an axis rounded up to
-the smallest covering multiple of three, and a per-bar value annotation. The
-component draws vertical bars against its own ticks and answers a hover instead.
-The rule that a module cannot invent a fifth look is worth more than three
-charts matching a drawing of them; the differences belong in the atlas if they
-are wanted, where every chart in the product would get them.
+**What the design draws, and how each is stated.** The design draws these
+three as SVG: a horizontal ranked bar for the station and effort charts with the
+figure written at each bar's end, an axis rounded up to the smallest covering
+multiple of three on all three, and a row of type chips under the weekly chart.
+Each is a statement on the `AtlasChart` now, not a drawing here: "By station"
+and "Effort" are `ChartKind::Ranked` with `ChartFigures` (bare for a count, `h`
+for hours); every one of the three carries `AxisScale::covering($largest, 3)`,
+the design's rule stated once in `PatrolDashboard::axis()`; "Per week" takes
+`ChartLegend::Chips`, the atlas drawing the type pills from the series through
+the same `data-cat` door the filter chips use. The component owns what each of
+those looks like, for every module at once.
 
-**Reopen if:** the atlas grows a horizontal bar kind or a stated axis step — then
-these three take it, and the design's shape comes back for everybody at once.
+**What still differs from the drawing.** The design plots at 209px and fades a
+ranking's bars from 0.95 to 0.47 opacity down the list; the platform's box is
+196px and a ranking's bars are one category at one weight. Both are the atlas's
+to settle, not this module's.

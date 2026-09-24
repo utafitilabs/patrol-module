@@ -14,7 +14,10 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Unit\Model;
 
 use PHPUnit\Framework\TestCase;
+use Uhifadhi\Bundle\AtlasBundle\Model\AxisScale;
+use Uhifadhi\Bundle\AtlasBundle\Model\ChartFigures;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartKind;
+use Uhifadhi\Bundle\AtlasBundle\Model\ChartLegend;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Patrol\Model\PatrolDashboard;
 
@@ -51,6 +54,10 @@ final class PatrolDashboardChartsTest extends TestCase
         self::assertSame(ChartKind::Bar, $chart->kind);
         self::assertSame(['W1', 'W2'], $chart->labels);
         self::assertSame('patrols', $chart->unit);
+        // The design's row of type chips under the plate, and no figures on
+        // the grouped bars (PL·09).
+        self::assertSame(ChartLegend::Chips, $chart->legend);
+        self::assertNull($chart->figures);
         self::assertCount(2, $chart->series);
 
         self::assertSame('walking round', $chart->series[0]->label);
@@ -90,27 +97,49 @@ final class PatrolDashboardChartsTest extends TestCase
         self::assertNull($chart->series[1]->cat);
     }
 
-    /** The five busiest stations, ranked, as one series of counts. */
-    public function testTheStationChartIsOneRankedSeries(): void
+    /** The five busiest stations, ranked sideways, the count on every bar (PL·10). */
+    public function testTheStationChartIsOneRankedSeriesWithItsFigures(): void
     {
         $chart = self::dashboard()->stationChart();
 
-        self::assertSame(ChartKind::Bar, $chart->kind);
+        self::assertSame(ChartKind::Ranked, $chart->kind);
         self::assertSame(['North post', 'South post'], $chart->labels);
         self::assertSame('patrols', $chart->unit);
         self::assertCount(1, $chart->series);
         self::assertSame([9.0, 4.0], $chart->series[0]->points);
+        self::assertEquals(new ChartFigures(), $chart->figures);
     }
 
-    /** HOURS, NOT ROWS — and the lead named the way every patrol row names one. */
-    public function testTheEffortChartIsPatrolHoursPerLead(): void
+    /** HOURS, NOT ROWS — ranked the same way, the figure in hours (PL·17). */
+    public function testTheEffortChartIsPatrolHoursPerLeadRankedWithHoursOnTheBar(): void
     {
         $chart = self::dashboard()->effortChart();
 
-        self::assertSame(ChartKind::Bar, $chart->kind);
+        self::assertSame(ChartKind::Ranked, $chart->kind);
         self::assertSame(['A. Ranger'], $chart->labels);
         self::assertSame('patrol-hours', $chart->unit);
         self::assertSame([6.5], $chart->series[0]->points);
+        self::assertEquals(new ChartFigures(unit: 'h'), $chart->figures);
+    }
+
+    /**
+     * THE THREE BAR CHARTS SHARE ONE AXIS RULE, and it is the design's: the
+     * top is the smallest multiple of three that still covers the largest
+     * bar, never less than three — so the gridlines land on whole numbers
+     * and an empty month keeps a width to measure against. "By station" and
+     * "per week" count patrols; "Effort" plots hours, whose maximum is a
+     * fraction as soon as the longest patrol is shorter than an hour.
+     */
+    public function testEveryBarChartRoundsItsAxisUpToTheSmallestCoveringMultipleOfThree(): void
+    {
+        $dashboard = self::dashboard();
+
+        self::assertEquals(new AxisScale(6.0, 2.0), $dashboard->weeklyChart(self::TYPES, self::CATEGORIES)->axis, 'five walks in W2');
+        self::assertEquals(new AxisScale(9.0, 3.0), $dashboard->stationChart()->axis, 'nine at the north post');
+        self::assertEquals(new AxisScale(9.0, 3.0), $dashboard->effortChart()->axis, 'six and a half hours');
+
+        $empty = new PatrolDashboard([], 0, 0.0, [], null, [], 0, null, [], [], [], [], [], []);
+        self::assertEquals(new AxisScale(3.0, 1.0), $empty->stationChart()->axis, 'a month with nothing to plot');
     }
 
     /** A month nobody has closed a patrol in states nothing to draw. */
