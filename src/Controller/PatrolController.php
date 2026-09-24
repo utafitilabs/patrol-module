@@ -56,6 +56,18 @@ use Uhifadhi\Patrol\Widget\PatrolWidgets;
  * Patrols is a uhifadhi module, so the bundle may depend on the host's
  * AreaOfInterest (never the reverse); the route's uuid resolves to it via
  * MapEntity.
+ *
+ * READING IS STATED AS A PAIR ON THE ROUTE, with #[IsGranted('patrols.read',
+ * subject: 'area')] — the listener resolves the subject by argument name and
+ * asks the checker with the area the route resolved. Unlike the entry flow,
+ * these read screens are registered unconditionally, so on an installation with
+ * no SecurityBundle the listener that honours the attribute is absent and the
+ * pages are open — which is what such an installation has always been, having
+ * no firewall to sign anybody in with, and is why no write of this module is
+ * registered there.
+ *
+ * @see https://symfony.com/doc/current/security.html#access-control-in-controllers
+ * @see vendor/symfony/security-http/EventListener/IsGrantedAttributeListener.php
  */
 // EVERY ROUTE BELOW BELONGS TO THIS MODULE, and says so: where an area has
 // parked Patrols, the registry closes these routes before the controller runs.

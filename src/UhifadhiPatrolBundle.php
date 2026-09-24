@@ -285,8 +285,9 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          * at all (the routes fail loudly) rather than an open write endpoint. The
          * two upload targets sit under the same guard and for the same reason: a
          * target registered where nothing can refuse would be a door with no
-         * lock. See PatrolRecordController for why the check is in code and not
-         * an #[IsGranted] attribute.
+         * lock — and the screens inside this guard state their pair with
+         * #[IsGranted], whose listener ships in symfony/security-http and is
+         * therefore only ever present here. See PatrolRecordController.
          *
          * The guard asks whether SecurityBundle is actually in the kernel, read
          * from the kernel.bundles parameter. Two other checks look right and are

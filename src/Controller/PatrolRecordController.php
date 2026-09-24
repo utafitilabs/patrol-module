@@ -23,7 +23,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
@@ -79,14 +78,21 @@ use Uhifadhi\Patrol\Upload\PatrolTrackTarget;
  * and the component draws a live upload endpoint, neither of which a reader who
  * cannot record a patrol should be handed.
  *
- * Checked in code rather than with #[IsGranted]: that attribute is honoured by a
- * listener in symfony/security-http, which this bundle does not require — a host
- * without it would get a silently UNPROTECTED recording screen. Symfony treats
- * security as an optional dependency the same way (symfony/twig-bridge lists
- * security-* under require-dev and injects a nullable AuthorizationCheckerInterface).
- * Here the service is only registered when the host has security at all, so the
- * checker is never null and the route simply does not exist otherwise — see
- * UhifadhiPatrolBundle::loadExtension().
+ * Enforced by #[IsGranted], which names the concern/verb pair on the route
+ * itself so the access test can walk every route and hold it against the
+ * declarations. The attribute is honoured by a listener in symfony/security-http
+ * — a package this bundle keeps under require-dev — so it would enforce NOTHING
+ * in a host without security; that is safe here and only here, because these
+ * services are registered exclusively inside the SecurityBundle guard, so where
+ * the listener is absent the route does not exist at all
+ * (UhifadhiPatrolBundle::loadExtension()). A screen registered OUTSIDE that
+ * guard may not rely on the attribute for the same reason.
+ *
+ * The subject is resolved by argument NAME: `subject: 'area'` is the $area the
+ * route resolved, and the listener asks the checker with it.
+ *
+ * @see https://symfony.com/doc/current/security.html#access-control-in-controllers
+ * @see vendor/symfony/security-http/EventListener/IsGrantedAttributeListener.php
  *
  * IT WRITES NO PATROL ITSELF. {@see PatrolRecordingService} is the write path
  * for the whole submission, track and observations and photographs together, and
