@@ -43,6 +43,12 @@ final class PatrolModuleProvider implements ModuleProviderInterface
         return self::SLUG;
     }
 
+    /** The one sentence the catalogue prints under the name — what the module is, for a stranger. */
+    public function description(): string
+    {
+        return 'Ranger patrols — tracks, observations and station duty.';
+    }
+
     public function name(): string
     {
         return 'Patrols';

@@ -18,6 +18,11 @@ use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 
 final class PatrolModuleProviderTest extends TestCase
 {
+    public function testItSaysWhatItIsInOneSentence(): void
+    {
+        self::assertSame('Ranger patrols — tracks, observations and station duty.', new PatrolModuleProvider('operations')->description());
+    }
+
     public function testDeclaresThePatrolsModule(): void
     {
         $provider = new PatrolModuleProvider('operations');
