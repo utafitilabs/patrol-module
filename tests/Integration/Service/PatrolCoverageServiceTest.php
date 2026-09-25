@@ -18,9 +18,9 @@ use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Service\PatrolCoverageService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -38,7 +38,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 final class PatrolCoverageServiceTest extends IntegrationTestCase
 {
-    private const float BUFFER_M = 2000.0;
+    use StoredCoverage;
+
     private const string TRACK = '{"type":"LineString","coordinates":[[-29.98,-2.95],[-29.94,-2.95]]}';
     private const string ELSEWHERE = '{"type":"LineString","coordinates":[[-29.98,-2.92],[-29.94,-2.92]]}';
 
@@ -134,12 +135,33 @@ final class PatrolCoverageServiceTest extends IntegrationTestCase
         self::assertNotSame($first, $service->bufferFor($area, $this->monthStart, $this->nextMonth, $now));
     }
 
+    /**
+     * PL·03 IS READ, NOT MEASURED: the month's share as the worker filed it,
+     * with its time — and nothing at all before the worker has run.
+     */
+    public function testTheMonthShareIsTheFiledFactAndNothingBeforeTheWorkerRuns(): void
+    {
+        $area = $this->makeArea();
+        $this->makePatrol($area, self::TRACK);
+        $service = $this->coverageService(null);
+
+        self::assertNull($service->monthShare($area, $this->monthStart));
+
+        $this->fileFacts($this->monthStart);
+        $area = $this->em->find(AreaOfInterest::class, $area->getId());
+        self::assertInstanceOf(AreaOfInterest::class, $area);
+        $share = $service->monthShare($area, $this->monthStart);
+
+        self::assertNotNull($share);
+        self::assertTrue($share->isKnown());
+        // A 4 km band across 0.04° of an 11 km square, clipped: a share in points.
+        self::assertGreaterThan(5.0, (float) $share->value);
+        self::assertLessThan(40.0, (float) $share->value);
+    }
+
     private function coverageService(?ArrayAdapter $cache): PatrolCoverageService
     {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
-
-        return new PatrolCoverageService($repository, self::BUFFER_M, $cache);
+        return new PatrolCoverageService($this->corridors(), $this->facts(), $cache);
     }
 
     private function makeArea(): AreaOfInterest
@@ -152,13 +174,15 @@ final class PatrolCoverageServiceTest extends IntegrationTestCase
         return $area;
     }
 
+    /** A complete patrol, buffered as the worker buffers it when it settles. */
     private function makePatrol(AreaOfInterest $area, string $track): void
     {
-        $this->em->persist(new Patrol($area, Vocabulary::type($this->em, $area, 'walk'))
+        $this->em->persist($patrol = new Patrol($area, Vocabulary::type($this->em, $area, 'walk'))
             ->setSource(PatrolSourceEnum::Gpx)
             ->setStartedAt(new \DateTimeImmutable('2026-03-10T06:00:00Z'))
             ->setStatus(PatrolStatusEnum::Complete)
             ->setTrack($track));
         $this->em->flush();
+        self::assertTrue($this->bufferPatrol($patrol));
     }
 }

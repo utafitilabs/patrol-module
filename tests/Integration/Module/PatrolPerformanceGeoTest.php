@@ -31,6 +31,7 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Service\PatrolFigureService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\CollectedGeoProviders;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -46,6 +47,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 final class PatrolPerformanceGeoTest extends IntegrationTestCase
 {
+    use StoredCoverage;
+
     private const string WALKED = 'Walked reserve';
     private const string QUIET = 'Quiet reserve';
     private const string OUTSIDE = 'Unserved reserve';
@@ -282,7 +285,12 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
         $areaModules = static::getContainer()->get('test_public.'.AreaModuleService::class);
         \assert($areaModules instanceof AreaModuleService);
 
-        return new PatrolPerformanceGeo($this->em, $areaModules, new PatrolFigureService($repository), 'patrols', 'Patrols');
+        // What the worker would have done by now: the patrols buffered, and the
+        // month's zone facts filed.
+        $this->em->flush();
+        $this->fileFacts(self::period()->from);
+
+        return new PatrolPerformanceGeo($this->em, $areaModules, new PatrolFigureService($repository, $this->corridors(), $this->facts()), 'patrols', 'Patrols');
     }
 
     /** @param list<GeoSeries> $series */

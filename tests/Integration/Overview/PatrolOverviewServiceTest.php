@@ -181,11 +181,12 @@ final class PatrolOverviewServiceTest extends PatrolOverviewTestCase
         $this->makeZone('South', -3.0, -2.95);
         $this->makePatrol('a', 'walk', '2026-03-19T06:00:00+00:00', '2026-03-19T09:00:00+00:00')
             ->setTrack('{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
-        $this->em->flush();
+        $this->runWorker();
 
         $gaps = $this->overview()->gaps($this->area, $this->now());
 
         self::assertSame('South', $gaps['zones'][0]['zone']);
+        self::assertTrue($gaps['zones'][0]['never']);
         self::assertNull($gaps['zones'][0]['daysSince']);
         self::assertSame('North', $gaps['zones'][1]['zone']);
         self::assertSame(2, $gaps['zones'][1]['daysSince']);
@@ -199,11 +200,52 @@ final class PatrolOverviewServiceTest extends PatrolOverviewTestCase
         // "still today" for another eight hours.
         $this->makePatrol('a', 'walk', '2026-03-20T23:50:00+00:00', '2026-03-21T00:30:00+00:00')
             ->setTrack('{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
-        $this->em->flush();
+        $this->runWorker();
 
         $gaps = $this->overview()->gaps($this->area, $this->now());
 
         self::assertSame(1, $gaps['zones'][0]['daysSince']);
+    }
+
+    /**
+     * BEFORE THE WORKER HAS RUN a zone is neither a gap nor patrolled: it is
+     * not computed yet, sorts after every measured zone, and claims no date.
+     */
+    public function testAZoneTheWorkerHasNotMeasuredIsNotComputedAndSortsLast(): void
+    {
+        $this->makeZone('North', -2.95, -2.9);
+        $this->makeZone('South', -3.0, -2.95);
+        $this->makePatrol('a', 'walk', '2026-03-19T06:00:00+00:00', '2026-03-19T09:00:00+00:00')
+            ->setTrack('{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
+        $this->em->flush();
+
+        $gaps = $this->overview()->gaps($this->area, $this->now());
+
+        foreach ($gaps['zones'] as $zone) {
+            self::assertFalse($zone['computed']);
+            self::assertFalse($zone['never']);
+            self::assertNull($zone['daysSince']);
+            self::assertNull($zone['coverageFraction']);
+        }
+        self::assertNull($gaps['asOf']);
+        self::assertNull($gaps['areaCoverageFraction']);
+    }
+
+    /** The area's share and the zones' come from the same run, and the card says when. */
+    public function testTheWorkersRunGivesTheAreaShareAndTheStamp(): void
+    {
+        $this->makeZone('North', -2.95, -2.9);
+        $this->makePatrol('a', 'walk', '2026-03-19T06:00:00+00:00', '2026-03-19T09:00:00+00:00')
+            ->setTrack('{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
+        $this->runWorker();
+
+        $gaps = $this->overview()->gaps($this->area, $this->now());
+
+        self::assertNotNull($gaps['asOf']);
+        self::assertNotNull($gaps['areaCoverageFraction']);
+        self::assertGreaterThan(0.0, $gaps['areaCoverageFraction']);
+        self::assertLessThan(1.0, $gaps['areaCoverageFraction']);
+        self::assertNotNull($gaps['zones'][0]['coverageFraction']);
     }
 
     public function testAnAreaWithNoZonesMeasuresNoAbsence(): void

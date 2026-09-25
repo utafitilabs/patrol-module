@@ -26,6 +26,7 @@ use Uhifadhi\Patrol\Entity\TaxonomyKind;
 use Uhifadhi\Patrol\Entity\TaxonomySubcategory;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\FixedRecordVoter;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 
 /**
  * The patrols widget dashboard: the KPI strip, the coverage map payload, the
@@ -38,6 +39,7 @@ final class DashboardPageTest extends WebTestCase
 {
     use EveryAreaRunsPatrols;
     use SomebodyIsSignedIn;
+    use StoredCoverage;
 
     private KernelBrowser $client;
     private EntityManagerInterface $em;
@@ -123,6 +125,9 @@ final class DashboardPageTest extends WebTestCase
 
     public function testTheDashboardRendersEveryWidgetFromRealRows(): void
     {
+        // The worker has run: the month's coverage is filed on the ledger.
+        $this->fileFacts(new \DateTimeImmutable());
+
         $crawler = $this->client->request('GET', '/areas/'.$this->area->getUuidString().'/modules/patrols');
 
         self::assertResponseIsSuccessful();
@@ -156,7 +161,7 @@ final class DashboardPageTest extends WebTestCase
         self::assertSelectorTextContains('[data-kpi="month"] .kpi span', '2 walking round');
         self::assertSelectorTextContains('[data-kpi="distance"] .kpi b', '85');
         self::assertSelectorTextContains('[data-kpi="coverage"] .kpi b', '9%');
-        self::assertSelectorTextContains('[data-kpi="coverage"] .kpi span', 'of area within 2 km of a track');
+        self::assertSelectorTextContains('[data-kpi="coverage"] .kpi span', 'of area within 2 km of a track · as of');
         self::assertSelectorTextContains('[data-kpi="last"] .kpi span', $this->boat->getRef());
 
         // Filter chips: one per configured type, each with its live count.
@@ -461,6 +466,19 @@ final class DashboardPageTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('[data-kpi="coverage"] .kpi b', '—');
         self::assertSelectorTextContains('[data-kpi="coverage"] .kpi span', 'of area within 2 km of a track');
+    }
+
+    /**
+     * BEFORE THE WORKER HAS RUN the coverage KPI claims nothing — not 0 %, an
+     * em dash — and its caption says when the figure comes.
+     */
+    public function testBeforeTheWorkerHasRunTheCoverageKpiSaysNotComputedYet(): void
+    {
+        $this->client->request('GET', '/areas/'.$this->area->getUuidString().'/modules/patrols');
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('[data-kpi="coverage"] .kpi b', '—');
+        self::assertSelectorTextContains('[data-kpi="coverage"] .kpi span', 'of area within 2 km of a track · not computed yet · runs hourly');
     }
 
     /**

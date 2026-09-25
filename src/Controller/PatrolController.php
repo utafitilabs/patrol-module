@@ -149,15 +149,10 @@ final class PatrolController
             $patrols,
             $types,
             $now,
-            // PL·03 is the one month figure the loaded rows cannot answer: it is
-            // a PostGIS set operation over the month's tracks, asked for exactly
-            // the window the service counts in.
-            $this->patrols->coverageFractionWithin(
-                $area,
-                PatrolDashboardService::COVERAGE_BUFFER_M,
-                $monthStart,
-                $nextMonth,
-            ),
+            // PL·03 is the one month figure the loaded rows cannot answer: a set
+            // operation over the month's tracks, which the worker files on the
+            // facts ledger — read here for exactly the month the service counts in.
+            $this->coverage->monthShare($area, $monthStart),
             $filter,
             // The ZONE each patrol set out in — a live PostGIS spatial join
             // against the host's zone polygons, over exactly the month's rows.

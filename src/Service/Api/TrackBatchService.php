@@ -22,6 +22,7 @@ use Uhifadhi\Patrol\Entity\TrackBatch;
 use Uhifadhi\Patrol\Entity\TrackPoint;
 use Uhifadhi\Patrol\Repository\TrackBatchRepository;
 use Uhifadhi\Patrol\Service\GeoService;
+use Uhifadhi\Patrol\Service\PatrolCorridorQueue;
 
 /**
  * `POST /api/patrols/{uuid}/track` — API-CONTRACT.md §5.
@@ -45,6 +46,7 @@ final class TrackBatchService
         private readonly TrackBatchRepository $batches,
         private readonly GeoService $geo,
         private readonly float $gapThresholdMinutes,
+        private readonly PatrolCorridorQueue $corridors,
     ) {
     }
 
@@ -114,6 +116,10 @@ final class TrackBatchService
 
         $this->rebuildRoute($patrol);
         $this->entityManager->flush();
+
+        // A batch that lands after the patrol completed changes a track that
+        // may already be buffered; the worker buffers it again.
+        $this->corridors->settled($patrol);
 
         return [[$batchKey], false];
     }

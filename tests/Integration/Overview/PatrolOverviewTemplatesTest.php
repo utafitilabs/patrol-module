@@ -187,6 +187,7 @@ final class PatrolOverviewTemplatesTest extends PatrolOverviewTestCase
     public function testTheGapsTableIsWorstFirstAndNamesTheTrackThatEntered(): void
     {
         $this->busyMorning();
+        $this->runWorker();
 
         $html = $this->render('pl_gaps');
 
@@ -199,6 +200,23 @@ final class PatrolOverviewTemplatesTest extends PatrolOverviewTestCase
         self::assertStringContainsString('no track has entered it', $html);
         self::assertStringContainsString($this->patrols['lake']->getRef(), $html);
         self::assertStringContainsString('Area within 2 km of a track, this month', $html);
+    }
+
+    /**
+     * BEFORE THE WORKER HAS RUN, every zone reads "not computed yet · runs
+     * hourly" — no date, no gap, no share, and never a false 0 % — and the
+     * caption line says the same of the area's figure.
+     */
+    public function testTheGapsTableBeforeTheWorkerHasRunSaysNotComputedYet(): void
+    {
+        $this->busyMorning();
+
+        $html = $this->render('pl_gaps');
+
+        self::assertSame(2, substr_count($html, 'not computed yet · runs hourly'));
+        self::assertStringNotContainsString('<span class="chip fail">never</span>', $html);
+        self::assertStringNotContainsString('0 %', $html);
+        self::assertStringContainsString('Area within 2 km of a track, this month · <span class="muted">not computed yet</span><span class="muted"> · runs hourly</span>', $html);
     }
 
     public function testAnAreaWithNoZonesSaysSoRatherThanShowingAnEmptyTable(): void

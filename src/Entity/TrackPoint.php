@@ -33,7 +33,7 @@ use Uhifadhi\Patrol\Repository\TrackPointRepository;
 #[ORM\Entity(repositoryClass: TrackPointRepository::class)]
 #[ORM\Table(name: 'patrol_track_point')]
 // fields, not columns: the HOST owns the naming strategy, so the column
-// names are not knowable here (see PatrolRepository::coverageFractionWithin
+// names are not knowable here (see PatrolRepository::zoneEntriesBetween
 // for the same reason spelled out at length).
 #[ORM\Index(name: 'idx_patrol_track_point_patrol_time', fields: ['patrol', 'recordedAt'])]
 class TrackPoint

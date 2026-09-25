@@ -17,6 +17,7 @@ use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Overview\MapLayer;
 use Uhifadhi\Bundle\AreaBundle\Overview\MapLayerProviderInterface;
 use Uhifadhi\Contracts\Atlas\PlatePalette;
+use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
@@ -58,6 +59,7 @@ final readonly class PatrolMapLayers implements MapLayerProviderInterface
         // THE AREA'S OWN WORDS — the same list the module's own map is drawn
         // from, so a track is the same colour on both.
         private PatrolTypeRepository $types,
+        private PatrolCorridorRepository $corridors,
     ) {
     }
 
@@ -197,7 +199,7 @@ final readonly class PatrolMapLayers implements MapLayerProviderInterface
     private function buffer(AreaOfInterest $area, \DateTimeImmutable $now, string $accent): MapLayer
     {
         [$monthStart, $nextMonth] = PatrolDashboardService::monthRange($now);
-        $geometry = $this->patrols->coverageBufferGeoJson($area, PatrolDashboardService::COVERAGE_BUFFER_M, $monthStart, $nextMonth);
+        $geometry = $this->corridors->coveredGeoJson($area, $monthStart, $nextMonth);
 
         return new MapLayer(
             'patrols.buffer',

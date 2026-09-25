@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Service;
 
 use Uhifadhi\Contracts\Atlas\PlatePalette;
+use Uhifadhi\Contracts\Facts\Fact;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Model\PatrolDashboard;
 use Uhifadhi\Patrol\Model\PatrolFilter;
@@ -70,10 +71,10 @@ final class PatrolDashboardService
      * count, PL·02's distance sum, PL·03's coverage and the station ranking).
      *
      * Public because the coverage KPI is the one month figure that CANNOT be
-     * computed from the loaded entities — it is a PostGIS set operation
-     * ({@see \Uhifadhi\Patrol\Repository\PatrolRepository::coverageFractionWithin()}) —
-     * so its caller must ask the database for exactly the window this service
-     * counts in. Decided here, in the one place that defines "this month", never
+     * computed from the loaded entities — it is a set operation the worker
+     * files on the facts ledger per month
+     * ({@see \Uhifadhi\Patrol\Facts\PatrolFactProvider::AREA_COVERAGE_UNIFORM}) —
+     * so its caller must read exactly the month this service counts in. Decided here, in the one place that defines "this month", never
      * re-derived at the call site.
      *
      * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable} [from, untilExclusive]
@@ -299,13 +300,13 @@ final class PatrolDashboardService
     }
 
     /**
-     * @param list<Patrol>                        $patrols          latest first, the LOAD window ({@see self::loadRange()})
-     * @param array<string, array{label: string}> $types            the deployment's patrol.types map
-     * @param float|null                          $coverageFraction PL·03, queried by the caller for the month on screen (see {@see self::monthRange()}); null where it is unknown
-     * @param PatrolFilter|null                   $filter           the one filter the whole screen reads — type, station, zone and month; null is the month containing $now, narrowed by nothing
-     * @param array<string, string>               $patrolZones      patrol uuid → zone name (the live spatial join); the ZONE filter's menu and its predicate
+     * @param list<Patrol>                        $patrols     latest first, the LOAD window ({@see self::loadRange()})
+     * @param array<string, array{label: string}> $types       the deployment's patrol.types map
+     * @param Fact|null                           $coverage    PL·03, read by the caller from the facts ledger for the month on screen (see {@see self::monthRange()}); null where the worker has not computed it yet
+     * @param PatrolFilter|null                   $filter      the one filter the whole screen reads — type, station, zone and month; null is the month containing $now, narrowed by nothing
+     * @param array<string, string>               $patrolZones patrol uuid → zone name (the live spatial join); the ZONE filter's menu and its predicate
      */
-    public function build(array $patrols, array $types, \DateTimeImmutable $now, ?float $coverageFraction = null, ?PatrolFilter $filter = null, array $patrolZones = []): PatrolDashboard
+    public function build(array $patrols, array $types, \DateTimeImmutable $now, ?Fact $coverage = null, ?PatrolFilter $filter = null, array $patrolZones = []): PatrolDashboard
     {
         $filter ??= new PatrolFilter($now->modify('first day of this month')->setTime(0, 0));
 
@@ -437,7 +438,7 @@ final class PatrolDashboardService
             monthCount: $monthCount,
             monthDistanceKm: $monthDistanceKm,
             monthTypeCounts: $monthTypeCounts,
-            coverageFraction: $coverageFraction,
+            coverage: $coverage,
             typeCounts: $typeCounts,
             totalCount: $totalCount,
             lastPatrol: $lastPatrol,

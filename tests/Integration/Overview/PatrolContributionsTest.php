@@ -315,7 +315,7 @@ final class PatrolContributionsTest extends PatrolOverviewTestCase
             ->setTrack('{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
         $this->makePatrol('b', 'walk', '2026-03-01T06:00:00+00:00', '2026-03-01T09:00:00+00:00')
             ->setTrack('{"type":"LineString","coordinates":[[-30.0,-2.98],[-29.9,-2.98]]}');
-        $this->em->flush();
+        $this->runWorker();
 
         $items = $this->attention();
         $byZone = [];
@@ -327,6 +327,14 @@ final class PatrolContributionsTest extends PatrolOverviewTestCase
         self::assertSame('8 d', $byZone['North']->ageLabel);
         self::assertSame(AttentionSeverity::Now, $byZone['South']->severity);
         self::assertSame('coverage gap', $byZone['South']->kind);
+    }
+
+    /** Nothing is known about a zone the worker has not measured, so nothing is raised. */
+    public function testAZoneTheWorkerHasNotMeasuredRaisesNothing(): void
+    {
+        $this->makeZone('North', -2.95, -2.9);
+
+        self::assertSame([], $this->attention());
     }
 
     public function testAZoneBeingPatrolledIsNotOnTheList(): void
@@ -344,6 +352,7 @@ final class PatrolContributionsTest extends PatrolOverviewTestCase
     public function testAZoneNoTrackEverEnteredSaysNeverAndSortsAsTheOldest(): void
     {
         $this->makeZone('North', -2.95, -2.9);
+        $this->runWorker();
 
         $item = $this->attention()[0];
 

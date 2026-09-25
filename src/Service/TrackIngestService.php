@@ -36,6 +36,7 @@ final class TrackIngestService
         private readonly GpxParser $parser,
         private readonly EntityManagerInterface $em,
         private readonly float $gapThresholdMinutes,
+        private readonly PatrolCorridorQueue $corridors,
     ) {
     }
 
@@ -77,6 +78,9 @@ final class TrackIngestService
 
         $this->em->persist($patrol);
         $this->em->flush();
+
+        // The worker buffers the track; this request only says so.
+        $this->corridors->settled($patrol);
 
         return $patrol;
     }

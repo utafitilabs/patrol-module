@@ -16,20 +16,25 @@ namespace Uhifadhi\Patrol\Service;
 use Psr\Cache\CacheItemInterface;
 use Symfony\Contracts\Cache\CacheInterface;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
+use Uhifadhi\Contracts\Facts\Fact;
+use Uhifadhi\Contracts\Facts\FactPeriod;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
+use Uhifadhi\Contracts\Facts\FactSubject;
+use Uhifadhi\Patrol\Facts\PatrolFactProvider;
+use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 
 /**
  * THE GROUND A MONTH'S ROUTES COVERED, HELD FOR THE DAY.
  *
- * PL·03 states the share of the area within {@see PatrolDashboardService::COVERAGE_BUFFER_M}
- * of a track; the coverage plate draws that same set operation as a shape. It is
- * genuine work — a month of dense traces buffered, unioned, clipped to the
- * boundary and simplified — and it is asked for on every load of the dashboard
- * and of the widget library.
+ * The coverage plate draws the ground the month's complete patrols covered, each
+ * at its type's own width: the stored corridors
+ * ({@see \Uhifadhi\Patrol\Entity\PatrolCorridor}) unioned, clipped to the
+ * boundary and simplified. No track is buffered here — the worker did that once
+ * — but a union of a month of corridors is still work, and it is asked for on
+ * every load of the dashboard and of the widget library.
  *
- * WHY IT IS CACHED, AND WHY BY THE DAY. It answers in roughly 145 ms on a
- * seeded month of 142 traces, which is a visible share of a page load for a
- * figure that changes only when a new track arrives. Held per AREA, per MONTH
+ * WHY IT IS CACHED, AND WHY BY THE DAY. A month's union is a visible share of
+ * a page load for a shape that changes only when a new track arrives. Held per AREA, per MONTH
  * and per DAY, so the key rolls at midnight and a shape can never outlive the
  * day it was measured on — a track synced this afternoon is on the plate
  * tomorrow morning at the latest, and the KPI beside it moves with it.
@@ -57,8 +62,8 @@ final readonly class PatrolCoverageService
     private const int TTL_SECONDS = 86400;
 
     public function __construct(
-        private PatrolRepository $patrols,
-        private float $bufferMetres,
+        private PatrolCorridorRepository $corridors,
+        private FactReaderInterface $facts,
         private ?CacheInterface $cache = null,
     ) {
     }
@@ -78,12 +83,7 @@ final readonly class PatrolCoverageService
         \DateTimeImmutable $nextMonth,
         \DateTimeImmutable $now,
     ): ?string {
-        $measure = fn (): ?string => $this->patrols->coverageBufferGeoJson(
-            $area,
-            $this->bufferMetres,
-            $monthStart,
-            $nextMonth,
-        );
+        $measure = fn (): ?string => $this->corridors->coveredGeoJson($area, $monthStart, $nextMonth);
 
         $key = self::key($area, $monthStart, $now);
         if (null === $this->cache || null === $key) {
@@ -101,6 +101,21 @@ final readonly class PatrolCoverageService
         );
 
         return $covered;
+    }
+
+    /**
+     * PL·03 FOR ONE MONTH, AS THE WORKER FILED IT — the share of the area
+     * within the module's one width of a complete track, in points, with the
+     * time it is true as of. Null where the worker has not computed the month
+     * yet; a fact with no value where there was nothing to measure.
+     *
+     * A read of one ledger row: the union behind it was the worker's.
+     */
+    public function monthShare(AreaOfInterest $area, \DateTimeImmutable $monthStart): ?Fact
+    {
+        $uuid = $area->getUuidString();
+
+        return null === $uuid ? null : $this->facts->latest(FactSubject::AREA, $uuid, PatrolFactProvider::AREA_COVERAGE_UNIFORM, FactPeriod::month($monthStart)->key);
     }
 
     /**

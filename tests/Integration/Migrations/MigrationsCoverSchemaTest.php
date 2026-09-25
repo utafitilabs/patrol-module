@@ -50,6 +50,7 @@ final class MigrationsCoverSchemaTest extends MigrationsTestCase
         'patrol_launch_point',
         'patrol_flight',
         'patrol_settings',
+        'patrol_corridor',
     ];
 
     public function testMigrateBuildsEveryTableThisModuleOwns(): void

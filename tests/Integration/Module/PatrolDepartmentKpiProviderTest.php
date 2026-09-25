@@ -28,6 +28,7 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
 use Uhifadhi\Patrol\Service\PatrolFigureService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -37,6 +38,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
 {
+    use StoredCoverage;
+
     private const string NOW = '2026-08-20 09:00:00';
 
     public function testEveryPatrolInTheAreaCountsWhicheverDepartmentItsLeadIsSeatedIn(): void
@@ -122,9 +125,7 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
 
         $coverage = self::kpi($this->provider()->kpisFor(self::ref($world['ecology']), self::now()), 'coverage');
 
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
-        $rolledUp = $repository->coverageFractionAcrossAreas(PatrolDashboardService::COVERAGE_BUFFER_M, ...PatrolDashboardService::monthRange(self::now()));
+        $rolledUp = $this->corridors()->fractionAcrossAreas(...PatrolDashboardService::monthRange(self::now()));
 
         self::assertNotNull($rolledUp);
         self::assertNotNull($coverage->value);
@@ -392,14 +393,10 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
     /** The area's own PL·03, straight from the repository. */
     private function areaWideCoverage(AreaOfInterest $area): ?float
     {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
+        $this->em->flush();
+        $this->bufferCorridors();
 
-        return $repository->coverageFractionWithin(
-            $area,
-            PatrolDashboardService::COVERAGE_BUFFER_M,
-            ...PatrolDashboardService::monthRange(self::now()),
-        );
+        return $this->corridors()->fractionWithin($area, ...PatrolDashboardService::monthRange(self::now()));
     }
 
     private function provider(): PatrolDepartmentKpiProvider
@@ -407,7 +404,11 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
         $repository = $this->em->getRepository(Patrol::class);
         \assert($repository instanceof PatrolRepository);
 
-        return new PatrolDepartmentKpiProvider(new PatrolFigureService($repository), $this->em, 'patrols', 'Patrols');
+        // The patrols buffered, as the worker would have by now.
+        $this->em->flush();
+        $this->bufferCorridors();
+
+        return new PatrolDepartmentKpiProvider(new PatrolFigureService($repository, $this->corridors(), $this->facts()), $this->em, 'patrols', 'Patrols');
     }
 
     private function department(string $name): Department

@@ -15,20 +15,23 @@
             <span>this month · from GPX</span>
         </div>
     </div>
-    {# PL·03 — the share of the area within 2 km of a track recorded this month
-       (PostGIS: buffer the month's tracks, union, clip to the boundary), stated
-       as the design's whole percent. Null is the empty state, not 0 %: an area
-       with no boundary, or a month whose patrols were all hand-logged, has
-       nothing to measure — see PatrolRepository::coverageFractionWithin(). #}
+    {# PL·03 — the share of the area within 2 km of a track recorded this month,
+       as the worker filed it on the facts ledger (the month's stored corridors,
+       unioned and clipped to the boundary), stated as the design's whole
+       percent, with the time it is true as of on the caption line. A fact with
+       no value is the em dash, not 0 %: an area with no boundary, or a month
+       whose patrols were all hand-logged, has nothing to measure. No fact at
+       all is the worker not having run yet, and the caption says so. #}
+    {% set coverage = dashboard.coverage %}
     <div class="c" data-kpi="coverage">
         <span class="tab">Coverage<span class="src">· 2 km buffer</span></span>
         <div class="kpi">
-            {% if dashboard.coverageFraction is not null %}
-                <b>{{ (dashboard.coverageFraction * 100)|round }}<em>%</em></b>
+            {% if coverage and coverage.known %}
+                <b>{{ coverage.value|round }}<em>%</em></b>
             {% else %}
                 <b>—</b>
             {% endif %}
-            <span>of area within 2 km of a track</span>
+            <span>of area within 2 km of a track{{ include('@UhifadhiPatrol/_as_of.html.twig', {fact: coverage}, with_context = false) }}</span>
         </div>
     </div>
     <div class="c" data-kpi="last">

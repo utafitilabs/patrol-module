@@ -131,14 +131,9 @@ final class PatrolWidgetsController
             $this->patrols->findByAreaLatestFirst($area),
             $types = $this->types->findVocabularyByArea($area),
             $now,
-            // The library previews the REAL KPI strip, so PL·03 is queried here
-            // exactly as the dashboard queries it.
-            $this->patrols->coverageFractionWithin(
-                $area,
-                PatrolDashboardService::COVERAGE_BUFFER_M,
-                $monthStart,
-                $nextMonth,
-            ),
+            // The library previews the REAL KPI strip, so PL·03 is read here
+            // exactly as the dashboard reads it.
+            $this->coverage->monthShare($area, $monthStart),
             $filter,
             $patrolZones,
         );

@@ -15,14 +15,16 @@ namespace Uhifadhi\Patrol\Tests\Integration\Repository;
 
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Patrol\Entity\Patrol;
+use Uhifadhi\Patrol\Entity\PatrolType;
 use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
  * PL·03 "Coverage · 2 km buffer" against real PostGIS: the share of the area's
- * surface lying within 2 km of any track recorded this month.
+ * surface lying within 2 km of any track recorded this month, read from the
+ * STORED CORRIDORS — each complete patrol's track buffered once, then unioned.
  *
  * The fixture area is a ~0.1° square straddling the equator-ish latitude −3,
  * so its geodesic extent is roughly 11.1 km × 11.1 km ≈ 123 km². A track drawn
@@ -31,10 +33,9 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  * hand-computable figure, not a golden number: the point is that the query
  * measures on the spheroid (buffering in geography metres), not in degrees.
  */
-final class PatrolRepositoryCoverageTest extends IntegrationTestCase
+final class PatrolCorridorCoverageTest extends IntegrationTestCase
 {
-    /** The design's buffer: "% of area within 2 km of a track". */
-    private const float BUFFER_M = 2000.0;
+    use StoredCoverage;
 
     private \DateTimeImmutable $monthStart;
     private \DateTimeImmutable $nextMonth;
@@ -45,14 +46,6 @@ final class PatrolRepositoryCoverageTest extends IntegrationTestCase
 
         $this->monthStart = new \DateTimeImmutable('2026-03-01T00:00:00Z');
         $this->nextMonth = new \DateTimeImmutable('2026-04-01T00:00:00Z');
-    }
-
-    private function repository(): PatrolRepository
-    {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
-
-        return $repository;
     }
 
     /** A ~11.1 km square: lon −30.0 to −29.9, lat −3.0 to −2.9. */
@@ -82,7 +75,9 @@ final class PatrolRepositoryCoverageTest extends IntegrationTestCase
 
     private function coverage(AreaOfInterest $area): ?float
     {
-        return $this->repository()->coverageFractionWithin($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
+        $this->bufferCorridors();
+
+        return $this->corridors()->fractionWithin($area, $this->monthStart, $this->nextMonth);
     }
 
     /**
@@ -105,17 +100,24 @@ final class PatrolRepositoryCoverageTest extends IntegrationTestCase
         $patrol->setPatrolType($narrow);
         $this->em->flush();
 
-        $tight = $this->repository()->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth, false);
+        $this->bufferCorridors();
+        $tight = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth, false);
         self::assertIsString($tight);
 
         // The same track with no width of its own is buffered by the module's own
         // distance, which is more than thirteen times as wide — so the two shapes
-        // cannot be confused for one another.
+        // cannot be confused for one another. (Buffering cleared the entity
+        // manager, as a batch does, so the type is read again.)
+        $narrow = $this->em->find(PatrolType::class, $narrow->getId());
+        self::assertInstanceOf(PatrolType::class, $narrow);
         $narrow->setCoverageBufferM(null);
         $this->em->flush();
         $this->em->clear();
 
-        $wide = $this->repository()->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth, false);
+        // The corridor buffered at 150 m is STALE now, and the rebuild finds it
+        // by the width stored beside it.
+        self::assertSame(1, $this->corridorService()->catchUp());
+        $wide = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth, false);
         self::assertIsString($wide);
         self::assertNotSame($tight, $wide);
         self::assertGreaterThan(
@@ -123,6 +125,14 @@ final class PatrolRepositoryCoverageTest extends IntegrationTestCase
             $this->areaOf($wide),
             'the module\'s 2 km buffer covers many times the ground a 150 m one does',
         );
+    }
+
+    private function corridorService(): \Uhifadhi\Patrol\Service\PatrolCorridorService
+    {
+        $service = static::getContainer()->get('test_public.'.\Uhifadhi\Patrol\Service\PatrolCorridorService::class);
+        \assert($service instanceof \Uhifadhi\Patrol\Service\PatrolCorridorService);
+
+        return $service;
     }
 
     /** The square degrees a GeoJSON polygon covers — enough to tell two apart. */
@@ -228,7 +238,7 @@ final class PatrolRepositoryCoverageTest extends IntegrationTestCase
      *
      * The coverage query answers null for one: a track can be recorded there,
      * but with no boundary there is nothing for that track to be a share OF. The
-     * `a.geom IS NOT NULL` branch in {@see PatrolRepository::coverageFractionWithin()}
+     * `a.geom IS NOT NULL` branch in {@see \Uhifadhi\Patrol\Repository\PatrolCorridorRepository::fractionWithin()}
      * is the honest one, and this proves it fires — a real COMPLETE track across
      * where the boundary would be still measures null, not zero and not an error.
      */

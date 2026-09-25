@@ -22,10 +22,10 @@ use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\FixedRecordVoter;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 
 /**
  * A PATROL THAT IS STILL RECORDING IS NOT A RECORD YET — asserted on every
@@ -52,6 +52,7 @@ final class RecordingExclusionTest extends WebTestCase
 {
     use EveryAreaRunsPatrols;
     use SomebodyIsSignedIn;
+    use StoredCoverage;
 
     private KernelBrowser $client;
     private EntityManagerInterface $em;
@@ -170,22 +171,22 @@ final class RecordingExclusionTest extends WebTestCase
 
     /**
      * THE COVERAGE SHARE, in SQL. The two tracks are deliberately different
-     * lines, so a query that buffered both would return a bigger share than one
-     * that buffered the arrived one alone.
+     * lines, and BOTH are given a stored corridor, so a union that counted both
+     * would return a bigger share than one that counted the arrived one alone.
      */
-    public function testTheCoverageShareBuffersOnlyArrivedTracks(): void
+    public function testTheCoverageShareCountsOnlyArrivedTracks(): void
     {
-        /** @var PatrolRepository $patrols */
-        $patrols = static::getContainer()->get(PatrolRepository::class);
         [$from, $until] = PatrolDashboardService::monthRange(new \DateTimeImmutable());
+        self::assertTrue($this->bufferPatrol($this->arrived));
+        self::assertTrue($this->bufferPatrol($this->recording));
 
-        $withRecording = $patrols->coverageFractionWithin($this->area, PatrolDashboardService::COVERAGE_BUFFER_M, $from, $until);
+        $withRecording = $this->corridors()->fractionWithin($this->area, $from, $until);
 
         // Now the same query with the unfinished patrol gone from the table
         // altogether: if the share is unchanged, it was never counted.
         $this->em->remove($this->recording);
         $this->em->flush();
-        $withoutRecording = $patrols->coverageFractionWithin($this->area, PatrolDashboardService::COVERAGE_BUFFER_M, $from, $until);
+        $withoutRecording = $this->corridors()->fractionWithin($this->area, $from, $until);
 
         self::assertNotNull($withRecording);
         self::assertNotNull($withoutRecording);

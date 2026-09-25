@@ -17,21 +17,20 @@ use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
- * PL·03 ROLLED UP ACROSS EVERY AREA, against real PostGIS: the ground covered in the areas that
- * recorded a track, over those areas' boundaries added together.
+ * PL·03 ROLLED UP ACROSS EVERY AREA, against real PostGIS: the ground the stored corridors cover in
+ * the areas that recorded a track, over those areas' boundaries added together.
  *
  * The fixture squares are the ~11.1 km × 11.1 km ≈ 123 km² square the area-wide test uses, so a
  * track straight across one sweeps a 4 km band ≈ 44 km² — about a third of it.
  */
-final class PatrolRepositoryRollUpCoverageTest extends IntegrationTestCase
+final class PatrolCorridorRollUpCoverageTest extends IntegrationTestCase
 {
-    /** The design's buffer: "% of area within 2 km of a track". */
-    private const float BUFFER_M = 2000.0;
+    use StoredCoverage;
 
     private \DateTimeImmutable $monthStart;
     private \DateTimeImmutable $nextMonth;
@@ -125,22 +124,18 @@ final class PatrolRepositoryRollUpCoverageTest extends IntegrationTestCase
         self::assertNull($this->rollUp());
     }
 
-    private function repository(): PatrolRepository
-    {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
-
-        return $repository;
-    }
-
     private function rollUp(): ?float
     {
-        return $this->repository()->coverageFractionAcrossAreas(self::BUFFER_M, $this->monthStart, $this->nextMonth);
+        $this->bufferCorridors();
+
+        return $this->corridors()->fractionAcrossAreas($this->monthStart, $this->nextMonth);
     }
 
     private function areaCoverage(AreaOfInterest $area): ?float
     {
-        return $this->repository()->coverageFractionWithin($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
+        $this->bufferCorridors();
+
+        return $this->corridors()->fractionWithin($area, $this->monthStart, $this->nextMonth);
     }
 
     /** A ~11.1 km square: 0.1° wide from $lonWest, lat −3.0 to −2.9. */

@@ -18,6 +18,7 @@ use Uhifadhi\Patrol\Api\PatrolApiException;
 use Uhifadhi\Patrol\Api\Payload;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
+use Uhifadhi\Patrol\Service\PatrolCorridorQueue;
 
 /**
  * `POST /api/patrols/{uuid}/complete` — API-CONTRACT.md §9.
@@ -36,6 +37,7 @@ final class PatrolCompletionService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly PatrolCorridorQueue $corridors,
     ) {
     }
 
@@ -76,6 +78,11 @@ final class PatrolCompletionService
 
         $patrol->setStatus(PatrolStatusEnum::Complete);
         $this->entityManager->flush();
+
+        // THE COMPLETION IS THE EVENT, recorded now. Buffering the track grows
+        // with the track, so it is the worker's: this sends the message and
+        // answers the handset.
+        $this->corridors->settled($patrol);
 
         return [$patrol, false];
     }

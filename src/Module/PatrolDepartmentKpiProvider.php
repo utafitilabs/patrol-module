@@ -63,7 +63,7 @@ final class PatrolDepartmentKpiProvider implements DepartmentKpiProviderInterfac
      *
      * COVERAGE ROLLS UP AS ONE SHARE OF ONE SURFACE — the ground covered across the areas that
      * recorded a track, over those areas' boundaries added together; see
-     * {@see \Uhifadhi\Patrol\Repository\PatrolRepository::coverageFractionAcrossAreas()}.
+     * {@see \Uhifadhi\Patrol\Repository\PatrolCorridorRepository::fractionAcrossAreas()}.
      *
      * No patrol recorded in the scope this month or last month reports NOTHING rather than four
      * zeros: absent is not zero, and the host draws a dashed labelled slot instead.

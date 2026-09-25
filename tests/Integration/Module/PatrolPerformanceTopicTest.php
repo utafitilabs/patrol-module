@@ -33,6 +33,7 @@ use Uhifadhi\Patrol\Module\PatrolPerformanceTopic;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Service\PatrolFigureService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -45,6 +46,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 final class PatrolPerformanceTopicTest extends IntegrationTestCase
 {
+    use StoredCoverage;
+
     private const string NOW = '2026-08-20 09:00:00';
 
     /**
@@ -435,7 +438,11 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
         $directory = static::getContainer()->get('test_public.'.DepartmentDirectoryInterface::class);
         \assert($directory instanceof DepartmentDirectoryInterface);
 
-        return new PatrolPerformanceTopic($this->em, $directory, new PatrolFigureService($repository), 'patrols', 'Patrols');
+        // The patrols buffered, as the worker would have by now.
+        $this->em->flush();
+        $this->bufferCorridors();
+
+        return new PatrolPerformanceTopic($this->em, $directory, new PatrolFigureService($repository, $this->corridors(), $this->facts()), 'patrols', 'Patrols');
     }
 
     private static function period(): FigurePeriod

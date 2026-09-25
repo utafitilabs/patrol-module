@@ -14,7 +14,12 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Service;
 
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
+use Uhifadhi\Contracts\Facts\FactSubject;
+use Uhifadhi\Patrol\Facts\PatrolFactPeriod;
+use Uhifadhi\Patrol\Facts\PatrolFactProvider;
 use Uhifadhi\Patrol\Model\PatrolTally;
+use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 
 /**
@@ -34,8 +39,11 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
  */
 final readonly class PatrolFigureService
 {
-    public function __construct(private PatrolRepository $patrols)
-    {
+    public function __construct(
+        private PatrolRepository $patrols,
+        private PatrolCorridorRepository $corridors,
+        private FactReaderInterface $facts,
+    ) {
     }
 
     /**
@@ -74,12 +82,13 @@ final readonly class PatrolFigureService
     }
 
     /**
-     * THE SHARE OF THE GROUND THE WINDOW'S TRACKS LIE OVER, IN POINTS — 54.0
-     * for 54 %.
+     * THE SHARE OF THE GROUND WITHIN THE MODULE'S ONE WIDTH OF A COMPLETE
+     * TRACK, IN POINTS — 54.0 for 54 %.
      *
-     * The repository answers a fraction of 1; every contract this module
-     * publishes carries a share as the number a plate prints, because a share
-     * is displayed as it is given and its movement is read in POINTS.
+     * Read from the STORED CORRIDORS ({@see PatrolCorridorRepository}): the
+     * window's corridors unioned and clipped, and no track buffered. Every
+     * contract this module publishes carries a share as the number a plate
+     * prints, and its movement is read in POINTS.
      *
      * `$within` null asks across every area as ONE ratio — the ground covered
      * over those areas' boundaries added together — rather than as a mean of
@@ -91,31 +100,23 @@ final readonly class PatrolFigureService
     public function coverage(?AreaOfInterest $within, \DateTimeImmutable $from, \DateTimeImmutable $until): ?float
     {
         $fraction = null === $within
-            ? $this->patrols->coverageFractionAcrossAreas(PatrolDashboardService::COVERAGE_BUFFER_M, $from, $until)
-            : $this->patrols->coverageFractionWithin($within, PatrolDashboardService::COVERAGE_BUFFER_M, $from, $until);
+            ? $this->corridors->fractionAcrossAreas($from, $until)
+            : $this->corridors->fractionWithin($within, $from, $until);
 
         return null === $fraction ? null : $fraction * 100.0;
     }
 
     /**
-     * THE SAME SHARE, FOR A SET OF ZONES AT ONCE, IN POINTS — keyed by the
-     * zone's published uuid, and only for the zones the database answered for.
+     * THE SHARE OF EACH OF A SET OF ZONES COVERED, IN POINTS — read from the
+     * facts ledger, where the worker filed it; keyed by the zone's published
+     * uuid, and only for the zones it has filed a figure for.
      *
-     * ONE PASS, NOT ONE PER ZONE. Every figure here is a set operation, and
-     * asking the question zone by zone would union the same buffers again for
-     * each of them; {@see PatrolRepository::zoneFiguresFor()} measures the
-     * whole set in one go, which is the only reason a plate of forty zones is
-     * a page and not a wait.
+     * Each track counts at its own type's width, the module's figure standing
+     * in where a type sets none. The window is answered by the ledger period
+     * that matches it ({@see PatrolFactPeriod::answering()}).
      *
-     * A ZONE'S WIDTH IS READ PER TRACK — each counts as covering its own
-     * type's width, with the module's figure standing in where a type sets
-     * none — so this is the zone-shaped sibling of {@see coverage()} rather
-     * than a second opinion about it.
-     *
-     * NULL STAYS NULL, and it means the area recorded no track in the window
-     * at all. A zone the window's tracks ran nowhere near, in an area that
-     * recorded tracks elsewhere, is a MEASURED NOUGHT: the ground was looked
-     * at and none of it was covered.
+     * NULL STAYS NULL: the area recorded no track in the period. A zone the
+     * worker has not measured yet is absent, not nought.
      *
      * @param list<string> $zoneUuids
      *
@@ -123,10 +124,17 @@ final readonly class PatrolFigureService
      */
     public function zoneCoverage(array $zoneUuids, \DateTimeImmutable $from, \DateTimeImmutable $until): array
     {
+        if ([] === $zoneUuids) {
+            return [];
+        }
+
+        $period = PatrolFactPeriod::answering($from, $until);
         $shares = [];
-        foreach ($this->patrols->zoneFiguresFor($zoneUuids, PatrolDashboardService::COVERAGE_BUFFER_M, $from, $until) as $uuid => $figures) {
-            $fraction = $figures['coverageFraction'];
-            $shares[$uuid] = null === $fraction ? null : $fraction * 100.0;
+        foreach ($this->facts->batch(FactSubject::ZONE, $zoneUuids, [PatrolFactProvider::ZONE_COVERAGE], $period->key) as $uuid => $figures) {
+            $fact = $figures[PatrolFactProvider::ZONE_COVERAGE] ?? null;
+            if (null !== $fact) {
+                $shares[$uuid] = $fact->value;
+            }
         }
 
         return $shares;

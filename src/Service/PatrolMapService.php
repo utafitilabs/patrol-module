@@ -134,7 +134,7 @@ final readonly class PatrolMapService
      * @param array{patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>} $payload
      * @param array<string, array{label: string, bufferM?: int|null}>                                                                                                                                        $types      key → the word the legend prints, and the coverage width that type carries (null where it carries none)
      * @param array<string, string>                                                                                                                                                                          $typeSwatch each type's plate token, from {@see PatrolDashboardService::typeSwatches()}
-     * @param string|null                                                                                                                                                                                    $coverage   the covered ground as GeoJSON text, from {@see \Uhifadhi\Patrol\Repository\PatrolRepository::coverageBufferGeoJson()}; null where the month recorded no track
+     * @param string|null                                                                                                                                                                                    $coverage   the covered ground as GeoJSON text, from {@see \Uhifadhi\Patrol\Repository\PatrolCorridorRepository::coveredGeoJson()}; null where the month recorded no track
      */
     public function coverage(array $ground, array $payload, array $types, array $typeSwatch, ?string $coverage = null): AtlasMap
     {

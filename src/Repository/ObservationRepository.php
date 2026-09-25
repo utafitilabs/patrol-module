@@ -152,7 +152,7 @@ final class ObservationRepository extends ServiceEntityRepository
      *
      * Raw SQL because DQL has no ST_Intersects, and every table and column is
      * read from Doctrine's metadata for the same reason
-     * {@see PatrolRepository::coverageFractionWithin()} reads its own: the host
+     * {@see PatrolRepository::zoneEntriesBetween()} reads its own: the host
      * owns Zone and may map it with another naming strategy than this bundle's
      * tests do.
      *

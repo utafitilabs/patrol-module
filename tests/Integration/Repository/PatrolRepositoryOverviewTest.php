@@ -20,6 +20,7 @@ use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -30,7 +31,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  * PL·A3 IS ABOUT ABSENCE, and absence is measured from the last track that
  * ENTERED a zone, not from the last patrol that named one: a patrol carries a
  * free-text station and no zone at all, so the only honest answer comes from
- * ST_Intersects against the host's zone polygons.
+ * ST_Intersects against the host's zone polygons. The worker asks these
+ * questions and files the answers; the coverage is read from stored corridors.
  *
  * The fixture area is the same ~0.1° square PatrolRepositoryCoverageTest uses
  * (lon −30.0 to −29.9, lat −3.0 to −2.9, ≈ 123 km²), split into a NORTH and a SOUTH
@@ -38,7 +40,7 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 final class PatrolRepositoryOverviewTest extends IntegrationTestCase
 {
-    private const float BUFFER_M = 2000.0;
+    use StoredCoverage;
 
     private \DateTimeImmutable $monthStart;
     private \DateTimeImmutable $nextMonth;
@@ -152,87 +154,122 @@ final class PatrolRepositoryOverviewTest extends IntegrationTestCase
     public function testAZoneNoTrackEverEnteredHasNoLastEntry(): void
     {
         $area = $this->makeArea();
-        $this->makeZone($area, 'North', -2.95, -2.9);
-        $this->makeZone($area, 'South', -3.0, -2.95);
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
+        $south = $this->makeZone($area, 'South', -3.0, -2.95);
         // A track along the far north edge: it enters North and misses South.
-        $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
+        $patrol = $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
 
-        $rows = $this->repository()->zoneAbsenceForArea($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
+        $last = $this->repository()->zoneLastEntriesBefore($this->nextMonth);
 
-        self::assertCount(2, $rows);
-        // Worst first: the zone nobody has entered leads.
-        self::assertSame('South', $rows[0]['zone']);
-        self::assertNull($rows[0]['lastEnteredAt']);
-        self::assertNull($rows[0]['lastPatrolId']);
-
-        self::assertSame('North', $rows[1]['zone']);
-        self::assertNotNull($rows[1]['lastEnteredAt']);
-        self::assertSame('2026-03-10', $rows[1]['lastEnteredAt']->format('Y-m-d'));
+        self::assertCount(2, $last);
+        self::assertNull($last[(string) $south->getUuidString()]);
+        $entry = $last[(string) $north->getUuidString()];
+        self::assertNotNull($entry);
+        self::assertSame($patrol->getId(), $entry['patrolId']);
+        self::assertSame('2026-03-10', $entry['enteredAt']->format('Y-m-d'));
     }
 
     public function testTheMostRECENTTrackToEnterAZoneIsTheOneReported(): void
     {
         $area = $this->makeArea();
-        $this->makeZone($area, 'North', -2.95, -2.9);
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
         $this->makePatrol($area, '2026-03-05T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
         $latest = $this->makePatrol($area, '2026-03-18T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.93],[-29.9,-2.93]]}');
 
-        $rows = $this->repository()->zoneAbsenceForArea($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
+        $entry = $this->repository()->zoneLastEntriesBefore($this->nextMonth)[(string) $north->getUuidString()];
 
-        self::assertSame($latest->getId(), $rows[0]['lastPatrolId']);
-        self::assertSame('2026-03-18', $rows[0]['lastEnteredAt']?->format('Y-m-d'));
+        self::assertNotNull($entry);
+        self::assertSame($latest->getId(), $entry['patrolId']);
+        self::assertSame('2026-03-18', $entry['enteredAt']->format('Y-m-d'));
+    }
+
+    /** "Ever" ends where the period does: a closed month keeps the answer of its last day. */
+    public function testALaterTrackIsNotTheLastEntryOfAnEarlierPeriod(): void
+    {
+        $area = $this->makeArea();
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
+        $march = $this->makePatrol($area, '2026-03-05T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
+        $this->makePatrol($area, '2026-04-18T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.93],[-29.9,-2.93]]}');
+
+        self::assertSame($march->getId(), $this->repository()->zoneLastEntriesBefore($this->nextMonth)[(string) $north->getUuidString()]['patrolId'] ?? null);
     }
 
     public function testADiscardedTrackNeverEnteredAnything(): void
     {
         $area = $this->makeArea();
-        $this->makeZone($area, 'North', -2.95, -2.9);
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
         $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}', PatrolStatusEnum::Discarded);
-
-        $rows = $this->repository()->zoneAbsenceForArea($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
 
         // A discard says the effort did not happen as recorded, so it cannot be
         // the evidence that somebody was there.
-        self::assertNull($rows[0]['lastEnteredAt']);
-        self::assertNull($rows[0]['coverageFraction']);
+        self::assertNull($this->repository()->zoneLastEntriesBefore($this->nextMonth)[(string) $north->getUuidString()]);
+        self::assertSame(['patrols' => 0, 'metres' => 0.0], $this->repository()->zoneEntriesBetween($this->monthStart, $this->nextMonth)[(string) $north->getUuidString()]);
+    }
+
+    public function testEntriesCountTheTracksThatCrossedIntoAZoneAndTheirLengthInside(): void
+    {
+        $area = $this->makeArea();
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
+        $south = $this->makeZone($area, 'South', -3.0, -2.95);
+        // Two tracks across North, each ≈ 11.1 km inside it; none reaches South.
+        $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
+        $this->makePatrol($area, '2026-03-11T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.93],[-29.9,-2.93]]}');
+
+        $entries = $this->repository()->zoneEntriesBetween($this->monthStart, $this->nextMonth);
+
+        self::assertSame(2, $entries[(string) $north->getUuidString()]['patrols']);
+        self::assertEqualsWithDelta(22200.0, $entries[(string) $north->getUuidString()]['metres'], 400.0);
+        self::assertSame(0, $entries[(string) $south->getUuidString()]['patrols']);
     }
 
     public function testEachZoneIsCoveredAgainstItsOwnSurface(): void
     {
         $area = $this->makeArea();
-        $this->makeZone($area, 'North', -2.95, -2.9);
-        $this->makeZone($area, 'South', -3.0, -2.95);
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
+        $south = $this->makeZone($area, 'South', -3.0, -2.95);
+        // A walk counts 150 m either side as covered; the module's width is 2 km.
+        Vocabulary::type($this->em, $area, 'walk')->setCoverageBufferM(150);
         // Straight across the middle of the NORTH half only (≈ 5.5 km tall), so
         // its 4 km band covers most of North and only clips into South.
         $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.925],[-29.9,-2.925]]}');
+        $this->bufferCorridors();
 
-        $rows = $this->repository()->zoneAbsenceForArea($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
-        $byZone = array_column($rows, null, 'zone');
+        $zones = $this->corridors()->coverageBetween($this->monthStart, $this->nextMonth)['zones'];
 
-        $north = $byZone['North']['coverageFraction'];
-        $south = $byZone['South']['coverageFraction'];
-        self::assertNotNull($north);
-        self::assertNotNull($south);
+        $northShare = $zones[(string) $north->getUuidString()]['uniform'];
+        $southShare = $zones[(string) $south->getUuidString()]['uniform'];
+        self::assertNotNull($northShare);
+        self::assertNotNull($southShare);
         // The band sits over North and reaches only a little way into South.
-        self::assertGreaterThan(0.6, $north);
-        self::assertLessThan($north, $south);
+        self::assertGreaterThan(0.6, $northShare);
+        self::assertLessThan($northShare, $southShare);
+        // The walk's own 150 m corridor covers far less of North than 2 km does.
+        self::assertLessThan($northShare, (float) $zones[(string) $north->getUuidString()]['typed']);
     }
 
-    public function testAnAreaWithNoZonesMeasuresNothing(): void
+    public function testAZoneInAnAreaWithNoTrackIsUnmeasuredAndTheAreaToo(): void
     {
         $area = $this->makeArea();
-        $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.95],[-29.9,-2.95]]}');
+        $north = $this->makeZone($area, 'North', -2.95, -2.9);
 
-        self::assertSame([], $this->repository()->zoneAbsenceForArea($area, self::BUFFER_M, $this->monthStart, $this->nextMonth));
+        $coverage = $this->corridors()->coverageBetween($this->monthStart, $this->nextMonth);
+
+        self::assertNull($coverage['zones'][(string) $north->getUuidString()]['uniform']);
+        self::assertNull($coverage['zones'][(string) $north->getUuidString()]['typed']);
+        self::assertArrayHasKey((string) $area->getUuidString(), $coverage['areas']);
+        self::assertNull($coverage['areas'][(string) $area->getUuidString()]);
     }
 
-    public function testAnotherAreasZonesAreNotThisAreasGaps(): void
+    public function testAnotherAreasTracksDoNotCoverThisAreasZones(): void
     {
         $area = $this->makeArea();
         $elsewhere = $this->makeArea();
-        $this->makeZone($elsewhere, 'Somewhere else', -3.0, -2.9);
+        $zone = $this->makeZone($area, 'North', -2.95, -2.9);
+        $this->makePatrol($elsewhere, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.0,-2.92],[-29.9,-2.92]]}');
+        $this->bufferCorridors();
 
-        self::assertSame([], $this->repository()->zoneAbsenceForArea($area, self::BUFFER_M, $this->monthStart, $this->nextMonth));
+        self::assertNull($this->corridors()->coverageBetween($this->monthStart, $this->nextMonth)['zones'][(string) $zone->getUuidString()]['uniform']);
+        self::assertNull($this->repository()->zoneLastEntriesBefore($this->nextMonth)[(string) $zone->getUuidString()]);
     }
 
     // ---- the coverage buffer, as geometry ---------------------------------
@@ -241,8 +278,9 @@ final class PatrolRepositoryOverviewTest extends IntegrationTestCase
     {
         $area = $this->makeArea();
         $this->makePatrol($area, '2026-03-10T06:00:00Z', '{"type":"LineString","coordinates":[[-30.2,-2.95],[-29.7,-2.95]]}');
+        $this->bufferCorridors();
 
-        $geoJson = $this->repository()->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
+        $geoJson = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth);
 
         self::assertNotNull($geoJson);
         /** @var array{type?: string, coordinates?: array<mixed>} $decoded */
@@ -257,8 +295,9 @@ final class PatrolRepositoryOverviewTest extends IntegrationTestCase
     {
         $area = $this->makeArea();
         $this->makePatrol($area, '2026-03-10T06:00:00Z', null);
+        self::assertSame(0, $this->bufferCorridors());
 
-        self::assertNull($this->repository()->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth));
+        self::assertNull($this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth));
     }
 
     /**
@@ -271,10 +310,10 @@ final class PatrolRepositoryOverviewTest extends IntegrationTestCase
     {
         $area = $this->makeArea();
         $this->makePatrol($area, '2026-03-10T06:00:00Z', self::denseTrack());
+        $this->bufferCorridors();
 
-        $repository = $this->repository();
-        $simplified = $repository->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
-        $whole = $repository->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth, simplify: false);
+        $simplified = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth);
+        $whole = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth, simplify: false);
 
         self::assertNotNull($simplified);
         self::assertNotNull($whole);
@@ -291,10 +330,10 @@ final class PatrolRepositoryOverviewTest extends IntegrationTestCase
     {
         $area = $this->makeArea();
         $this->makePatrol($area, '2026-03-10T06:00:00Z', self::denseTrack());
+        $this->bufferCorridors();
 
-        $repository = $this->repository();
-        $simplified = $repository->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth);
-        $whole = $repository->coverageBufferGeoJson($area, self::BUFFER_M, $this->monthStart, $this->nextMonth, simplify: false);
+        $simplified = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth);
+        $whole = $this->corridors()->coveredGeoJson($area, $this->monthStart, $this->nextMonth, simplify: false);
 
         self::assertNotNull($simplified);
         self::assertNotNull($whole);

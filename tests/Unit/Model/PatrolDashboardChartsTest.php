@@ -162,7 +162,7 @@ final class PatrolDashboardChartsTest extends TestCase
             monthCount: 0,
             monthDistanceKm: 0.0,
             monthTypeCounts: [],
-            coverageFraction: null,
+            coverage: null,
             typeCounts: [],
             totalCount: 0,
             lastPatrol: null,

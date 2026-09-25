@@ -24,8 +24,8 @@ use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Entity\PatrolType;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
 use Uhifadhi\Patrol\Module\PatrolZoneFigureProvider;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -41,6 +41,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 final class PatrolZoneFigureProviderTest extends IntegrationTestCase
 {
+    use StoredCoverage;
+
     private const string NORTH = 'North';
     private const string SOUTH = 'South';
 
@@ -212,6 +214,64 @@ final class PatrolZoneFigureProviderTest extends IntegrationTestCase
     }
 
     /**
+     * BEFORE THE WORKER HAS RUN, a zone reads as not computed yet — its plates
+     * carry no value, never a nought, and say when the figure will come.
+     */
+    public function testAZoneTheWorkerHasNotMeasuredSaysSoRatherThanZero(): void
+    {
+        $area = $this->area();
+        $this->zone($area, self::NORTH, -2.92, -2.90);
+        $this->patrol($area, self::CROSSING);
+        $this->em->flush();
+
+        $plates = $this->reader()->figuresFor($this->request($area))->forZone($this->zoneUuid($area, self::NORTH));
+
+        self::assertCount(3, $plates);
+        foreach ($plates as $kpi) {
+            self::assertFalse($kpi->isKnown());
+            self::assertStringEndsWith(PatrolZoneFigureProvider::NOT_COMPUTED, $kpi->caption);
+            self::assertNull($kpi->asOf);
+        }
+    }
+
+    /** A filed figure of a month still open carries the time it is true as of. */
+    public function testAFiledFigureCarriesTheTimeItIsTrueAsOf(): void
+    {
+        $area = $this->area();
+        $this->zone($area, self::NORTH, -2.92, -2.90);
+        $this->patrol($area, self::CROSSING, null, (new \DateTimeImmutable('first day of this month 07:00'))->format('Y-m-d H:i:s'));
+        $this->em->flush();
+        $now = new \DateTimeImmutable();
+        $this->fileFacts($now);
+
+        $plates = $this->reader()->figuresFor($this->request($area, FigurePeriod::month($now)))->forZone($this->zoneUuid($area, self::NORTH));
+
+        self::assertNotSame([], $plates);
+        foreach ($plates as $kpi) {
+            self::assertNotNull($kpi->asOf, $kpi->key.' is a figure of the month open now, so it says when it was computed.');
+        }
+    }
+
+    /**
+     * A ROLLING WINDOW is answered by the calendar period of about its length
+     * that holds its last day, and the answer says which.
+     */
+    public function testARollingWindowIsAnsweredByTheCalendarPeriodThatHoldsItsEnd(): void
+    {
+        $area = $this->area();
+        $this->zone($area, self::NORTH, -2.92, -2.90);
+        $this->patrol($area, self::CROSSING);
+        $this->em->flush();
+        $this->fileFacts(self::period()->from);
+
+        $rolling = new FigurePeriod(new \DateTimeImmutable('2026-01-01 00:00:00'), new \DateTimeImmutable('2026-03-31 00:00:00'), 'the last 89 days');
+        $answer = $this->reader()->figuresFor($this->request($area, $rolling));
+
+        self::assertEquals(new \DateTimeImmutable('2026-01-01 00:00:00'), $answer->period->from);
+        self::assertEquals(new \DateTimeImmutable('2026-04-01 00:00:00'), $answer->period->until);
+    }
+
+    /**
      * Every zone's figures as name => key => value — the shape the assertions read.
      *
      * @return array<string, array<string, float|null>>
@@ -268,12 +328,21 @@ final class PatrolZoneFigureProviderTest extends IntegrationTestCase
         return $zones;
     }
 
+    /**
+     * THE PROVIDER AFTER THE WORKER HAS RUN: the month's facts filed through
+     * the core's own rebuild, then the provider that reads them.
+     */
     private function provider(): PatrolZoneFigureProvider
     {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
+        $this->fileFacts(self::period()->from);
 
-        return new PatrolZoneFigureProvider($repository, 'patrols', 'Patrols');
+        return $this->reader();
+    }
+
+    /** The provider as a page meets it, whether or not the worker has run. */
+    private function reader(): PatrolZoneFigureProvider
+    {
+        return new PatrolZoneFigureProvider($this->facts(), 'patrols', 'Patrols');
     }
 
     private function area(): AreaOfInterest

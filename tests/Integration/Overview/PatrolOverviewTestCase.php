@@ -22,6 +22,7 @@ use Uhifadhi\Patrol\Entity\TrackBatch;
 use Uhifadhi\Patrol\Entity\TrackPoint;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
+use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
@@ -40,6 +41,8 @@ use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
  */
 abstract class PatrolOverviewTestCase extends IntegrationTestCase
 {
+    use StoredCoverage;
+
     protected const string NOW = '2026-03-21T11:42:00+00:00';
 
     /**
@@ -73,6 +76,22 @@ abstract class PatrolOverviewTestCase extends IntegrationTestCase
     protected function now(): \DateTimeImmutable
     {
         return new \DateTimeImmutable(self::NOW);
+    }
+
+    /**
+     * WHAT THE WORKER DOES BETWEEN A PATROL AND A PAGE: the tracks buffered and
+     * the month's patrol facts filed. The zone figures a page reads are these,
+     * so a test that reads them runs the worker first — and one that does not
+     * reads the page as it is before the worker has run.
+     */
+    protected function runWorker(): void
+    {
+        $this->em->flush();
+        $this->fileFacts($this->now());
+
+        $area = $this->em->find(AreaOfInterest::class, $this->area->getId());
+        \assert($area instanceof AreaOfInterest);
+        $this->area = $area;
     }
 
     protected function makeUser(string $first, string $last): User

@@ -36,6 +36,7 @@ use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Bundle\TeamBundle\Security\ApiTokenAuthenticator;
 use Uhifadhi\Bundle\TeamBundle\TeamBundle;
 use Uhifadhi\Contracts\Performance\PerformanceGeoProviderInterface;
+use Uhifadhi\Contracts\Queue\AsyncMessageInterface;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\CollectedContentProviders;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\CollectedGeoProviders;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\FixedRecordVoter;
@@ -150,6 +151,22 @@ final class TestKernel extends Kernel
             'assets' => true,
             'asset_mapper' => [
                 'paths' => [__DIR__.'/Fixtures/app/assets' => ''],
+            ],
+            // THE QUEUE AS THE CORE'S RECIPE WRITES IT for production: both
+            // queues are names in the one Doctrine table, which the registry's
+            // migration creates (auto_setup=0), and every message carrying the
+            // core's marker goes to `async`. So the schema this suite builds
+            // and diffs has messenger_messages in it, as an installation's
+            // does, and a test reads what a request queued from the table.
+            // https://symfony.com/doc/current/messenger.html#doctrine-transport
+            // @see vendor/symfony/doctrine-bridge/SchemaListener/MessengerTransportDoctrineSchemaListener.php
+            'messenger' => [
+                'failure_transport' => 'failed',
+                'transports' => [
+                    'async' => ['dsn' => 'doctrine://default?auto_setup=0', 'options' => ['queue_name' => 'async']],
+                    'failed' => ['dsn' => 'doctrine://default?auto_setup=0', 'options' => ['queue_name' => 'failed']],
+                ],
+                'routing' => [AsyncMessageInterface::class => 'async'],
             ],
         ]);
 
@@ -345,6 +362,13 @@ final class TestKernel extends Kernel
             // Who the departments are, what they attach, and since when they
             // could have been asked — the one read a topic starts with.
             \Uhifadhi\Contracts\Performance\DepartmentDirectoryInterface::class => 'team.department_directory',
+            \Uhifadhi\Contracts\Facts\FactReaderInterface::class => 'registry.facts.reader',
+            \Uhifadhi\Bundle\RegistryBundle\Service\FactRebuildService::class => 'registry.facts.rebuild',
+            \Uhifadhi\Patrol\Service\PatrolCorridorService::class => 'patrol.corridors',
+            \Uhifadhi\Patrol\Facts\PatrolFactProvider::class => 'patrol.facts',
+            \Uhifadhi\Patrol\MessageHandler\BufferPatrolCorridorHandler::class => 'patrol.corridor_handler',
+            \Uhifadhi\Patrol\Service\Api\PatrolCompletionService::class => 'patrol.api.completion',
+            'messenger.transport.async' => 'messenger.transport.async',
         ] as $class => $serviceId) {
             $container->services()->alias('test_public.'.$class, $serviceId)->public();
         }

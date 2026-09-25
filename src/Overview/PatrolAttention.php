@@ -150,6 +150,12 @@ final readonly class PatrolAttention implements AttentionProviderInterface
 
         $items = [];
         foreach ($gaps['zones'] as $zone) {
+            // A zone the worker has not measured yet is not a gap anybody
+            // knows about: it raises nothing until its facts are filed.
+            if (!$zone['computed']) {
+                continue;
+            }
+
             $days = $zone['daysSince'];
             if (null !== $days && $days < PatrolOverviewService::ZONE_GAP_SOON_DAYS) {
                 continue;

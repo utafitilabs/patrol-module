@@ -17,6 +17,8 @@ use PHPUnit\Framework\TestCase;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Contracts\Atlas\PlatePalette;
+use Uhifadhi\Contracts\Facts\Fact;
+use Uhifadhi\Contracts\Facts\FactSubject;
 use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
@@ -265,16 +267,17 @@ final class PatrolDashboardServiceTest extends TestCase
     }
 
     /**
-     * PL·03 is queried (PostGIS), not derived from the rows, so the service only
-     * carries it — and carries "unknown" as null rather than flattening it to
-     * 0.0, which the KPI would print as a false 0 %.
+     * PL·03 is read from the facts ledger, not derived from the rows, so the
+     * service only carries the fact — and carries "not computed yet" as null
+     * rather than flattening it to 0.0, which the KPI would print as a false 0 %.
      */
-    public function testCoverageIsCarriedThroughAndDefaultsToUnknown(): void
+    public function testCoverageIsCarriedThroughAndDefaultsToNotComputed(): void
     {
         $patrols = [$this->patrol('walk', '2026-03-20T06:00:00Z', 1.0)];
+        $fact = new Fact(FactSubject::AREA, '0190a0c4-0000-7000-8000-000000000001', 'patrols.area_coverage_uniform', '2026-03', 63.0, new \DateTimeImmutable('2026-03-22T09:00:00Z'));
 
-        self::assertNull(new PatrolDashboardService()->build($patrols, self::TYPES, $this->now)->coverageFraction);
-        self::assertSame(0.63, new PatrolDashboardService()->build($patrols, self::TYPES, $this->now, 0.63)->coverageFraction);
+        self::assertNull(new PatrolDashboardService()->build($patrols, self::TYPES, $this->now)->coverage);
+        self::assertSame($fact, new PatrolDashboardService()->build($patrols, self::TYPES, $this->now, $fact)->coverage);
     }
 
     /**

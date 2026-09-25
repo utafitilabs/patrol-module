@@ -15,8 +15,15 @@ namespace Uhifadhi\Patrol\Service;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Entity\Zone;
+use Uhifadhi\Bundle\AreaBundle\Repository\ZoneRepository;
+use Uhifadhi\Contracts\Facts\Fact;
+use Uhifadhi\Contracts\Facts\FactPeriod;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
+use Uhifadhi\Contracts\Facts\FactSubject;
 use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\Patrol;
+use Uhifadhi\Patrol\Facts\PatrolFactProvider;
 use Uhifadhi\Patrol\Repository\ObservationRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
@@ -83,6 +90,10 @@ final readonly class PatrolOverviewService
         // THE AREA'S OWN PATROL TYPES — the Patrol types section's list.
         private PatrolTypeRepository $types,
         private array $categories,
+        // THE FACTS LEDGER, where the worker files the zone figures PL·A3 reads.
+        private FactReaderInterface $facts,
+        // THE AREA'S ZONES, from the core's own repository, by name.
+        private ZoneRepository $zones,
     ) {
     }
 
@@ -242,47 +253,99 @@ final readonly class PatrolOverviewService
 
     /**
      * PL·A3 — every zone of the area by how long since a track entered it, worst
-     * first, with the share of each lying within the coverage buffer this month.
+     * first, with the share of each lying within the module's one coverage
+     * width this month — READ FROM THE FACTS LEDGER, never measured here.
      *
-     * `daysSince` is null for a zone no track ever entered: that is not "a very
-     * large number of days", it is an absence of evidence with no start date,
-     * and it sorts first because it is the worst gap the area has. An area with
-     * no zones drawn measures nothing at all — the host's zones are optional and
-     * an org with none is the normal state.
+     * The worker files, per zone, whether a complete track has ever entered it,
+     * when the last one did and which patrol it was, and the month's covered
+     * share ({@see PatrolFactProvider}); a page reads one batch of rows and
+     * counts the days from the stored instant itself, so "days since" moves with
+     * the clock between two runs.
      *
-     * @return array{zones: list<array{zone: string, lastPatrol: Patrol|null, lastEnteredAt: \DateTimeImmutable|null, daysSince: int|null, coverageFraction: float|null}>, areaCoverageFraction: float|null, bufferKm: float}
+     * THREE STATES, NEVER CONFLATED:
+     *  - `never`: the worker looked and no track has ever entered the zone —
+     *    the worst gap there is, sorted first;
+     *  - a last entry: `daysSince` whole calendar days before `$now`;
+     *  - `computed` false: no fact filed for the zone yet — the page says
+     *    "not computed yet · runs hourly", sorts it last, and raises no
+     *    attention about it, because nothing is known about it.
+     *
+     * `asOf` is the fact the card's stamp prints ({@see shell_as_of()}): the
+     * area's share where it is filed, otherwise the first zone fact read.
+     *
+     * @return array{zones: list<array{zone: string, uuid: string, computed: bool, never: bool, lastPatrol: Patrol|null, lastEnteredAt: \DateTimeImmutable|null, daysSince: int|null, coverageFraction: float|null}>, areaCoverageFraction: float|null, asOf: Fact|null, bufferKm: float}
      */
     public function gaps(AreaOfInterest $area, \DateTimeImmutable $now): array
     {
-        [$monthStart, $nextMonth] = PatrolDashboardService::monthRange($now);
         $buffer = PatrolDashboardService::COVERAGE_BUFFER_M;
+        $month = FactPeriod::month($now)->key;
+        $zones = $this->zones->zonesFor($area);
 
-        $rows = $this->patrols->zoneAbsenceForArea($area, $buffer, $monthStart, $nextMonth);
-        $lastPatrolIds = array_values(array_filter(array_column($rows, 'lastPatrolId'), static fn (?int $id): bool => null !== $id));
+        $uuids = array_values(array_filter(array_map(static fn (Zone $zone): ?string => $zone->getUuidString(), $zones)));
+        $read = [] === $uuids ? [] : $this->facts->batch(FactSubject::ZONE, $uuids, [
+            PatrolFactProvider::ZONE_ENTERED_EVER,
+            PatrolFactProvider::ZONE_LAST_ENTERED_AT,
+            PatrolFactProvider::ZONE_LAST_PATROL,
+            PatrolFactProvider::ZONE_COVERAGE_UNIFORM,
+        ], $month);
+
+        $areaUuid = $area->getUuidString();
+        $areaCoverage = null === $areaUuid ? null : $this->facts->latest(FactSubject::AREA, $areaUuid, PatrolFactProvider::AREA_COVERAGE_UNIFORM, $month);
+
+        $lastPatrolIds = [];
+        foreach ($read as $facts) {
+            $id = $facts[PatrolFactProvider::ZONE_LAST_PATROL]->value ?? null;
+            if (null !== $id && 1.0 === ($facts[PatrolFactProvider::ZONE_ENTERED_EVER]->value ?? null)) {
+                $lastPatrolIds[] = (int) $id;
+            }
+        }
         /** @var array<int, Patrol> $lastPatrols */
         $lastPatrols = [];
         foreach ([] === $lastPatrolIds ? [] : $this->patrols->findBy(['id' => $lastPatrolIds]) as $patrol) {
             $lastPatrols[(int) $patrol->getId()] = $patrol;
         }
 
-        $zones = [];
-        foreach ($rows as $row) {
-            $enteredAt = $row['lastEnteredAt'];
-            $zones[] = [
-                'zone' => $row['zone'],
-                'lastPatrol' => null === $row['lastPatrolId'] ? null : ($lastPatrols[$row['lastPatrolId']] ?? null),
+        $asOf = $areaCoverage;
+        $rows = [];
+        foreach ($zones as $zone) {
+            $uuid = (string) $zone->getUuidString();
+            $facts = $read[$uuid] ?? [];
+            $ever = $facts[PatrolFactProvider::ZONE_ENTERED_EVER] ?? null;
+            $coverage = $facts[PatrolFactProvider::ZONE_COVERAGE_UNIFORM] ?? null;
+            $asOf ??= $ever ?? $coverage;
+
+            $entered = 1.0 === $ever?->value;
+            $at = $entered ? ($facts[PatrolFactProvider::ZONE_LAST_ENTERED_AT]->value ?? null) : null;
+            $enteredAt = null === $at ? null : new \DateTimeImmutable('@'.(int) $at)->setTimezone($now->getTimezone());
+            $patrolId = $entered ? ($facts[PatrolFactProvider::ZONE_LAST_PATROL]->value ?? null) : null;
+
+            $rows[] = [
+                'zone' => (string) $zone->getName(),
+                'uuid' => $uuid,
+                'computed' => null !== $ever,
+                'never' => null !== $ever && !$entered,
+                'lastPatrol' => null === $patrolId ? null : ($lastPatrols[(int) $patrolId] ?? null),
                 'lastEnteredAt' => $enteredAt,
                 // Whole days between the two calendar dates, so a patrol that
                 // entered at 23:50 last night reads as "1 d" this morning rather
                 // than as "0 d" for another eight hours.
                 'daysSince' => null === $enteredAt ? null : max(0, (int) $enteredAt->setTime(0, 0)->diff($now->setTime(0, 0))->format('%r%a')),
-                'coverageFraction' => $row['coverageFraction'],
+                'coverageFraction' => null === $coverage?->value ? null : $coverage->value / 100.0,
             ];
         }
 
+        // Worst first: never entered, then the longest since, then what the
+        // worker has not measured yet; by name within each.
+        usort($rows, static function (array $a, array $b): int {
+            $rank = static fn (array $row): int => !$row['computed'] ? 2 : ($row['never'] ? 0 : 1);
+
+            return [$rank($a), $a['lastEnteredAt']?->getTimestamp() ?? 0, $a['zone']] <=> [$rank($b), $b['lastEnteredAt']?->getTimestamp() ?? 0, $b['zone']];
+        });
+
         return [
-            'zones' => $zones,
-            'areaCoverageFraction' => $this->patrols->coverageFractionWithin($area, $buffer, $monthStart, $nextMonth),
+            'zones' => $rows,
+            'areaCoverageFraction' => null === $areaCoverage?->value ? null : $areaCoverage->value / 100.0,
+            'asOf' => $asOf,
             'bufferKm' => $buffer / 1000,
         ];
     }
@@ -347,7 +410,7 @@ final readonly class PatrolOverviewService
      * a plain dashboard shows none of them, but the library previews every widget
      * and a preset may turn any of them on — so the reading must always be there.
      *
-     * @return array{out: list<array<string, mixed>>, handsets: array{reporting: int, total: int, worst: array<string, mixed>|null}, gaps: array{zones: list<array<string, mixed>>, areaCoverageFraction: float|null, bufferKm: float}, observations: array{rows: list<array<string, mixed>>, monthCount: int}}
+     * @return array{out: list<array<string, mixed>>, handsets: array{reporting: int, total: int, worst: array<string, mixed>|null}, gaps: array{zones: list<array<string, mixed>>, areaCoverageFraction: float|null, asOf: Fact|null, bufferKm: float}, observations: array{rows: list<array<string, mixed>>, monthCount: int}}
      */
     public function dashboardReading(AreaOfInterest $area, \DateTimeImmutable $now): array
     {

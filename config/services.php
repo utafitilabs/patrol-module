@@ -18,20 +18,27 @@ use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationReposi
 use Uhifadhi\Bundle\AtlasBundle\Map\MapBuilderInterface;
 use Uhifadhi\Bundle\TeamBundle\Access\Door;
 use Uhifadhi\Contracts\Access\ConcernSourceInterface;
+use Uhifadhi\Contracts\Facts\FactProviderInterface;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
 use Uhifadhi\Contracts\Shell\ConfigurationSectionsInterface;
 use Uhifadhi\Contracts\Shell\ModuleTabsInterface;
 use Uhifadhi\Patrol\Access\PatrolConcerns;
+use Uhifadhi\Patrol\Command\CoverageRebuildCommand;
 use Uhifadhi\Patrol\Controller\PatrolCalendarController;
 use Uhifadhi\Patrol\Controller\PatrolController;
 use Uhifadhi\Patrol\Controller\PatrolDetailController;
 use Uhifadhi\Patrol\Controller\PatrolExportController;
 use Uhifadhi\Patrol\Controller\PatrolKindsOverviewController;
 use Uhifadhi\Patrol\Controller\PatrolListController;
+use Uhifadhi\Patrol\Facts\PatrolFactProvider;
+use Uhifadhi\Patrol\Message\BufferPatrolCorridor;
+use Uhifadhi\Patrol\MessageHandler\BufferPatrolCorridorHandler;
 use Uhifadhi\Patrol\Repository\FlightRepository;
 use Uhifadhi\Patrol\Repository\LaunchPointRepository;
 use Uhifadhi\Patrol\Repository\ObservationAmendmentRepository;
 use Uhifadhi\Patrol\Repository\ObservationPhotoRepository;
 use Uhifadhi\Patrol\Repository\ObservationRepository;
+use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 use Uhifadhi\Patrol\Repository\PatrolDraftFileRepository;
 use Uhifadhi\Patrol\Repository\PatrolDraftRepository;
 use Uhifadhi\Patrol\Repository\PatrolEventRepository;
@@ -48,6 +55,8 @@ use Uhifadhi\Patrol\Service\GpxParser;
 use Uhifadhi\Patrol\Service\GpxWriter;
 use Uhifadhi\Patrol\Service\ObservationAmendmentService;
 use Uhifadhi\Patrol\Service\PatrolCalendar;
+use Uhifadhi\Patrol\Service\PatrolCorridorQueue;
+use Uhifadhi\Patrol\Service\PatrolCorridorService;
 use Uhifadhi\Patrol\Service\PatrolCoverageService;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
 use Uhifadhi\Patrol\Service\PatrolDraftService;
@@ -137,8 +146,8 @@ return static function (ContainerConfigurator $container): void {
      */
     $services->set('patrol.coverage', PatrolCoverageService::class)
         ->args([
-            service(PatrolRepository::class),
-            PatrolDashboardService::COVERAGE_BUFFER_M,
+            service(PatrolCorridorRepository::class),
+            service(FactReaderInterface::class),
             service('cache.app')->nullOnInvalid(),
         ]);
 
@@ -202,6 +211,7 @@ return static function (ContainerConfigurator $container): void {
             service('doctrine.orm.entity_manager'),
             service('patrol.drafts'),
             service('patrol.track_ingest'),
+            service('patrol.corridor_queue'),
         ]);
 
     $services->set('patrol.track_ingest', TrackIngestService::class)
@@ -209,7 +219,54 @@ return static function (ContainerConfigurator $container): void {
             service('patrol.gpx_parser'),
             service('doctrine.orm.entity_manager'),
             param('patrol.gap_threshold_minutes'),
+            service('patrol.corridor_queue'),
         ]);
+
+    /*
+     * STORED CORRIDORS AND THE FACTS READ FROM THEM.
+     *
+     * A settled patrol's track is buffered by the WORKER: the request sends
+     * BufferPatrolCorridor, which carries the core's queue marker and so goes
+     * to the installation's `async` transport, and its handler is tagged by
+     * hand — a reusable bundle is not autoconfigured:
+     *   "If autoconfiguration is disabled, manually register handlers using
+     *    the messenger.message_handler tag"
+     *   — https://symfony.com/doc/current/messenger.html#manually-configuring-handlers
+     * The bus is the framework's default one, the id the core dispatches on.
+     *
+     * The fact provider is tagged by hand with the core's tag, as the facts
+     * contract says; the core's schedule asks it hourly and files what it
+     * returns. `clock` is the framework's, so a test fixes "now".
+     *
+     * @see vendor/uhifadhi/uhifadhi/src/Uhifadhi/Contracts/Facts/FactProviderInterface.php
+     * @see vendor/symfony/messenger/DependencyInjection/MessengerPass.php
+     */
+    $services->set('patrol.corridor_queue', PatrolCorridorQueue::class)
+        ->args([service('messenger.default_bus')]);
+
+    $services->set('patrol.corridors', PatrolCorridorService::class)
+        ->args([
+            service(PatrolCorridorRepository::class),
+            service('doctrine.orm.entity_manager'),
+            service('clock'),
+        ]);
+
+    $services->set('patrol.corridor_handler', BufferPatrolCorridorHandler::class)
+        ->args([service('patrol.corridors')])
+        ->tag('messenger.message_handler', ['handles' => BufferPatrolCorridor::class]);
+
+    $services->set('patrol.facts', PatrolFactProvider::class)
+        ->args([
+            service('patrol.corridors'),
+            service(PatrolCorridorRepository::class),
+            service(PatrolRepository::class),
+            'patrols',
+        ])
+        ->tag(FactProviderInterface::TAG);
+
+    $services->set('patrol.command.coverage_rebuild', CoverageRebuildCommand::class)
+        ->args([service('patrol.corridors')])
+        ->tag('console.command');
 
     /*
      * Repositories keep FQCN ids — the one place the bundle-alias prefix cannot
@@ -223,6 +280,9 @@ return static function (ContainerConfigurator $container): void {
         ->args([service('doctrine')])
         ->tag('doctrine.repository_service');
     $services->set(ObservationRepository::class)
+        ->args([service('doctrine')])
+        ->tag('doctrine.repository_service');
+    $services->set(PatrolCorridorRepository::class)
         ->args([service('doctrine')])
         ->tag('doctrine.repository_service');
 

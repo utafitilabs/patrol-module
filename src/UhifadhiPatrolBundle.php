@@ -27,7 +27,9 @@ use Uhifadhi\Bundle\AreaBundle\Overview\OverviewCopyProviderInterface;
 use Uhifadhi\Bundle\AreaBundle\Overview\PulseProviderInterface;
 use Uhifadhi\Bundle\AreaBundle\Repository\AreaOfInterestRepository;
 use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
+use Uhifadhi\Bundle\AreaBundle\Repository\ZoneRepository;
 use Uhifadhi\Bundle\ShellBundle\Widget\Registry\WidgetSurfaceInterface;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
 use Uhifadhi\Contracts\Kpi\DepartmentKpiProviderInterface;
 use Uhifadhi\Contracts\Kpi\StationFigureProviderInterface;
 use Uhifadhi\Contracts\Kpi\ZoneFigureProviderInterface;
@@ -71,6 +73,7 @@ use Uhifadhi\Patrol\Repository\FlightRepository;
 use Uhifadhi\Patrol\Repository\LaunchPointRepository;
 use Uhifadhi\Patrol\Repository\ObservationPhotoRepository;
 use Uhifadhi\Patrol\Repository\ObservationRepository;
+use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 use Uhifadhi\Patrol\Repository\PatrolDraftFileRepository;
 use Uhifadhi\Patrol\Repository\PatrolEventRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
@@ -659,6 +662,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                     service(TrackBatchRepository::class),
                     service('patrol.geo'),
                     param('patrol.gap_threshold_minutes'),
+                    service('patrol.corridor_queue'),
                 ]);
 
             $services->set('patrol.api.flight_sync', FlightSyncService::class)
@@ -669,7 +673,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 ]);
 
             $services->set('patrol.api.completion', PatrolCompletionService::class)
-                ->args([service('doctrine.orm.entity_manager')]);
+                ->args([service('doctrine.orm.entity_manager'), service('patrol.corridor_queue')]);
 
             $services->set('patrol.api.events', PatrolEventService::class)
                 ->args([
@@ -805,7 +809,11 @@ final class UhifadhiPatrolBundle extends AbstractBundle
         // rather than constants because the provider exposes them as methods and a scalar is what
         // a service argument can carry; PatrolDepartmentKpiProviderTest pins the two together.
         $services->set('patrol.figure_service', PatrolFigureService::class)
-            ->args([service(PatrolRepository::class)]);
+            ->args([
+                service(PatrolRepository::class),
+                service(PatrolCorridorRepository::class),
+                service(FactReaderInterface::class),
+            ]);
         $services->alias(PatrolFigureService::class, 'patrol.figure_service');
 
         $services->set('patrol.department_kpi_provider', PatrolDepartmentKpiProvider::class)
@@ -835,7 +843,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          */
         $services->set('patrol.zone_figure_provider', PatrolZoneFigureProvider::class)
             ->args([
-                service(PatrolRepository::class),
+                service(FactReaderInterface::class),
                 'patrols',
                 'Patrols',
             ])
@@ -970,6 +978,8 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 service('router'),
                 service(PatrolTypeRepository::class),
                 param('patrol.observation_categories'),
+                service(FactReaderInterface::class),
+                service(ZoneRepository::class),
             ]);
 
         $services->set('patrol.overview.contributor', PatrolOverviewContributor::class)
@@ -985,7 +995,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
             ->tag(AttentionProviderInterface::TAG);
 
         $services->set('patrol.overview.map_layers', PatrolMapLayers::class)
-            ->args([service('patrol.overview'), service(PatrolRepository::class), service(PatrolTypeRepository::class)])
+            ->args([service('patrol.overview'), service(PatrolRepository::class), service(PatrolTypeRepository::class), service(PatrolCorridorRepository::class)])
             ->tag(MapLayerProviderInterface::TAG);
 
         // THE MODULE'S WORDS INSIDE THE HOST'S SENTENCES. Not a widget and not a

@@ -72,6 +72,7 @@ final readonly class PatrolRecordingService
         private EntityManagerInterface $entityManager,
         private PatrolDraftService $drafts,
         private TrackIngestService $ingest,
+        private PatrolCorridorQueue $corridors,
     ) {
     }
 
@@ -185,6 +186,9 @@ final readonly class PatrolRecordingService
 
         $this->entityManager->persist($patrol);
         $this->entityManager->flush();
+
+        // The worker buffers the track; this request only says so.
+        $this->corridors->settled($patrol);
 
         return $patrol;
     }

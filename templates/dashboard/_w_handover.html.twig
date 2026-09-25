@@ -20,7 +20,7 @@
 
     <div class="rln"><span class="fog">Still out</span><span class="mono patrol-ao-mono">{% if out|length %}{{ out|length }} · {{ out|map(r => r.patrol.ref)|join(', ') }}{% else %}nobody is out{% endif %}</span></div>
     <div class="rln"><span class="fog">Observations awaiting action</span><span class="mono patrol-ao-mono">{{ observations.rows|length }} in the queue · {{ observations.monthCount }} logged this month</span></div>
-    <div class="rln"><span class="fog">Worst zone gap</span><span class="mono patrol-ao-mono">{% if worstGap %}{{ worstGap.zone }} · {% if worstGap.daysSince is null %}no track has entered it{% else %}{{ worstGap.daysSince }} d since a patrol entered{% endif %}{% else %}no zones drawn to measure against{% endif %}</span></div>
+    <div class="rln"><span class="fog">Worst zone gap</span><span class="mono patrol-ao-mono">{% if worstGap %}{{ worstGap.zone }} · {% if not worstGap.computed %}not computed yet · runs hourly{% elseif worstGap.never %}no track has entered it{% else %}{{ worstGap.daysSince }} d since a patrol entered{% endif %}{% else %}no zones drawn to measure against{% endif %}</span></div>
 
     <div class="use" style="margin-top:12px"><b>Three things the next shift is being handed.</b></div>
 

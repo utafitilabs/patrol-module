@@ -1,0 +1,11 @@
+{#- WHEN A STORED FIGURE IS TRUE AS OF, appended to the caption line beside it:
+    " · as of 13:00" through the shell's own helper (shell_as_of), nothing for
+    a final figure, and for a figure the worker has not computed yet the
+    shell's "not computed yet" and when it will be. `fact` is a
+    Uhifadhi\Contracts\Facts\Fact or null.
+    @see vendor/uhifadhi/uhifadhi/src/Uhifadhi/Bundle/ShellBundle/Twig/AsOfRuntime.php -#}
+{%- set stamp = shell_as_of(fact) -%}
+{%- if stamp is not empty -%}
+    {{- ' · ' -}}{{- shell_as_of(fact) -}}
+    {%- if fact is null -%}<span class="muted">{{- ' · runs hourly' -}}</span>{%- endif -%}
+{%- endif -%}

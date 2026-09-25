@@ -20,6 +20,7 @@ use Uhifadhi\Bundle\AtlasBundle\Model\ChartKind;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartLegend;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartSeries;
 use Uhifadhi\Contracts\Entity\UserInterface;
+use Uhifadhi\Contracts\Facts\Fact;
 use Uhifadhi\Patrol\Entity\Patrol;
 
 /**
@@ -40,25 +41,25 @@ final readonly class PatrolDashboard
     public const int EFFORT_ROWS = 6;
 
     /**
-     * @param list<Patrol>                                                                             $patrols          latest first — the log/feed rows, scoped to the month on screen (the map + log + charts all read one month, driven by the MONTH filter)
-     * @param int                                                                                      $monthCount       patrols started this month
-     * @param float                                                                                    $monthDistanceKm  distance sum this month
-     * @param array<string, int>                                                                       $monthTypeCounts  this month, keyed by type
-     * @param float|null                                                                               $coverageFraction PL·03 — the share of the area within {@see \Uhifadhi\Patrol\Service\PatrolDashboardService::COVERAGE_BUFFER_M} of a track recorded this month, as a fraction of 1; null where there is nothing to measure (no recorded track this month, or an area with no boundary) — the KPI then shows the design's em dash rather than a false 0 %
-     * @param array<string, int>                                                                       $typeCounts       the month's listed patrols, every configured type present (filter chips)
-     * @param list<array{label: string, counts: array<string, int>}>                                   $weeklySeries     five weeks, oldest first
-     * @param list<array{station: string, label: string, count: int}>                                  $stationSeries    this month, ranked — `station` is the record KEY (what a filter link carries), `label` what the chart prints
-     * @param list<array{lead: UserInterface, hours: float}>                                           $effortSeries     patrol-hours this month per patrol lead, ranked — the "Effort by ranger" widget (PL·17); a patrol with no committed lead or no measured duration credits nobody and is absent
-     * @param array<string, string>                                                                    $stations         the month's stations as key → label (filter menu); the key is what ?station= carries
-     * @param list<string>                                                                             $zones            distinct zones the month's patrols set out in, sorted (filter menu) — computed by a PostGIS spatial join against the host's zone polygons, never a stored field
-     * @param list<array{date: \DateTimeImmutable, patrols: list<Patrol>, today: bool, outside: bool}> $calendar         42 Monday-start cells for the month on screen
+     * @param list<Patrol>                                                                             $patrols         latest first — the log/feed rows, scoped to the month on screen (the map + log + charts all read one month, driven by the MONTH filter)
+     * @param int                                                                                      $monthCount      patrols started this month
+     * @param float                                                                                    $monthDistanceKm distance sum this month
+     * @param array<string, int>                                                                       $monthTypeCounts this month, keyed by type
+     * @param Fact|null                                                                                $coverage        PL·03 — the share of the area within {@see \Uhifadhi\Patrol\Service\PatrolDashboardService::COVERAGE_BUFFER_M} of a track recorded in the month on screen, in points, as the facts ledger holds it; a fact with no value where there is nothing to measure (no recorded track, or an area with no boundary), and null where the worker has not computed the month yet — the KPI draws each state in its own words, never a false 0 %
+     * @param array<string, int>                                                                       $typeCounts      the month's listed patrols, every configured type present (filter chips)
+     * @param list<array{label: string, counts: array<string, int>}>                                   $weeklySeries    five weeks, oldest first
+     * @param list<array{station: string, label: string, count: int}>                                  $stationSeries   this month, ranked — `station` is the record KEY (what a filter link carries), `label` what the chart prints
+     * @param list<array{lead: UserInterface, hours: float}>                                           $effortSeries    patrol-hours this month per patrol lead, ranked — the "Effort by ranger" widget (PL·17); a patrol with no committed lead or no measured duration credits nobody and is absent
+     * @param array<string, string>                                                                    $stations        the month's stations as key → label (filter menu); the key is what ?station= carries
+     * @param list<string>                                                                             $zones           distinct zones the month's patrols set out in, sorted (filter menu) — computed by a PostGIS spatial join against the host's zone polygons, never a stored field
+     * @param list<array{date: \DateTimeImmutable, patrols: list<Patrol>, today: bool, outside: bool}> $calendar        42 Monday-start cells for the month on screen
      */
     public function __construct(
         public array $patrols,
         public int $monthCount,
         public float $monthDistanceKm,
         public array $monthTypeCounts,
-        public ?float $coverageFraction,
+        public ?Fact $coverage,
         public array $typeCounts,
         public int $totalCount,
         public ?Patrol $lastPatrol,

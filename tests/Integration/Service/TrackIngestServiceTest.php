@@ -92,6 +92,26 @@ final class TrackIngestServiceTest extends IntegrationTestCase
         self::assertEqualsWithDelta([-30.0, -1.0], $geo['coordinates'][0], 1e-9);
     }
 
+    /** A patrol recorded from a file is settled: the worker is asked to buffer its track, and nothing is buffered here. */
+    public function testARecordedPatrolIsQueuedForTheWorkerNotBufferedHere(): void
+    {
+        $area = $this->makeArea();
+        $patrol = $this->ingest()->ingest($this->gpx(), $area, type: Vocabulary::type($this->em, $area, 'walk'));
+
+        $transport = static::getContainer()->get('test_public.messenger.transport.async');
+        self::assertInstanceOf(\Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface::class, $transport);
+        $queued = [];
+        foreach ($transport->all() as $envelope) {
+            $message = $envelope->getMessage();
+            if ($message instanceof \Uhifadhi\Patrol\Message\BufferPatrolCorridor) {
+                $queued[] = $message->patrolId;
+            }
+        }
+
+        self::assertSame([(int) $patrol->getId()], $queued);
+        self::assertSame(0, self::whole($this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM patrol_corridor')));
+    }
+
     public function testObservationsPersistWithTheirPatrol(): void
     {
         $area = $this->makeArea();
@@ -118,5 +138,12 @@ final class TrackIngestServiceTest extends IntegrationTestCase
         $point = json_decode($position, true, flags: \JSON_THROW_ON_ERROR);
         self::assertSame('Point', $point['type']);
         self::assertEqualsWithDelta([-30.001, -1.0005], $point['coordinates'], 1e-9);
+    }
+
+    private static function whole(mixed $value): int
+    {
+        self::assertIsNumeric($value);
+
+        return (int) $value;
     }
 }

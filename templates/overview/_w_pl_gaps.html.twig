@@ -10,7 +10,8 @@
    The two columns read two windows and the footer says which: days-since looks
    over all of history, because a zone nobody has entered for a year is exactly
    the row this card exists for; the coverage share is this month's, so it
-   reconciles with the module's own PL·03. #}
+   reconciles with the module's own PL·03. Both are the worker's facts, and the
+   footer's caption says when they are true as of. #}
 {% set pl = by.patrols %}
 {% set g = pl.gaps %}
 <div class="c" data-w="pl_gaps">
@@ -28,11 +29,15 @@
             {% for z in g.zones %}
                 <tr>
                     <td>{{ z.zone }}</td>
-                    <td class="fog">{% if z.lastEnteredAt %}<time datetime="{{ z.lastEnteredAt|date('c') }}" data-localtime-format="date">{{ z.lastEnteredAt|date('D j M')|lower }}</time>{% if z.lastPatrol %} · {{ z.lastPatrol.ref }}{% endif %}{% else %}no track has entered it{% endif %}</td>
+                    {# A zone the worker has not measured yet says so, and claims
+                       neither a date nor a gap. #}
+                    <td class="fog">{% if not z.computed %}not computed yet · runs hourly{% elseif z.lastEnteredAt %}<time datetime="{{ z.lastEnteredAt|date('c') }}" data-localtime-format="date">{{ z.lastEnteredAt|date('D j M')|lower }}</time>{% if z.lastPatrol %} · {{ z.lastPatrol.ref }}{% endif %}{% else %}no track has entered it{% endif %}</td>
                     {# Never is the worst gap there is and has no number, so it
                        wears the failure chip and says the word. #}
                     <td class="num">
-                        {% if z.daysSince is null %}
+                        {% if not z.computed %}
+                            —
+                        {% elseif z.never %}
                             <span class="chip fail">never</span>
                         {% else %}
                             <span class="chip {{ z.daysSince >= 7 ? 'fail' : (z.daysSince >= 4 ? 'warn' : (z.daysSince >= 1 ? 'idle' : 'ok')) }}">{{ z.daysSince }} d</span>
@@ -46,7 +51,7 @@
         </table>
 
         <div class="rln patrol-ao-foot">
-            <span class="fog">Area within {{ g.bufferKm|number_format }} km of a track, this month</span>
+            <span class="fog">Area within {{ g.bufferKm|number_format }} km of a track, this month{{ include('@UhifadhiPatrol/_as_of.html.twig', {fact: g.asOf}, with_context = false) }}</span>
             <span class="mono acc patrol-ao-mono">{{ g.areaCoverageFraction is null ? '—' : (g.areaCoverageFraction * 100)|round ~ ' %' }} · the module’s own number</span>
         </div>
     {% else %}
