@@ -582,9 +582,17 @@ final class PatrolRepository extends ServiceEntityRepository
         // computed ONCE in a CTE and clipped per zone. Repeating the union
         // inside a per-zone lateral would buffer every track as many times as
         // the area has zones.
+        // COMPUTED ONCE, BY ORDER. Without MATERIALIZED the planner folds a
+        // once-referenced WITH query into the join and recomputes the union
+        // of buffered tracks for every zone row — eighteen zones, eighteen
+        // buffers of every track, and a page that dies at the execution
+        // limit on one long patrol. "MATERIALIZED [forces] separate
+        // calculation of the WITH query" —
+        // https://www.postgresql.org/docs/current/queries-with.html (7.8.3,
+        // "CTE Materialization"); PostgreSQL 12+.
         $sql = \sprintf(
             <<<'SQL'
-                WITH covered AS (
+                WITH covered AS MATERIALIZED (
                     SELECT ST_Union(ST_Buffer(p.%1$s::geography, :buffer)::geometry) AS geom
                     FROM %2$s p
                     WHERE p.%3$s = :area
@@ -812,7 +820,7 @@ final class PatrolRepository extends ServiceEntityRepository
                     FROM %5$s z
                     WHERE CAST(z.%2$s AS TEXT) IN (:zones)
                 ),
-                covered AS (
+                covered AS MATERIALIZED (
                     SELECT p.%6$s AS area_id,
                            ST_Union(ST_Buffer(p.%7$s::geography, COALESCE(t.%8$s, :buffer))::geometry) AS geom
                     FROM %9$s p
