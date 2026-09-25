@@ -15,6 +15,9 @@ namespace Uhifadhi\Patrol\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
+use Uhifadhi\Contracts\Facts\FactPeriod;
+use Uhifadhi\Contracts\Facts\RecomputeFacts;
+use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 
 /**
@@ -50,6 +53,29 @@ final readonly class PatrolCorridorService
     public function buffer(int $patrolId): bool
     {
         return $this->corridors->buffer($patrolId, self::width(), self::width(), $this->clock->now());
+    }
+
+    /**
+     * The ledger months a patrol's track falls in — the month it started and,
+     * when it ran past a month's end, the month it ended in — as the keys the
+     * core's {@see RecomputeFacts} asks for. A patrol with no start has no
+     * month to file.
+     *
+     * @return list<string>
+     */
+    public function monthsOf(int $patrolId): array
+    {
+        $patrol = $this->entityManager->find(Patrol::class, $patrolId);
+        $from = $patrol?->getStartedAt();
+        if (null === $patrol || null === $from) {
+            return [];
+        }
+        $until = $patrol->getEndedAt() ?? $from;
+
+        return array_values(array_unique(array_map(
+            static fn (FactPeriod $month): string => $month->key,
+            FactPeriod::monthsBetween($from, max($from, $until)),
+        )));
     }
 
     /**

@@ -86,11 +86,14 @@ final readonly class PatrolFactProvider implements FactProviderInterface
         self::ZONE_LAST_PATROL,
     ];
 
+    /** The slug the module files its figures under, and names in a {@see \Uhifadhi\Contracts\Facts\RecomputeFacts}. */
+    public const string SLUG = 'patrols';
+
     public function __construct(
         private PatrolCorridorService $buffering,
         private PatrolCorridorRepository $corridors,
         private PatrolRepository $patrols,
-        private string $slug = 'patrols',
+        private string $slug = self::SLUG,
     ) {
     }
 

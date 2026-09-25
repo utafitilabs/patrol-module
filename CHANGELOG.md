@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * a buffered corridor asks the core (`RecomputeFacts`) to file the patrol's months again at once, so a completed or late-uploaded patrol reaches the figures on the worker's next turn rather than the schedule's next run
+
 - A patrol's track is buffered once, by the queue worker, into `patrol_corridor`
   — at its type's width and at the module's 2 km — when the patrol settles: a
   completion from the handset, a patrol recorded from a GPX file, or a track

@@ -252,7 +252,7 @@ return static function (ContainerConfigurator $container): void {
         ]);
 
     $services->set('patrol.corridor_handler', BufferPatrolCorridorHandler::class)
-        ->args([service('patrol.corridors')])
+        ->args([service('patrol.corridors'), service('messenger.default_bus')])
         ->tag('messenger.message_handler', ['handles' => BufferPatrolCorridor::class]);
 
     $services->set('patrol.facts', PatrolFactProvider::class)

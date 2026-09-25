@@ -13,7 +13,9 @@ declare(strict_types=1);
 
 namespace Uhifadhi\Patrol\Tests\Integration\MessageHandler;
 
+use Symfony\Component\Messenger\Transport\Receiver\ListableReceiverInterface;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Contracts\Facts\RecomputeFacts;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolSourceEnum;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
@@ -48,6 +50,32 @@ final class BufferPatrolCorridorHandlerTest extends IntegrationTestCase
         self::assertEqualsWithDelta(57.0e6, self::number($row['uniform']), 3.0e6);
     }
 
+    /** The figures are not computed here: the core is asked, for this module and the patrol's month. */
+    public function testABufferedCorridorAsksTheCoreToFileThisMonthsFiguresAgain(): void
+    {
+        $patrol = $this->patrol('{"type":"LineString","coordinates":[[-30.0,-2.95],[-29.9,-2.95]]}', 150);
+
+        ($this->handler())(new BufferPatrolCorridor((int) $patrol->getId()));
+
+        $asked = [];
+        foreach ($this->async()->all() as $envelope) {
+            $message = $envelope->getMessage();
+            if ($message instanceof RecomputeFacts) {
+                $asked[] = [$message->moduleSlug, $message->monthKeys, $message->subjectUuid];
+            }
+        }
+        self::assertSame([['patrols', ['2026-03'], null]], $asked);
+    }
+
+    public function testAPatrolThatBuffersNothingAsksForNothing(): void
+    {
+        ($this->handler())(new BufferPatrolCorridor(999999));
+
+        foreach ($this->async()->all() as $envelope) {
+            self::assertNotInstanceOf(RecomputeFacts::class, $envelope->getMessage());
+        }
+    }
+
     public function testASecondMessageReplacesTheCorridorRatherThanAddingOne(): void
     {
         $patrol = $this->patrol('{"type":"LineString","coordinates":[[-30.0,-2.95],[-29.9,-2.95]]}', 150);
@@ -75,6 +103,14 @@ final class BufferPatrolCorridorHandlerTest extends IntegrationTestCase
         $this->handler()(new BufferPatrolCorridor(987654));
 
         self::assertSame(0, self::whole($this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM patrol_corridor')));
+    }
+
+    private function async(): ListableReceiverInterface
+    {
+        $transport = static::getContainer()->get('test_public.messenger.transport.async');
+        self::assertInstanceOf(ListableReceiverInterface::class, $transport);
+
+        return $transport;
     }
 
     private function handler(): BufferPatrolCorridorHandler

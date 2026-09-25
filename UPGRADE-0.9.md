@@ -39,6 +39,10 @@ The first buffers every complete patrol's track, 100 at a time
 quarters and years they touch. The hourly schedule keeps the month open now
 current from then on.
 
+## When a figure moves
+
+A completed patrol is buffered by the worker, which then asks the core to file this module's figures for the patrol's month again, closed months included. With the worker running, the dashboard and the zone figures follow a completion within its next turn; without it, the hourly schedule catches up. This needs the core release that carries `Uhifadhi\Contracts\Facts\RecomputeFacts`.
+
 ## What changes on the pages
 
 | Where | Now |
