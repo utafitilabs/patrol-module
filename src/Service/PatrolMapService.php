@@ -202,7 +202,7 @@ final readonly class PatrolMapService
 
         $map->addLayer(new GeoJsonLayer(
             id: 'patrol.stations',
-            label: 'stations',
+            label: 'Stations',
             features: self::collection($stations),
             swatch: self::STATION_SWATCH,
             shape: LayerShape::Point,

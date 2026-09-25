@@ -282,7 +282,7 @@ final class PatrolMapServiceTest extends TestCase
 
         $area = array_values(array_filter($map->legend(), static fn (LegendItem $row): bool => Ground::GROUP === $row->group));
         self::assertSame(
-            [['Boundary', null], ['Zones', 2], ['stations', 1]],
+            [['Boundary', null], ['Zones', 2], ['Stations', 1]],
             array_map(static fn (LegendItem $row): array => [$row->label, $row->count], $area),
         );
         self::assertSame(Ground::GROUP, $map->legend()[0]->group);
