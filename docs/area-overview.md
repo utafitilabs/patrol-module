@@ -47,9 +47,10 @@ module's own six selectors with the accent its tracks already wear.
 
 A zone is the area module's ground and every count over it is whichever module
 recorded it, so `Module\PatrolZoneFigureProvider` (tagged `uhifadhi.zone_kpi`)
-publishes three `DepartmentKpi` figures for each zone of an area, answered for
-the whole set the caller is about to draw in one query and keyed by the zone's
-uuid. **Patrols logged** is every complete patrol in the period whose track
+publishes three `DepartmentKpi` figures for each zone of an area, read in one
+batch from the facts ledger where the worker filed them
+([coverage.md](coverage.md)) and keyed by the zone's uuid; each carries the time
+it is true as of in `DepartmentKpi::$asOf`. **Patrols logged** is every complete patrol in the period whose track
 entered the ring — the track, never the station, which is a free-text word and
 no evidence anybody crossed anything. **Distance patrolled** is the length of
 those tracks *inside* the ring, in kilometres. **Covered** — the key the
@@ -58,10 +59,12 @@ under the period's tracks buffered each at its own type's width, falling back
 on the module's two kilometres where a type sets none; the union is built for
 the whole area and then clipped to the zone, because a round walked along the
 fence covers the ring's edge without ever crossing it. The answer states the
-period it measured, which is the period asked for. A zone no track entered, in
-a period whose area recorded no track at all, is left out of the answer
-entirely: unknown is not zero, and the zones surfaces say so in their own
-words.
+period it read: the one asked for where it is a calendar month, quarter or year,
+otherwise the calendar period of about its length that holds its last day. A
+zone no track entered, in a period whose area recorded no track at all, is left
+out of the answer entirely: unknown is not zero, and the zones surfaces say so
+in their own words. A zone the worker has not measured yet gets its three plates
+with no value and the caption "not computed yet · runs hourly".
 
 ## One headline for every station
 

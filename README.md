@@ -62,7 +62,7 @@ php bin/console registry:sync
 php bin/console cache:warmup
 ```
 
-Those are the installation's four commands, the same four after every change to it. The second is the whole of this module's schema step, and the third enters the module in the catalogue — `registry:sync` gives every area its row and prints what it added, kept and retired. This module ships the SQL for the eleven `patrol_*`
+Those are the installation's four commands, the same four after every change to it. The second is the whole of this module's schema step, and the third enters the module in the catalogue — `registry:sync` gives every area its row and prints what it added, kept and retired. This module ships the SQL for the `patrol_*`
 tables it owns, under its own namespace, and registers the path itself — an
 installation writes no version for them, exactly as it writes none for the core.
 
@@ -82,6 +82,29 @@ package that command must report no changes; if it wants to create a
 ### What it requires
 
 This module requires the core (`uhifadhi/uhifadhi`) and the evidence store (`uhifadhi/storage-module`); both are on Packagist and resolve from the caret constraints in this package's manifest, so an installation names nothing.
+
+### The worker
+
+Coverage is computed by the queue worker, never by a page. A settled patrol's
+track is buffered by the worker from the `async` transport, and the coverage
+figures are filed hourly by the core's schedule on `scheduler_default`:
+
+```console
+php bin/console messenger:consume async scheduler_default
+```
+
+An installation that runs no worker shows "not computed yet · runs hourly" where
+the coverage figures go. After the deploy that brings stored corridors, and
+after a patrol type's coverage width changes, run once:
+
+```console
+php bin/console patrol:coverage:rebuild
+php bin/console uhifadhi:facts:rebuild --module=patrols --from=2026-01
+```
+
+The first buffers every complete patrol that has no stored corridor, or a stale
+one, in batches (`--batch-size`, default 100; `--all` buffers every one again);
+the second files the months from `--from` on. See [docs/coverage.md](docs/coverage.md).
 
 ### Switching it on
 
@@ -233,6 +256,7 @@ module's, and from here on it is the module that changes them.
 | `Uhifadhi\Patrol\Migrations\Version20260911090000` | `patrol_settings` — what one area runs patrols on. |
 | `Uhifadhi\Patrol\Migrations\Version20260911120000` | `patrol_type` and `patrol_station`, with every existing patrol carried onto them. |
 | `Uhifadhi\Patrol\Migrations\Version20260925090000` | A patrol points at the AREA's station (`area_station_id`); the module's own stations are moved onto the area's by name, made where the area has none and the module's carried a point, and kept as a word on the patrol otherwise. |
+| `Uhifadhi\Patrol\Migrations\Version20260925230000` | `patrol_corridor` — each patrol's track buffered once, empty until `patrol:coverage:rebuild` or the worker fills it. |
 
 The answer to every one of them is `doctrine:migrations:migrate`. What is
 kept for one release and dropped by a later, marked version: `patrol_patrol.type`
@@ -253,6 +277,9 @@ this module no longer writes. See [docs/development.md](docs/development.md).
   what it is counted in, the retention clock and how a review hold stops it.
 - [docs/organization-dashboard.md](docs/organization-dashboard.md) — the one
   contribution point on `/`, the figure and the cell it puts there.
+- [docs/coverage.md](docs/coverage.md) — the corridor each patrol's track is
+  buffered into once, the coverage facts the worker files, what each page reads
+  and what an installation runs.
 - [docs/area-overview.md](docs/area-overview.md) — the five contribution points
   patrols fills on an area's overview page, the three figures it publishes for
   every zone, the headline it publishes for every station, and the one thing it
