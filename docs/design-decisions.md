@@ -159,6 +159,16 @@ own number). A plate has a real height and refuses to stretch, so it is never as
 tall as the longest column beside it; the patrol detail plate states nothing,
 because the design's height for it is already the plate's default.
 
+THE AREA'S GROUND IS THE ATLAS'S. Every patrol plate but the station picker
+stands on the area's boundary and zones: the controller takes the area's answer
+from `AreaMapPayload::forArea()` (service `area.map_payload`) and
+`PatrolMapService` hands it to the atlas as a `Ground`. The atlas draws the
+zones as one quiet line layer under every patrol mark and opens the legend on
+"The area" — the Boundary row, then "Zones · N", present at nought — and
+patrol's own stations row joins that group. This module names no zone colour
+and draws no zone layer. The station picker keeps its own quiet boundary and
+no zones: it is a plate for placing one point.
+
 WHICH IMAGERY a satellite layer draws is the deployment's configuration
 (`atlas.satellite.provider`: esri, google or its own source), read by the atlas
 from the document. This module neither knows nor needs to.
@@ -168,7 +178,8 @@ is drawn. The coverage map shows it, like the area map: it frames the whole
 area, and dimming the outside is what makes the boundary read at a glance. The
 detail and observation plates do NOT: they open deep inside the area at close
 zoom, where "outside" is not in frame at all and the scrim would only darken
-imagery for no gain. Both draw the identical casing and jade line.
+imagery for no gain. Both draw the identical casing and jade line. The scrim is
+the one parameter this module hands the ground.
 
 **Why:** the platform rule is that the same layer renders identically wherever
 it appears — a patrol map and an area map must not disagree about what

@@ -21,6 +21,7 @@ use Uhifadhi\Bundle\AtlasBundle\Map\MapBuilderInterface;
 use Uhifadhi\Bundle\AtlasBundle\Model\AtlasMap;
 use Uhifadhi\Bundle\AtlasBundle\Model\Boundary;
 use Uhifadhi\Bundle\AtlasBundle\Model\GeoJsonLayer;
+use Uhifadhi\Bundle\AtlasBundle\Model\Ground;
 use Uhifadhi\Bundle\AtlasBundle\Model\LayerShape;
 use Uhifadhi\Bundle\AtlasBundle\Model\LayerStyle;
 use Uhifadhi\Bundle\AtlasBundle\Model\LegendItem;
@@ -34,9 +35,16 @@ use Uhifadhi\Contracts\Atlas\PlatePalette;
  * observations logged along it.
  *
  * Both are drawn by the atlas. This module holds no opinion about what
- * satellite imagery looks like, how a boundary is cased, where the zoom buttons
- * sit, what fullscreen does or how a legend is laid out; it says what is on its
- * maps and the platform draws them the one way it draws every map.
+ * satellite imagery looks like, how a boundary is cased, how a zone is drawn,
+ * where the zoom buttons sit, what fullscreen does or how a legend is laid out;
+ * it says what is on its maps and the platform draws them the one way it draws
+ * every map.
+ *
+ * BOTH STAND ON THE AREA'S GROUND. The area answers what its ground is
+ * (`AreaMapPayload::forArea()`: the boundary and the zones), and this hands
+ * that answer to the atlas as a {@see Ground} — the boundary, the zones under
+ * every patrol mark, and the "Boundary" and "Zones · N" rows under "The area"
+ * — then adds patrol's own layers on top.
  *
  * A TYPE IS A LAYER: one per patrol type, in the category the area's own order
  * puts that type in, each with a legend row that switches it. So a type can be taken off
@@ -49,8 +57,8 @@ final readonly class PatrolMapService
     /** The legend heading the patrol layers sit under. */
     public const string PATROLS_GROUP = 'patrols';
 
-    /** The heading for what the area itself contributes. */
-    public const string AREA_GROUP = 'the area';
+    /** The heading for what the area itself contributes — the atlas ground's, so a station row sits with the zones. */
+    public const string AREA_GROUP = Ground::GROUP;
 
     /**
      * TOKENS, NEVER COLOURS. A plate's palette is picked to survive satellite
@@ -107,8 +115,9 @@ final readonly class PatrolMapService
     public const int COVERAGE_Z_INDEX = 390;
 
     /**
-     * THE SUBJECT OF THE PLATE — what a route, an endpoint, the boundary and a
-     * patrol whose type the deployment has since dropped are drawn as.
+     * THE SUBJECT OF THE PLATE — what a route, an endpoint, the point being
+     * placed and a patrol whose type the deployment has since dropped are drawn
+     * as.
      */
     private const string DEFAULT_SWATCH = PlatePalette::ACCENT;
 
@@ -118,18 +127,19 @@ final readonly class PatrolMapService
     }
 
     /**
-     * The coverage map: the area, then every route recorded in the window,
-     * grouped by the type it was patrolled as.
+     * The coverage map: the area's ground, then every route recorded in the
+     * window, grouped by the type it was patrolled as.
      *
-     * @param array{boundary: string|null, patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>} $payload
-     * @param array<string, array{label: string, bufferM?: int|null}>                                                                                                                                                               $types      key → the word the legend prints, and the coverage width that type carries (null where it carries none)
-     * @param array<string, string>                                                                                                                                                                                                 $typeSwatch each type's plate token, from {@see PatrolDashboardService::typeSwatches()}
-     * @param string|null                                                                                                                                                                                                           $coverage   the covered ground as GeoJSON text, from {@see \Uhifadhi\Patrol\Repository\PatrolRepository::coverageBufferGeoJson()}; null where the month recorded no track
+     * @param array{boundary: string|null, zones: list<array{name: string|null, geom: string|null}>}                                                                                                         $ground     the area's answer, from `AreaMapPayload::forArea()`
+     * @param array{patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>} $payload
+     * @param array<string, array{label: string, bufferM?: int|null}>                                                                                                                                        $types      key → the word the legend prints, and the coverage width that type carries (null where it carries none)
+     * @param array<string, string>                                                                                                                                                                          $typeSwatch each type's plate token, from {@see PatrolDashboardService::typeSwatches()}
+     * @param string|null                                                                                                                                                                                    $coverage   the covered ground as GeoJSON text, from {@see \Uhifadhi\Patrol\Repository\PatrolRepository::coverageBufferGeoJson()}; null where the month recorded no track
      */
-    public function coverage(array $payload, array $types, array $typeSwatch, ?string $coverage = null): AtlasMap
+    public function coverage(array $ground, array $payload, array $types, array $typeSwatch, ?string $coverage = null): AtlasMap
     {
         $map = $this->maps->createMap();
-        $this->drawBoundary($map, $payload['boundary'], scrim: true);
+        $map->ground(Ground::fromGeoJson($ground['boundary'], $ground['zones'], scrim: true));
         $this->drawCoverage($map, $coverage, self::coverageLabel($types));
 
         // Grouped before anything is drawn, so a type the deployment configured
@@ -228,7 +238,20 @@ final readonly class PatrolMapService
     public function stationPoint(?string $boundary, array $placed, float $lat, float $lon, string $placing): AtlasMap
     {
         $map = $this->maps->createMap();
-        $this->drawBoundary($map, $boundary, scrim: false);
+
+        // THE PICKER'S OWN QUIET BOUNDARY, and no zones: a plate for placing
+        // one point is not a plate about the area's zones.
+        $edge = self::decode($boundary);
+        if (null !== $edge) {
+            $map->boundary(new Boundary($edge, scrim: false));
+            $map->addLegendItem(new LegendItem(
+                label: Ground::BOUNDARY_LABEL,
+                swatch: Ground::BOUNDARY_SWATCH,
+                shape: LayerShape::Line,
+                group: self::AREA_GROUP,
+                layerId: AtlasMap::BOUNDARY_LAYER_ID,
+            ));
+        }
 
         $stations = [];
         foreach ($placed as $station) {
@@ -286,29 +309,29 @@ final readonly class PatrolMapService
     }
 
     /**
-     * A detail plate: one route, the observations logged along it, and the area
-     * underneath as context.
+     * A detail plate: one route, the observations logged along it, and the
+     * area's ground underneath as context.
      *
      * One `observation` in the payload means the screen is about that
      * observation rather than about the patrol: the route becomes context, so it
      * is drawn without its ends.
      *
+     * @param array{boundary: string|null, zones: list<array{name: string|null, geom: string|null}>} $ground the area's answer, from `AreaMapPayload::forArea()`
      * @param array{
-     *     boundary: string|null,
      *     track?: string|null,
      *     color?: string|null,
      *     observation?: array{n: int, position: string|null, category?: string|null}|null,
      *     observations?: list<array{n: int, position: string|null, category?: string|null, url?: string|null, current?: bool}>,
      * } $payload
      */
-    public function track(array $payload): AtlasMap
+    public function track(array $ground, array $payload): AtlasMap
     {
         $map = $this->maps->createMap();
 
         // A detail plate opens deep inside the area, where dimming "outside"
         // darkens imagery with no edge in frame to explain it. The control is
         // built either way, so it can still be switched on.
-        $this->drawBoundary($map, $payload['boundary'], scrim: false);
+        $map->ground(Ground::fromGeoJson($ground['boundary'], $ground['zones'], scrim: false));
 
         $single = $payload['observation'] ?? null;
         $colour = $payload['color'] ?? self::DEFAULT_SWATCH;
@@ -505,23 +528,6 @@ final readonly class PatrolMapService
         return $metres < 1000
             ? [(string) $metres, 'm']
             : [rtrim(rtrim(number_format($metres / 1000, 1, '.', ''), '0'), '.'), 'km'];
-    }
-
-    private function drawBoundary(AtlasMap $map, ?string $boundary, bool $scrim): void
-    {
-        $geometry = self::decode($boundary);
-        if (null === $geometry) {
-            return;
-        }
-
-        $map->boundary(new Boundary($geometry, $scrim));
-        $map->addLegendItem(new LegendItem(
-            label: 'boundary',
-            swatch: self::DEFAULT_SWATCH,
-            shape: LayerShape::Line,
-            group: self::AREA_GROUP,
-            layerId: AtlasMap::BOUNDARY_LAYER_ID,
-        ));
     }
 
     /**

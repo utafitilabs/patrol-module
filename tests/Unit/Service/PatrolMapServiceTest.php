@@ -16,6 +16,7 @@ namespace Uhifadhi\Patrol\Tests\Unit\Service;
 use PHPUnit\Framework\TestCase;
 use Uhifadhi\Bundle\AtlasBundle\Map\MapBuilder;
 use Uhifadhi\Bundle\AtlasBundle\Model\AtlasMap;
+use Uhifadhi\Bundle\AtlasBundle\Model\Ground;
 use Uhifadhi\Bundle\AtlasBundle\Model\LegendItem;
 use Uhifadhi\Contracts\Atlas\PlatePalette;
 use Uhifadhi\Patrol\Service\PatrolMapService;
@@ -34,20 +35,21 @@ final class PatrolMapServiceTest extends TestCase
     private const string BOUNDARY = '{"type":"Polygon","coordinates":[[[-29.5,-3.2],[-29.4,-3.2],[-29.4,-3.1],[-29.5,-3.1],[-29.5,-3.2]]]}';
     private const string TRACK = '{"type":"LineString","coordinates":[[-29.48,-3.18],[-29.46,-3.16],[-29.44,-3.14]]}';
     private const string POINT = '{"type":"Point","coordinates":[-29.47,-3.17]}';
+    private const string ZONE = '{"type":"Polygon","coordinates":[[[-29.5,-3.2],[-29.45,-3.2],[-29.45,-3.1],[-29.5,-3.1],[-29.5,-3.2]]]}';
     private const string BUFFER = '{"type":"MultiPolygon","coordinates":[[[[-29.49,-3.19],[-29.43,-3.19],[-29.43,-3.13],[-29.49,-3.13],[-29.49,-3.19]]]]}';
 
     public function testEachPatrolTypeIsItsOwnLayerInTheDeploymentsColour(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors());
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors());
 
         $layers = $map->toArray()['layers'];
         self::assertSame(
-            [PatrolMapService::COVERAGE_LAYER, 'patrol.tracks.foot', 'patrol.tracks.vehicle', 'patrol.endpoints', 'patrol.stations'],
+            [Ground::ZONES_LAYER_ID, PatrolMapService::COVERAGE_LAYER, 'patrol.tracks.foot', 'patrol.tracks.vehicle', 'patrol.endpoints', 'patrol.stations'],
             array_column($layers, 'id'),
         );
-        self::assertSame(PlatePalette::category(1), $layers[1]['swatch']);
-        self::assertSame(PlatePalette::category(2), $layers[2]['swatch']);
-        self::assertSame('line', $layers[1]['shape']);
+        self::assertSame(PlatePalette::category(1), $layers[2]['swatch']);
+        self::assertSame(PlatePalette::category(2), $layers[3]['swatch']);
+        self::assertSame('line', $layers[2]['shape']);
     }
 
     /**
@@ -56,7 +58,7 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testATypeRowSwitchesItsTracksAndCountsThem(): void
     {
-        $row = self::legendRow(self::map()->coverage(self::coveragePayload(), self::types(), self::colors()), 'foot');
+        $row = self::legendRow(self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors()), 'foot');
 
         self::assertSame('patrol.tracks.foot', $row->layerId);
         self::assertSame(2, $row->count);
@@ -71,7 +73,8 @@ final class PatrolMapServiceTest extends TestCase
     public function testATypeWithNoTracksKeepsItsRowAndSaysZero(): void
     {
         $map = self::map()->coverage(
-            ['boundary' => self::BOUNDARY, 'patrols' => [], 'stations' => []],
+            self::ground(),
+            ['patrols' => [], 'stations' => []],
             self::types(),
             self::colors(),
         );
@@ -87,7 +90,7 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testATrackFeatureCarriesItsPatrolsReferenceAndColour(): void
     {
-        $features = self::features(self::map()->coverage(self::coveragePayload(), self::types(), self::colors()), 1);
+        $features = self::features(self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors()), 2);
 
         self::assertSame(
             ['ref' => 'PT-0001', 'color' => PlatePalette::category(1), PatrolMapService::TOOLTIP_PROPERTY => 'PT-0001 · foot'],
@@ -106,12 +109,12 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testATrackNamesItselfAndItsTypeOnHover(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors());
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors());
 
         $layers = $map->toArray()['layers'];
-        self::assertSame(PatrolMapService::TOOLTIP_PROPERTY, $layers[1]['tooltip']);
+        self::assertSame(PatrolMapService::TOOLTIP_PROPERTY, $layers[2]['tooltip']);
 
-        $properties = self::properties($map, 1, 0);
+        $properties = self::properties($map, 2, 0);
         self::assertSame('PT-0001 · foot', $properties[PatrolMapService::TOOLTIP_PROPERTY] ?? null);
         self::assertArrayNotHasKey('label', $properties);
     }
@@ -123,10 +126,10 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testATrackLayerNamesThePropertyARowSpotlightsItBy(): void
     {
-        $layers = self::map()->coverage(self::coveragePayload(), self::types(), self::colors())->toArray()['layers'];
+        $layers = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors())->toArray()['layers'];
 
-        self::assertSame('ref', $layers[1]['featureId']);
         self::assertSame('ref', $layers[2]['featureId']);
+        self::assertSame('ref', $layers[3]['featureId']);
     }
 
     /**
@@ -140,15 +143,15 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testTheCoverageBufferIsDrawnUnderTheTracksWithItsOwnLegendRow(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors(), self::BUFFER);
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors(), self::BUFFER);
 
         $layers = $map->toArray()['layers'];
-        self::assertSame(PatrolMapService::COVERAGE_LAYER, $layers[0]['id']);
-        self::assertSame('fill', $layers[0]['shape']);
-        $style = $layers[0]['style'];
+        self::assertSame(PatrolMapService::COVERAGE_LAYER, $layers[1]['id']);
+        self::assertSame('fill', $layers[1]['shape']);
+        $style = $layers[1]['style'];
         self::assertIsArray($style);
         self::assertSame(PatrolMapService::COVERAGE_Z_INDEX, $style['zIndex'] ?? null);
-        self::assertCount(1, self::features($map, 0));
+        self::assertCount(1, self::features($map, 1));
 
         $row = self::legendRow($map, PatrolMapService::COVERAGE_LABEL);
         self::assertSame(PatrolMapService::COVERAGE_LAYER, $row->layerId);
@@ -169,6 +172,7 @@ final class PatrolMapServiceTest extends TestCase
     public function testTheCoverageRowNamesTheWidthsTheTypesActuallyCarry(): void
     {
         $narrow = self::map()->coverage(
+            self::ground(),
             self::coveragePayload(),
             ['foot' => ['label' => 'Foot', 'bufferM' => 150], 'vehicle' => ['label' => 'Vehicle', 'bufferM' => 150]],
             self::colors(),
@@ -177,6 +181,7 @@ final class PatrolMapServiceTest extends TestCase
         self::assertSame('150 m coverage buffer', self::legendRow($narrow, '150 m coverage buffer')->label);
 
         $mixed = self::map()->coverage(
+            self::ground(),
             self::coveragePayload(),
             ['foot' => ['label' => 'Foot', 'bufferM' => 150], 'vehicle' => ['label' => 'Vehicle', 'bufferM' => 400]],
             self::colors(),
@@ -192,7 +197,7 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testATypeWithNoBufferOfItsOwnKeepsTheModulesDistanceInTheRow(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors(), self::BUFFER);
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors(), self::BUFFER);
 
         self::assertSame(PatrolMapService::COVERAGE_LABEL, self::legendRow($map, PatrolMapService::COVERAGE_LABEL)->label);
     }
@@ -204,19 +209,19 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testAMonthWithNoRecordedTrackStillShipsTheCoverageRow(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors(), null);
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors(), null);
 
-        self::assertSame(PatrolMapService::COVERAGE_LAYER, $map->toArray()['layers'][0]['id']);
-        self::assertSame([], self::features($map, 0));
+        self::assertSame(PatrolMapService::COVERAGE_LAYER, $map->toArray()['layers'][1]['id']);
+        self::assertSame([], self::features($map, 1));
         self::assertFalse(self::legendRow($map, PatrolMapService::COVERAGE_LABEL)->visible);
     }
 
     /** The design's ● start and ○ end, as points the plate draws in the track's colour. */
     public function testEveryTrackContributesItsStartAndItsEnd(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors());
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors());
 
-        $ends = self::features($map, 3);
+        $ends = self::features($map, 4);
 
         self::assertCount(6, $ends);
         self::assertSame(
@@ -231,7 +236,7 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testAStationIsDrawnWhereItsPatrolsSetOutAndWearsItsName(): void
     {
-        $features = self::features(self::map()->coverage(self::coveragePayload(), self::types(), self::colors()), 4);
+        $features = self::features(self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors()), 5);
 
         self::assertCount(1, $features);
         self::assertSame(['label' => 'North gate'], \is_array($features[0]) ? $features[0]['properties'] : null);
@@ -239,34 +244,90 @@ final class PatrolMapServiceTest extends TestCase
 
     public function testTheBoundaryIsDrawnWithItsScrimAndSwitchableFromTheLegend(): void
     {
-        $map = self::map()->coverage(self::coveragePayload(), self::types(), self::colors());
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors());
 
         $boundary = $map->toArray()['boundary'];
         self::assertIsArray($boundary);
         self::assertTrue($boundary['scrim']);
-        self::assertSame(AtlasMap::BOUNDARY_LAYER_ID, self::legendRow($map, 'boundary')->layerId);
+        self::assertSame(AtlasMap::BOUNDARY_LAYER_ID, self::legendRow($map, 'Boundary')->layerId);
     }
 
     public function testATrackThatWillNotParseIsSimplyNotDrawn(): void
     {
         $map = self::map()->coverage(
-            ['boundary' => 'not json', 'patrols' => [['uuid' => 'u', 'ref' => 'PT-0003', 'type' => 'foot', 'station' => '', 'zone' => '', 'color' => PlatePalette::category(1), 'track' => '{']], 'stations' => []],
+            self::ground('not json'),
+            ['patrols' => [['uuid' => 'u', 'ref' => 'PT-0003', 'type' => 'foot', 'station' => '', 'zone' => '', 'color' => PlatePalette::category(1), 'track' => '{']], 'stations' => []],
             self::types(),
             self::colors(),
         );
 
         self::assertNull($map->toArray()['boundary']);
-        self::assertSame([], self::features($map, 1));
+        self::assertSame([], self::features($map, 2));
+    }
+
+    /**
+     * THE AREA'S ZONES ARE THE ATLAS GROUND'S: the first layer, under every
+     * track, with a row that counts them under "The area" — the boundary row
+     * above it, the stations row after it.
+     */
+    public function testTheCoveragePlateStandsOnTheAreasGround(): void
+    {
+        $map = self::map()->coverage(self::ground(), self::coveragePayload(), self::types(), self::colors());
+
+        $zones = $map->toArray()['layers'][0];
+        self::assertSame(Ground::ZONES_LAYER_ID, $zones['id']);
+        self::assertSame(PlatePalette::DIM, $zones['swatch']);
+        self::assertSame('line', $zones['shape']);
+        self::assertCount(2, self::features($map, 0));
+
+        $area = array_values(array_filter($map->legend(), static fn (LegendItem $row): bool => Ground::GROUP === $row->group));
+        self::assertSame(
+            [['Boundary', null], ['Zones', 2], ['stations', 1]],
+            array_map(static fn (LegendItem $row): array => [$row->label, $row->count], $area),
+        );
+        self::assertSame(Ground::GROUP, $map->legend()[0]->group);
+    }
+
+    public function testAnAreaWithNoZonesStillStatesZonesNought(): void
+    {
+        $map = self::map()->coverage(['boundary' => self::BOUNDARY, 'zones' => []], self::coveragePayload(), self::types(), self::colors());
+
+        $row = self::legendRow($map, 'Zones');
+        self::assertSame(0, $row->count);
+        self::assertFalse($row->visible);
     }
 
     /* ---- the detail plate ------------------------------------------------ */
 
+    public function testTheTrackPlateStandsOnTheAreasGround(): void
+    {
+        $map = self::map()->track(self::ground(), ['track' => self::TRACK]);
+
+        self::assertSame(2, self::legendRow($map, 'Zones')->count);
+        self::assertSame(Ground::GROUP, self::legendRow($map, 'Zones')->group);
+        self::assertSame(Ground::GROUP, self::legendRow($map, 'Boundary')->group);
+    }
+
+    /**
+     * THE STATION PICKER KEEPS ITS OWN QUIET BOUNDARY: a plate for placing one
+     * point is not a plate about the area's zones.
+     */
+    public function testTheStationPickerDrawsNoZones(): void
+    {
+        $map = self::map()->stationPoint(self::BOUNDARY, [], -3.15, -29.45, 'North gate');
+
+        self::assertNotContains(Ground::ZONES_LAYER_ID, array_column($map->toArray()['layers'], 'id'));
+        $boundary = $map->toArray()['boundary'];
+        self::assertIsArray($boundary);
+        self::assertFalse($boundary['scrim']);
+    }
+
     public function testTheDetailPlateDrawsTheTrackAndItsEnds(): void
     {
-        $map = self::map()->track(['boundary' => self::BOUNDARY, 'track' => self::TRACK, 'color' => PlatePalette::category(1)]);
+        $map = self::map()->track(self::ground(), ['track' => self::TRACK, 'color' => PlatePalette::category(1)]);
 
-        self::assertSame(['patrol.track', 'patrol.endpoints'], array_column($map->toArray()['layers'], 'id'));
-        self::assertCount(2, self::features($map, 1));
+        self::assertSame([Ground::ZONES_LAYER_ID, 'patrol.track', 'patrol.endpoints'], array_column($map->toArray()['layers'], 'id'));
+        self::assertCount(2, self::features($map, 2));
     }
 
     /**
@@ -276,7 +337,7 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testTheDetailPlatesScrimStartsOff(): void
     {
-        $map = self::map()->track(['boundary' => self::BOUNDARY, 'track' => self::TRACK]);
+        $map = self::map()->track(self::ground(), ['track' => self::TRACK]);
 
         $boundary = $map->toArray()['boundary'];
         self::assertIsArray($boundary);
@@ -289,8 +350,7 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testEveryPositionedObservationIsAMarkerThatOpensItsPage(): void
     {
-        $map = self::map()->track([
-            'boundary' => self::BOUNDARY,
+        $map = self::map()->track(self::ground(), [
             'track' => self::TRACK,
             'observations' => [
                 ['n' => 1, 'position' => self::POINT, 'category' => 'snare', 'url' => '/patrols/x/observations/1', 'current' => false],
@@ -315,20 +375,19 @@ final class PatrolMapServiceTest extends TestCase
      */
     public function testTheObservationScreenDrawsTheTrackBack(): void
     {
-        $map = self::map()->track([
-            'boundary' => self::BOUNDARY,
+        $map = self::map()->track(self::ground(), [
             'track' => self::TRACK,
             'observation' => ['n' => 3, 'position' => self::POINT, 'category' => 'snare'],
         ]);
 
-        self::assertSame(['patrol.track'], array_column($map->toArray()['layers'], 'id'));
+        self::assertSame([Ground::ZONES_LAYER_ID, 'patrol.track'], array_column($map->toArray()['layers'], 'id'));
     }
 
     public function testAHandLoggedPatrolIsAPlateWithNoTrack(): void
     {
-        $map = self::map()->track(['boundary' => self::BOUNDARY, 'track' => null]);
+        $map = self::map()->track(self::ground(), ['track' => null]);
 
-        self::assertSame([], self::features($map, 0));
+        self::assertSame([], self::features($map, 1));
         self::assertNotNull($map->toArray()['boundary']);
     }
 
@@ -378,12 +437,11 @@ final class PatrolMapServiceTest extends TestCase
     }
 
     /**
-     * @return array{boundary: string|null, patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>}
+     * @return array{patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>}
      */
     private static function coveragePayload(): array
     {
         return [
-            'boundary' => self::BOUNDARY,
             'patrols' => [
                 ['uuid' => 'a', 'ref' => 'PT-0001', 'type' => 'foot', 'station' => 'North gate', 'zone' => '', 'color' => PlatePalette::category(1), 'track' => self::TRACK],
                 ['uuid' => 'b', 'ref' => 'PT-0002', 'type' => 'foot', 'station' => 'North gate', 'zone' => '', 'color' => PlatePalette::category(1), 'track' => self::TRACK],
@@ -411,6 +469,19 @@ final class PatrolMapServiceTest extends TestCase
     private static function colors(): array
     {
         return ['foot' => PlatePalette::category(1), 'vehicle' => PlatePalette::category(2)];
+    }
+
+    /**
+     * The area's answer, as `AreaMapPayload::forArea()` gives it.
+     *
+     * @return array{boundary: string|null, zones: list<array{name: string|null, geom: string|null}>}
+     */
+    private static function ground(?string $boundary = self::BOUNDARY): array
+    {
+        return [
+            'boundary' => $boundary,
+            'zones' => [['name' => 'North block', 'geom' => self::ZONE], ['name' => 'South block', 'geom' => self::ZONE]],
+        ];
     }
 
     private static function map(): PatrolMapService

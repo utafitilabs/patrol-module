@@ -426,6 +426,14 @@ return static function (ContainerConfigurator $container): void {
             service('patrol.dashboard'),
             service('patrol.calendar'),
             service('patrol.map'),
+            // The area's ground (boundary + zones) as the area answers it, by
+            // that bundle's published service id — the id is the reusable
+            // bundle's public surface, named here exactly as shell.widget.service
+            // is. "Services should not use autowiring or autoconfiguration.
+            // Instead, all services should be defined explicitly."
+            // https://symfony.com/doc/current/bundles/best_practices.html ;
+            // the id is defined in vendor/uhifadhi/uhifadhi/src/Uhifadhi/Bundle/AreaBundle/config/services.php
+            service('area.map_payload'),
             service('patrol.coverage'),
             // The day's live reading (out now, zone gaps, the observation queue)
             // for the direction widgets — measured in the ONE place the overview
@@ -505,6 +513,8 @@ return static function (ContainerConfigurator $container): void {
             service('patrol.geo'),
             service('patrol.gpx_writer'),
             service('patrol.map'),
+            // The area's ground, as the dashboard takes it (see there).
+            service('area.map_payload'),
             // The amendment trail the observation screen reads (PL·06). Not
             // behind the security guard the WRITE is behind: a correction is
             // part of the record and must be readable wherever the record is,

@@ -26,6 +26,7 @@ use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Service\AreaMapPayload;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Contracts\Atlas\PlatePalette;
 use Uhifadhi\Contracts\Entity\UserInterface;
@@ -75,6 +76,9 @@ final class PatrolDetailController
         private readonly GeoService $geo,
         private readonly GpxWriter $gpx,
         private readonly PatrolMapService $plates,
+        // THE AREA'S GROUND — the boundary and the zones every plate stands
+        // on, as the area answers it; the atlas draws it.
+        private readonly AreaMapPayload $ground,
         private readonly ObservationAmendmentRepository $amendments,
         private readonly PatrolTypeRepository $types,
         private readonly array $categories,
@@ -126,11 +130,10 @@ final class PatrolDetailController
             'holdToken' => $this->holdToken($area, $patrol),
             // The plate payload: the recorded track plus the positioned
             // observations, which the controller draws as numbered rings.
-            'map' => $this->plates->track([
-                // The area outline travels with every plate: a track is read
-                // AGAINST it, and it is all the plate can draw when a
-                // hand-logged patrol recorded no route at all.
-                'boundary' => $area->getGeom(),
+            // The area's ground travels with every plate: a track is read
+            // AGAINST the boundary and the zones, and they are all the plate
+            // can draw when a hand-logged patrol recorded no route at all.
+            'map' => $this->plates->track($this->ground->forArea($area), [
                 'track' => $patrol->getTrack(),
                 // The one colour this patrol's type is drawn in everywhere.
                 'color' => $this->trackColor($patrol),
@@ -286,8 +289,7 @@ final class PatrolDetailController
             'next' => $siblings['next'],
             // The parent track travels with the payload as context (drawn
             // faded), so the observation reads as a point ON the patrol.
-            'map' => $this->plates->track([
-                'boundary' => $area->getGeom(),
+            'map' => $this->plates->track($this->ground->forArea($area), [
                 'track' => $patrol->getTrack(),
                 'color' => $this->trackColor($patrol),
                 'observation' => [

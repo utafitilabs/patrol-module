@@ -161,8 +161,9 @@ final class ObservationDetailPageTest extends WebTestCase
         // track, which is drawn back because the page is about the observation.
         $plate = self::plate($crawler);
         self::assertStringContainsString('LineString', json_encode(self::features($plate, 'patrol.track'), \JSON_THROW_ON_ERROR));
-        // The route is context here, so its ends are not drawn.
-        self::assertSame(['patrol.track'], array_column($plate['layers'], 'id'));
+        // The route is context here, so its ends are not drawn; the area's
+        // zones lie under it, as on every plate of the area.
+        self::assertSame(['area.zones', 'patrol.track'], array_column($plate['layers'], 'id'));
         // The area outline travels with the plate here too.
         $boundary = $plate['boundary'];
         self::assertIsArray($boundary);

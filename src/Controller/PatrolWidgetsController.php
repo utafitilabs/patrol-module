@@ -25,6 +25,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Uid\Uuid;
 use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Service\AreaMapPayload;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Bundle\ShellBundle\Widget\Service\WidgetEndpoint;
 use Uhifadhi\Bundle\ShellBundle\Widget\Service\WidgetService;
@@ -83,6 +84,9 @@ final class PatrolWidgetsController
         // draws: the picture of a widget IS the widget.
         private readonly PatrolCalendar $calendar,
         private readonly PatrolMapService $plates,
+        // THE AREA'S GROUND — the boundary and the zones every plate stands
+        // on, as the area answers it; the atlas draws it.
+        private readonly AreaMapPayload $ground,
         private readonly PatrolCoverageService $coverage,
         // The library previews EVERY widget, including the direction widgets that
         // read the day's live state (out now, gaps, the observation queue), so it
@@ -168,7 +172,8 @@ final class PatrolWidgetsController
                 'patrolZones' => $patrolZones,
                 'dashboard' => $dashboard,
                 'map' => $this->plates->coverage(
-                    $this->dashboard->coveragePayload($area->getGeom(), $dashboard, $types, $patrolZones),
+                    $this->ground->forArea($area),
+                    $this->dashboard->coveragePayload($dashboard, $types, $patrolZones),
                     $types,
                     PatrolDashboardService::typeSwatches($types),
                     // The real coverage layer, so the previewed plate is the plate.

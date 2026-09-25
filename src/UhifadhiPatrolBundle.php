@@ -435,6 +435,8 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                     service('patrol.dashboard'),
                     service('patrol.calendar'),
                     service('patrol.map'),
+                    // The area's ground, as the dashboard takes it (config/services.php).
+                    service('area.map_payload'),
                     service('patrol.coverage'),
                     // The day's live reading for the direction widgets the library
                     // previews (out now, gaps, the observation queue).
@@ -465,6 +467,8 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                     service(TaxonomyKindRepository::class),
                     service('patrol.vocabulary'),
                     service('patrol.map'),
+                    // The area's ground, as the dashboard takes it (config/services.php).
+                    service('area.map_payload'),
                     service('patrol.drafts'),
                     service('patrol.recording'),
                     service('security.token_storage'),

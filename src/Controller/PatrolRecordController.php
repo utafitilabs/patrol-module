@@ -31,6 +31,7 @@ use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Station;
 use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository;
+use Uhifadhi\Bundle\AreaBundle\Service\AreaMapPayload;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\Patrol;
@@ -126,6 +127,9 @@ final class PatrolRecordController
         private readonly TaxonomyKindRepository $kinds,
         private readonly PatrolVocabularyService $vocabulary,
         private readonly PatrolMapService $plates,
+        // THE AREA'S GROUND — the boundary and the zones every plate stands
+        // on, as the area answers it; the atlas draws it.
+        private readonly AreaMapPayload $ground,
         private readonly PatrolDraftService $drafts,
         private readonly PatrolRecordingService $recording,
         private readonly TokenStorageInterface $tokenStorage,
@@ -229,7 +233,7 @@ final class PatrolRecordController
                 // A sketched route is offered only where step 1 was skipped — a
                 // sketch beside a real track would be two answers to one
                 // question — so the plate carries the area and nothing else.
-                'map' => null === $track ? $this->plates->track(['boundary' => $area->getGeom(), 'track' => null]) : null,
+                'map' => null === $track ? $this->plates->track($this->ground->forArea($area), ['track' => null]) : null,
                 'error' => $error,
             ]),
             $status,

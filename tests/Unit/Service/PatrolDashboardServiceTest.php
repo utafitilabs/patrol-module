@@ -435,7 +435,7 @@ final class PatrolDashboardServiceTest extends TestCase
 
     /* ── the coverage map's payload ──────────────────────────────────────── */
 
-    public function testCoveragePayloadCarriesTheBoundaryAndEveryRecordedTrack(): void
+    public function testCoveragePayloadCarriesEveryRecordedTrack(): void
     {
         $service = new PatrolDashboardService();
         $walk = $this->patrol('walk', '2026-03-20T06:00:00Z', 10.0, 'North post');
@@ -443,14 +443,11 @@ final class PatrolDashboardServiceTest extends TestCase
         $boat = $this->patrol('boat', '2026-03-19T06:00:00Z', 4.0);
         $boat->setTrack('{"type":"LineString","coordinates":[[-29.9,-3.1],[-29.8,-3.15]]}');
 
-        $boundary = '{"type":"MultiPolygon","coordinates":[[[[-30.0,-3.0],[-29.1,-3.0],[-29.1,-3.6],[-30.0,-3.6],[-30.0,-3.0]]]]}';
         $payload = $service->coveragePayload(
-            $boundary,
             $service->build([$walk, $boat], self::TYPES, $this->now),
             self::TYPES,
         );
 
-        self::assertSame($boundary, $payload['boundary']);
         self::assertCount(2, $payload['patrols']);
         self::assertSame($walk->getUuid()->toRfc4122(), $payload['patrols'][0]['uuid']);
         self::assertSame($walk->getRef(), $payload['patrols'][0]['ref']);
@@ -473,26 +470,22 @@ final class PatrolDashboardServiceTest extends TestCase
         $recorded->setTrack('{"type":"LineString","coordinates":[[-29.9,-3.1],[-29.8,-3.15]]}');
 
         $payload = $service->coveragePayload(
-            null,
             $service->build([$sketch, $recorded], self::TYPES, $this->now),
             self::TYPES,
         );
 
-        self::assertNull($payload['boundary']);
         self::assertCount(1, $payload['patrols']);
         self::assertSame($recorded->getUuid()->toRfc4122(), $payload['patrols'][0]['uuid']);
         // A list, never a gappy array: json_encode must emit [] not {"1":…}.
         self::assertSame(range(0, \count($payload['patrols']) - 1), array_keys($payload['patrols']));
     }
 
-    public function testCoveragePayloadOfAnAreaWithoutPatrolsStillCarriesTheBoundary(): void
+    public function testCoveragePayloadOfAnAreaWithoutPatrolsIsEmpty(): void
     {
         $service = new PatrolDashboardService();
-        $boundary = '{"type":"MultiPolygon","coordinates":[[[[-30.0,-3.0],[-29.1,-3.0],[-29.1,-3.6],[-30.0,-3.6],[-30.0,-3.0]]]]}';
 
-        $payload = $service->coveragePayload($boundary, $service->build([], self::TYPES, $this->now), self::TYPES);
+        $payload = $service->coveragePayload($service->build([], self::TYPES, $this->now), self::TYPES);
 
-        self::assertSame($boundary, $payload['boundary']);
         self::assertSame([], $payload['patrols']);
         self::assertSame([], $payload['stations']);
     }
@@ -522,7 +515,6 @@ final class PatrolDashboardServiceTest extends TestCase
         $unplaceable->setStationWord('Sketch camp');
 
         $payload = $service->coveragePayload(
-            null,
             $service->build([$north, $northAgain, $jetty, $anonymous, $unplaceable], self::TYPES, $this->now),
             self::TYPES,
         );
@@ -590,7 +582,7 @@ final class PatrolDashboardServiceTest extends TestCase
 
         $service = new PatrolDashboardService();
         $dashboard = $service->build([$thrownAway, $kept], self::TYPES, $this->now);
-        $payload = $service->coveragePayload(null, $dashboard, self::TYPES);
+        $payload = $service->coveragePayload($dashboard, self::TYPES);
 
         self::assertCount(1, $payload['patrols']);
         self::assertSame('walk', $payload['patrols'][0]['type']);

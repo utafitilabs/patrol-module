@@ -39,7 +39,7 @@ A [uhifadhi](https://github.com/uhifadhilabs) module bundle.
 - **Observations** — georeferenced field notes logged en route (category from
   `patrol.observation_categories`, note, photos), each with its own detail
   screen and an audit trail.
-- **Coverage** — every track drawn over the area boundary; the dashboard is a
+- **Coverage** — every track drawn over the area's boundary and zones; the dashboard is a
   per-user widget composition (KPIs, map, log, feed, charts, calendar).
 - **Export** — the filtered log as CSV and its recorded tracks as GPX, at one
   address in two formats; the file always carries the filter on screen.

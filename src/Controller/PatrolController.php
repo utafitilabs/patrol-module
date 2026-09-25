@@ -22,6 +22,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\AreaBundle\Service\AreaMapPayload;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Bundle\ShellBundle\Widget\Service\WidgetService;
 use Uhifadhi\Contracts\Entity\UserInterface;
@@ -87,6 +88,9 @@ final class PatrolController
         // happened on which day, and the calendar widget hands it over.
         private readonly PatrolCalendar $calendar,
         private readonly PatrolMapService $plates,
+        // THE AREA'S GROUND — the boundary and the zones every plate stands
+        // on, as the area answers it; the atlas draws it.
+        private readonly AreaMapPayload $ground,
         // The ground the month's routes covered, held for the day it was
         // measured on — PL·03's set operation is real work on a busy month.
         private readonly PatrolCoverageService $coverage,
@@ -203,7 +207,8 @@ final class PatrolController
             // What the coverage map draws — boundary + every recorded track this
             // month, each tagged with the zone it set out in.
             'map' => $this->plates->coverage(
-                $this->dashboard->coveragePayload($area->getGeom(), $dashboard, $types, $patrolZones),
+                $this->ground->forArea($area),
+                $this->dashboard->coveragePayload($dashboard, $types, $patrolZones),
                 $types,
                 PatrolDashboardService::typeSwatches($types),
                 // The ground the MONTH's routes covered — PL·03's own set

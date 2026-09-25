@@ -128,13 +128,16 @@ final class PatrolDashboardService
     }
 
     /**
-     * Everything the coverage map (PL·05) draws, in one JSON-safe bag: the area
-     * boundary and one entry per patrol that actually RECORDED a route. Built
-     * here rather than in Twig so its shape is unit-tested, and so the dashboard
-     * and the widget library can never hand their maps different data.
+     * What patrol draws on the coverage map (PL·05), in one JSON-safe bag: one
+     * entry per patrol that actually RECORDED a route, and the stations they set
+     * out from. The area's own ground — boundary and zones — is the area's
+     * answer (`AreaMapPayload::forArea()`) and is handed to the plate beside
+     * this. Built here rather than in Twig so its shape is unit-tested, and so
+     * the dashboard and the widget library can never hand their maps different
+     * data.
      *
-     * Both geometries travel as the GeoJSON text the geometry columns store
-     * (postgis-bundle types) — the Stimulus controller parses them.
+     * A track travels as the GeoJSON text the geometry column stores
+     * (postgis-bundle types) and is decoded where the plate is built.
      *
      * A hand-logged patrol has no geometry (docs/design-decisions.md §4): it is
      * left out entirely rather than drawn as a guess, and its absence must not
@@ -155,13 +158,12 @@ final class PatrolDashboardService
      * the way the station filter does — client-side, over data the payload carries.
      * A track whose start falls in no zone carries the empty string.
      *
-     * @param string|null                         $boundary    the area's geom as GeoJSON text, null where the area has none
      * @param array<string, array{label: string}> $types       the deployment's patrol.types map
      * @param array<string, string>               $patrolZones patrol uuid → zone name, the live spatial join; absent uuids are unzoned
      *
-     * @return array{boundary: string|null, patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>}
+     * @return array{patrols: list<array{uuid: string, ref: string, type: string, station: string, zone: string, color: string, track: string}>, stations: list<array{name: string, lon: float, lat: float}>}
      */
-    public function coveragePayload(?string $boundary, PatrolDashboard $dashboard, array $types, array $patrolZones = []): array
+    public function coveragePayload(PatrolDashboard $dashboard, array $types, array $patrolZones = []): array
     {
         $swatches = self::typeSwatches($types);
 
@@ -208,7 +210,7 @@ final class PatrolDashboardService
             }
         }
 
-        return ['boundary' => $boundary, 'patrols' => $tracks, 'stations' => array_values($stations)];
+        return ['patrols' => $tracks, 'stations' => array_values($stations)];
     }
 
     /**
