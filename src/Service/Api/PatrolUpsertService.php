@@ -91,8 +91,11 @@ final class PatrolUpsertService
             ->setLead($recorder)
             // The area's station the handset named — or, where the area keeps
             // no such station, the word alone (§ stations: nothing is invented).
-            ->setStationRecord($this->vocabulary->resolveStation($area, Payload::string($data, 'stationId')))
-            ->setStationWord(Payload::string($data, 'stationId'))
+            // The word is kept ONLY when no station answers to it: a handset
+            // names its posted station by the core's id (Doria 0.5.2), and
+            // setting that id as the word afterwards would read as a word that
+            // disagrees with the record and unlink it.
+            ->setStationRecord($station = $this->vocabulary->resolveStation($area, Payload::string($data, 'stationId')))
             ->setStartedAt(Payload::timestamp($data, 'startedAt'))
             // Null is legal and meaningful: a live upload of a patrol still
             // under way (§4). It is not backfilled with "now".
@@ -101,6 +104,10 @@ final class PatrolUpsertService
             ->setMission(Payload::string($data, 'mission'))
             ->setDeviceId(Payload::string($data, 'deviceId'))
             ->setAppVersion(Payload::string($data, 'appVersion'));
+
+        if (null === $station) {
+            $patrol->setStationWord(Payload::string($data, 'stationId'));
+        }
 
         $team = Payload::strings($data, 'team');
         $patrol->setTeamRangerIds($team)->setTeam($this->rangers->describe($team));

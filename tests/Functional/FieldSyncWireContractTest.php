@@ -14,6 +14,7 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Functional;
 
 use Symfony\Component\Routing\RouterInterface;
+use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolBaseEnum;
 use Uhifadhi\Patrol\Service\PatrolVocabularyService;
@@ -193,6 +194,27 @@ final class FieldSyncWireContractTest extends FieldSyncTestCase
         self::assertNull($patrol->getStationRecord(), 'no station is invented for a word the area does not keep');
         self::assertSame('somewhere-nobody-configured', $patrol->getStation(), 'the word itself is kept on the patrol');
         self::assertSame('somewhere-nobody-configured', $patrol->getStationKey(), 'the word is what a filter and an export key it by');
+    }
+
+    /**
+     * THE HANDSET NAMES ITS POSTED STATION BY THE CORE'S OWN ID (core 0.1.10,
+     * Doria 0.5.2): a patrol uploaded with that id is linked to the station,
+     * and every screen prints the station's name, never the id.
+     */
+    public function testAStationNamedByItsCoreIdIsLinkedAndPrintedByName(): void
+    {
+        $station = Vocabulary::station($this->em, $this->area, 'Hq', 'hq');
+        self::assertInstanceOf(AreaStation::class, $station);
+        $this->em->flush();
+        $this->actingAs($this->recorder);
+
+        $clientUuid = $this->createPatrol(['stationId' => (string) $station->getUuidString()]);
+
+        self::assertResponseStatusCodeSame(201);
+        $patrol = $this->em->getRepository(Patrol::class)->findOneBy(['clientUuid' => $clientUuid]);
+        self::assertInstanceOf(Patrol::class, $patrol);
+        self::assertSame($station->getUuidString(), $patrol->getStationRecord()?->getUuidString(), 'linked to the area station the id names');
+        self::assertSame('Hq', $patrol->getStation(), 'the station is printed by its name');
     }
 
     private function vocabulary(): PatrolVocabularyService
