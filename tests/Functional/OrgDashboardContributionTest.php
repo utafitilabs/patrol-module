@@ -235,8 +235,16 @@ final class OrgDashboardContributionTest extends WebTestCase
         $this->aPatrol($north, 'walk', '-2 hours', status: PatrolStatusEnum::Recording);
         $this->aPatrol($south, 'boat', '-1 hour', status: PatrolStatusEnum::Recording);
 
-        $this->aPatrol($north, 'walk', 'today 05:00', 'today 09:00', 61.0);
-        $this->aPatrol($south, 'boat', 'today 05:30', 'today 09:30', 35.0);
+        // BOTH FINISHED TODAY, WHATEVER THE HOUR THE SUITE RUNS AT. They used
+        // to be seeded at 05:00–09:30, which is the future before breakfast:
+        // CI ran at 04:36 on a Monday, counted no patrol this week, and failed.
+        // They now sit between today's midnight (always inside this week)
+        // and now, whatever the hour.
+        $now = time();
+        $since = max((int) strtotime('today'), $now - 4 * 3600);
+        $at = static fn (float $share): string => '@'.($since + (int) (($now - $since) * $share));
+        $this->aPatrol($north, 'walk', $at(0.0), $at(0.4), 61.0);
+        $this->aPatrol($south, 'boat', $at(0.5), $at(0.9), 35.0);
     }
 
     private function anArea(string $name): AreaOfInterest
