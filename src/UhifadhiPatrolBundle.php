@@ -135,6 +135,14 @@ final class UhifadhiPatrolBundle extends AbstractBundle
      */
     public const string TAXONOMY_STYLESHEET = 'bundles/uhifadhipatrol/taxonomy.css';
 
+    /**
+     * The sheet this module's cards on a person's own dashboard need — the
+     * week's bars and nothing else — carried in the head of every page by
+     * {@see Shell\PatrolStylesheets}, because the page they are drawn on is
+     * the area's and cannot know to link it (#19).
+     */
+    public const string ME_STYLESHEET = 'bundles/uhifadhipatrol/me.css';
+
     /** Config lives under "patrol:", not the class-derived "uhifadhi_labs_patrol:". */
     protected string $extensionAlias = 'patrol';
 

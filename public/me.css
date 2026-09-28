@@ -1,0 +1,20 @@
+/* A person's own dashboard (#19): the Distance covered card's week, a bar a
+   day from Monday to Sunday. The card, its tab, its rows and its foot are the
+   shell's; this sheet draws only the bars inside it, prefixed for this module
+   so it can never meet a class anybody else ships.
+
+   Carried in the head of every page (Shell/PatrolStylesheets), because the
+   dashboard the card is drawn on is the area's and cannot know to link it —
+   which is why this is a sheet of its own and not a part of patrol.css.
+
+   The bar's height is the template's inline style, measured against the
+   week's longest day; a day with nothing walked is a flat hairline. */
+.pl-me-bars { display: flex; align-items: flex-end; gap: 10px; height: 96px; margin: 12px 0 6px; }
+.pl-me-bars > div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.pl-me-bars i { display: block; width: 100%; border-radius: 6px 6px 2px 2px; background: color-mix(in srgb, rgb(var(--c-acc)) 70%, transparent); }
+.pl-me-bars i.pl-me-zero { height: 3px; background: var(--c-ln); }
+.pl-me-bars span { font: 600 9.5px var(--font-mono); color: rgb(var(--c-fog)); letter-spacing: .05em; }
+.pl-me-bars b { font: 700 10.5px var(--font-mono); color: rgb(var(--c-tx)); }
+
+/* The kind's chip before an observation's words (My observations). */
+.pl-me-kind { margin-right: 6px; }

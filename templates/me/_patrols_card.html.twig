@@ -1,0 +1,17 @@
+{# MY PATROLS (#19; design a.html ME·07) — the latest four they led, newest first: the reference,
+   when it set out, where from, how far, how many observations, and whether it
+   is still out or sent. The door into the module's list is drawn only for
+   somebody it opens for. #}
+<div class="c" data-me="my-patrols"><span class="tab">My patrols<span class="src">&middot; {{ mine.monthPatrols }} this month</span></span>
+    {% for patrol in mine.latestPatrols %}
+        {% set facts = [] %}
+        {% if patrol.station %}{% set facts = facts|merge([patrol.station]) %}{% endif %}
+        {% if patrol.distanceKm is not null %}{% set facts = facts|merge([patrol.distanceKm|number_format(1) ~ ' km']) %}{% endif %}
+        {% set facts = facts|merge([patrol.observations|length ~ ' obs']) %}
+        <div class="rln"><span><b>{{ patrol.ref }}</b> <span class="mono d"><time datetime="{{ patrol.startedAt|date('c') }}" data-localtime-format="daystamp">{{ patrol.startedAt|date('D j M')|lower }} &middot; {{ patrol.startedAt|date('H:i') }}</time></span></span>
+        <span class="mono d">{{ facts|join(' · ') }} &middot; {% if patrol.status is same as(constant('Uhifadhi\\Patrol\\Enum\\PatrolStatusEnum::Recording')) %}<span class="chip ok">out now</span>{% else %}<span class="chip idle">sent</span>{% endif %}</span></div>
+    {% else %}
+        <div class="rln"><span class="d">No patrols recorded yet.</span><span class="mono d">record one on Doria</span></div>
+    {% endfor %}
+    <div class="sxfoot"><span>recorded on my phone</span>{% if door %}<span class="sp"></span><a class="tgl" href="{{ door }}">All my patrols &rarr;</a>{% endif %}</div>
+</div>

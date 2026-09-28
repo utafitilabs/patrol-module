@@ -43,9 +43,9 @@ final class NoWorkshopLabelsTest extends TestCase
      */
     private const array FORBIDDEN = [
         'idx-chip' => '/class="[^"]*\bidx\b[^"]*"/',
-        'literal middot' => '/\b(?:TM|PM|DP|MB|AU|FL|PL)\x{00B7}/u',
-        'named entity' => '/\b(?:TM|PM|DP|MB|AU|FL|PL)&middot;/',
-        'numeric entity' => '/\b(?:TM|PM|DP|MB|AU|FL|PL)&#(?:183|xB7);/i',
+        'literal middot' => '/\b(?:TM|PM|DP|MB|AU|FL|PL|ME|SN)\x{00B7}/u',
+        'named entity' => '/\b(?:TM|PM|DP|MB|AU|FL|PL|ME|SN)&middot;/',
+        'numeric entity' => '/\b(?:TM|PM|DP|MB|AU|FL|PL|ME|SN)&#(?:183|xB7);/i',
     ];
 
     /** @return iterable<string, array{string}> */

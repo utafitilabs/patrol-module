@@ -15,11 +15,14 @@ namespace Uhifadhi\Patrol\Repository;
 
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Zone;
 use Uhifadhi\Patrol\Entity\Observation;
+use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
 
 /**
  * @extends ServiceEntityRepository<Observation>
@@ -212,5 +215,79 @@ final class ObservationRepository extends ServiceEntityRepository
         }
 
         return $zones;
+    }
+
+    /**
+     * THE LATEST OBSERVATIONS ON THE PATROLS ONE PERSON LED, newest first — *My
+     * observations* on their own dashboard (#19).
+     *
+     * ON THE PATROLS THEY LED, not by {@see Observation::getRecordedBy()}: the
+     * handset that opened the patrol logs every observation on it and names no
+     * separate recorder, so the lead is the one person an observation is
+     * recorded against. An observation on a discarded patrol is withdrawn with
+     * it.
+     *
+     * @return list<Observation>
+     */
+    public function findLatestOnPatrolsLedBy(string $personUuid, int $limit): array
+    {
+        if (!Uuid::isValid($personUuid)) {
+            return [];
+        }
+
+        /** @var list<Observation> $observations */
+        $observations = $this->onPatrolsLedBy($personUuid)
+            ->addSelect('p')
+            // An observation with no moment cannot be placed among the
+            // latest, and Postgres would sort it first.
+            ->andWhere('o.loggedAt IS NOT NULL')
+            ->orderBy('o.loggedAt', 'DESC')
+            ->addOrderBy('o.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $observations;
+    }
+
+    /**
+     * HOW MANY OBSERVATIONS ONE PERSON LOGGED inside a half-open window, and how
+     * many of them came with photographs — the figure on their own dashboard.
+     *
+     * "With photos" is the handset's own declaration ({@see Observation::getPhotoCount()}),
+     * so an observation whose photographs are still on the phone counts: the
+     * ranger took them, and that is what the figure says.
+     *
+     * @return array{all: int, withPhotos: int}
+     */
+    public function countOnPatrolsLedBetween(string $personUuid, \DateTimeImmutable $from, \DateTimeImmutable $until): array
+    {
+        if (!Uuid::isValid($personUuid)) {
+            return ['all' => 0, 'withPhotos' => 0];
+        }
+
+        /** @var array{counted: int|string|null, photographed: int|string|null} $row */
+        $row = $this->onPatrolsLedBy($personUuid)
+            ->select('COUNT(o.id) AS counted', 'SUM(CASE WHEN o.photoCount > 0 THEN 1 ELSE 0 END) AS photographed')
+            ->andWhere('o.loggedAt >= :from')
+            ->andWhere('o.loggedAt < :until')
+            ->setParameter('from', $from)
+            ->setParameter('until', $until)
+            ->getQuery()
+            ->getSingleResult();
+
+        return ['all' => (int) $row['counted'], 'withPhotos' => (int) $row['photographed']];
+    }
+
+    /** The stem the two readings above share: observations on the patrols one person led, discards left out. */
+    private function onPatrolsLedBy(string $personUuid): QueryBuilder
+    {
+        return $this->createQueryBuilder('o')
+            ->innerJoin('o.patrol', 'p')
+            ->innerJoin('p.lead', 'l')
+            ->andWhere('l.uuid = :person')
+            ->andWhere('p.status != :discarded')
+            ->setParameter('person', Uuid::fromString($personUuid), UuidType::NAME)
+            ->setParameter('discarded', PatrolStatusEnum::Discarded);
     }
 }

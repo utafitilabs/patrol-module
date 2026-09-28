@@ -16,10 +16,13 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Uhifadhi\Bundle\AreaBundle\Repository\AreaOfInterestRepository;
 use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
 use Uhifadhi\Bundle\AtlasBundle\Map\MapBuilderInterface;
+use Uhifadhi\Bundle\ShellBundle\Contract\StylesheetSourceInterface;
 use Uhifadhi\Bundle\TeamBundle\Access\Door;
 use Uhifadhi\Contracts\Access\ConcernSourceInterface;
+use Uhifadhi\Contracts\Area\StationSectionsInterface;
 use Uhifadhi\Contracts\Facts\FactProviderInterface;
 use Uhifadhi\Contracts\Facts\FactReaderInterface;
+use Uhifadhi\Contracts\Me\MyCardProviderInterface;
 use Uhifadhi\Contracts\Shell\ConfigurationSectionsInterface;
 use Uhifadhi\Contracts\Shell\ModuleTabsInterface;
 use Uhifadhi\Patrol\Access\PatrolConcerns;
@@ -31,6 +34,7 @@ use Uhifadhi\Patrol\Controller\PatrolExportController;
 use Uhifadhi\Patrol\Controller\PatrolKindsOverviewController;
 use Uhifadhi\Patrol\Controller\PatrolListController;
 use Uhifadhi\Patrol\Facts\PatrolFactProvider;
+use Uhifadhi\Patrol\Me\PatrolMyCards;
 use Uhifadhi\Patrol\Message\BufferPatrolCorridor;
 use Uhifadhi\Patrol\MessageHandler\BufferPatrolCorridorHandler;
 use Uhifadhi\Patrol\Repository\FlightRepository;
@@ -53,6 +57,7 @@ use Uhifadhi\Patrol\Repository\TrackPointRepository;
 use Uhifadhi\Patrol\Service\GeoService;
 use Uhifadhi\Patrol\Service\GpxParser;
 use Uhifadhi\Patrol\Service\GpxWriter;
+use Uhifadhi\Patrol\Service\MyPatrolsService;
 use Uhifadhi\Patrol\Service\ObservationAmendmentService;
 use Uhifadhi\Patrol\Service\PatrolCalendar;
 use Uhifadhi\Patrol\Service\PatrolCorridorQueue;
@@ -74,6 +79,8 @@ use Uhifadhi\Patrol\Service\TaxonomyAdminService;
 use Uhifadhi\Patrol\Service\TrackIngestService;
 use Uhifadhi\Patrol\Shell\PatrolConfigurationSections;
 use Uhifadhi\Patrol\Shell\PatrolModuleTabs;
+use Uhifadhi\Patrol\Shell\PatrolStationSections;
+use Uhifadhi\Patrol\Shell\PatrolStylesheets;
 use Uhifadhi\Patrol\Twig\PatrolTrailExtension;
 
 /*
@@ -424,6 +431,44 @@ return static function (ContainerConfigurator $container): void {
      */
     $services->set('patrol.screen_access', PatrolScreenAccessService::class)
         ->args([service(Door::class)]);
+
+    /*
+     * A PERSON'S OWN PAGES (#19, ruled 28 Sep 2026): the three figures and
+     * three cards this module puts on their dashboard, the *Patrols from here*
+     * band on the post they are posted at, and the one small sheet the week's
+     * bars are drawn with. Each is read by the area's pages through its TAG,
+     * and each tag goes on by hand — a reusable bundle is not autoconfigured,
+     * and an untagged provider is a card that silently never appears.
+     */
+    $services->set('patrol.me.reading', MyPatrolsService::class)
+        ->args([
+            service('doctrine.orm.entity_manager'),
+            service(PatrolRepository::class),
+            service(ObservationRepository::class),
+        ]);
+
+    $services->set('patrol.me.cards', PatrolMyCards::class)
+        ->args([
+            service('twig'),
+            service('patrol.me.reading'),
+            service('patrol.screen_access'),
+            service('registry.area_modules'),
+            service(TaxonomyKindRepository::class),
+            service('router'),
+            param('patrol.observation_categories'),
+        ])
+        ->tag(MyCardProviderInterface::TAG);
+
+    $services->set('patrol.station_sections', PatrolStationSections::class)
+        ->args([
+            service(AreaStationRepository::class),
+            service(PatrolRepository::class),
+            service('clock'),
+        ])
+        ->tag(StationSectionsInterface::TAG);
+
+    $services->set('patrol.stylesheets', PatrolStylesheets::class)
+        ->tag(StylesheetSourceInterface::TAG);
 
     /*
      * THE MODULE'S DATA PLACES. Tagged BY HAND: a reusable bundle does not

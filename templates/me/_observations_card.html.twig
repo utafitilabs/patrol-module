@@ -1,0 +1,13 @@
+{# MY OBSERVATIONS (#19; design a.html ME·11) — the latest four logged on the patrols they led:
+   the kind, what they wrote, when, and on which patrol. The kind wears the
+   one chip this module gives every observation, because a kind has no colour
+   of its own. #}
+<div class="c" data-me="my-observations"><span class="tab">My observations<span class="src">&middot; latest four</span></span>
+    {% for row in rows %}
+        {% set logged = row.observation.loggedAt %}
+        <div class="rln"><span><span class="chip warn pl-me-kind">{{ row.kind|lower }}</span>{{ row.observation.note }}</span>
+        <span class="mono d"><time datetime="{{ logged|date('c') }}" data-localtime-format="daystamp">{{ logged|date('D j M')|lower }} &middot; {{ logged|date('H:i') }}</time> &middot; {{ row.observation.patrol.ref }}</span></div>
+    {% else %}
+        <div class="rln"><span class="d">No observations yet.</span><span class="mono d">log one on a patrol</span></div>
+    {% endfor %}
+</div>

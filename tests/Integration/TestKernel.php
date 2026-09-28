@@ -327,6 +327,11 @@ final class TestKernel extends Kernel
             // dashboard, with the reading behind it — reached by a host through
             // its tag; these aliases only let a test hold them directly.
             \Uhifadhi\Patrol\Service\PatrolOrgOverviewService::class => 'patrol.org_overview',
+            // A person's own cards and the band on the post they are posted at
+            // (#19) — reached by the area's pages through their TAGS; these
+            // aliases only let a test hold them directly.
+            \Uhifadhi\Patrol\Me\PatrolMyCards::class => 'patrol.me.cards',
+            \Uhifadhi\Patrol\Shell\PatrolStationSections::class => 'patrol.station_sections',
             \Uhifadhi\Patrol\Org\PatrolOrgWidgets::class => 'patrol.org_widgets',
             // The widget framework, by the ids ShellBundle publishes,
             // plus the registry a surface has to be findable in.

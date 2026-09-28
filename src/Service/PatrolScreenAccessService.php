@@ -45,6 +45,16 @@ final readonly class PatrolScreenAccessService
     ) {
     }
 
+    /**
+     * Reading the area's patrols — the door a screen drawn OUTSIDE this
+     * module's pages asks before linking into them, such as a person's own
+     * dashboard (#19), which is drawn for somebody who may read nothing.
+     */
+    public function mayRead(AreaInterface $area): bool
+    {
+        return $this->door->opensFor(PatrolConcerns::PATROLS, Verb::Read, $area);
+    }
+
     /** The entry flow: importing a track, logging a patrol by hand. */
     public function mayRecord(AreaInterface $area): bool
     {

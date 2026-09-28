@@ -1,0 +1,9 @@
+{# PATROLS FROM HERE (#19; design station.html SN·04) — this week's patrols that
+   went out from the post, newest first: the reference, who led it, when it set
+   out, and how far it went or that it is still out. Rows only: the band, its
+   heading and the summary line are the area's. #}
+{% for row in rows %}
+    <div class="rln"><span><b>{{ row.ref }}</b> {{ row.who }}</span><span class="mono d"><time datetime="{{ row.startedAt|date('c') }}" data-localtime-format="daystamp">{{ row.startedAt|date('D j M')|lower }} &middot; {{ row.startedAt|date('H:i') }}</time> &middot; {% if row.out %}out now{% elseif row.km is null %}no distance{% else %}{{ row.km|number_format(1) }} km{% endif %}</span></div>
+{% else %}
+    <div class="rln"><span class="d">Nothing went out from here this week.</span><span class="mono d"></span></div>
+{% endfor %}

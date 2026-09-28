@@ -46,14 +46,15 @@ final class VocabularyConformanceTest extends VocabularyConformanceTestCase
     }
 
     /**
-     * Two: the module's own vocabulary, and the observation-taxonomy admin's,
-     * which is the one screen that links a second sheet of its own.
+     * Three: the module's own vocabulary, the observation-taxonomy admin's,
+     * which is the one screen that links a second sheet of its own, and the
+     * week's bars on a person's own dashboard, which the head carries.
      *
      * @return list<string>
      */
     protected static function ownStylesheets(): array
     {
-        return ['patrol.css', 'taxonomy.css'];
+        return ['patrol.css', 'taxonomy.css', 'me.css'];
     }
 
     /** @return list<string> */

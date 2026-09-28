@@ -16,7 +16,9 @@ namespace Uhifadhi\Patrol\Repository;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
@@ -651,5 +653,146 @@ final class PatrolRepository extends ServiceEntityRepository
         }
 
         return $figures;
+    }
+
+    /**
+     * THE PATROLS ONE PERSON LED that opened inside a half-open window, oldest
+     * first — the month and the week a person's own dashboard reads (#19).
+     *
+     * THE PERSON IS THE LEAD. {@see Patrol::getLead()} is the account the
+     * handset was signed in on when it opened the patrol, and the web entry
+     * flow's chosen lead where it was written up by hand: the one person a
+     * patrol is recorded against. The team is free text and names nobody.
+     *
+     * A DISCARDED PATROL IS LEFT OUT here and not by the caller, because it is
+     * the one answer every reader of this wants: a discard withdraws the whole
+     * outing, so it is neither a patrol of the month nor distance covered.
+     * A patrol still out comes back with the rest — it IS one of the month's —
+     * and {@see PatrolStatusEnum::countsTowardsStatistics()} keeps its
+     * provisional distance out of any sum.
+     *
+     * @return list<Patrol>
+     */
+    public function findLedByBetween(string $personUuid, \DateTimeImmutable $from, \DateTimeImmutable $until): array
+    {
+        if (!Uuid::isValid($personUuid)) {
+            return [];
+        }
+
+        /** @var list<Patrol> $patrols */
+        $patrols = $this->ledBy($personUuid)
+            ->andWhere('p.startedAt >= :from')
+            ->andWhere('p.startedAt < :until')
+            ->setParameter('from', $from)
+            ->setParameter('until', $until)
+            ->orderBy('p.startedAt', 'ASC')
+            ->addOrderBy('p.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $patrols;
+    }
+
+    /**
+     * THE LATEST PATROLS ONE PERSON LED, newest first, discards left out for
+     * the reason {@see self::findLedByBetween()} gives.
+     *
+     * @return list<Patrol>
+     */
+    public function findLatestLedBy(string $personUuid, int $limit): array
+    {
+        if (!Uuid::isValid($personUuid)) {
+            return [];
+        }
+
+        /** @var list<Patrol> $patrols */
+        $patrols = $this->ledBy($personUuid)
+            // A patrol with no start cannot be placed among the latest, and
+            // Postgres would sort it first.
+            ->andWhere('p.startedAt IS NOT NULL')
+            ->orderBy('p.startedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $patrols;
+    }
+
+    /**
+     * HOW MANY PATROLS ONE PERSON HAS OUT RIGHT NOW — opened on the handset and
+     * not yet completed, which is what `recording` means
+     * ({@see self::findByAreaRecording()}).
+     */
+    public function countOutLedBy(string $personUuid): int
+    {
+        if (!Uuid::isValid($personUuid)) {
+            return 0;
+        }
+
+        return (int) $this->ledBy($personUuid)
+            ->select('COUNT(p.id)')
+            ->andWhere('p.status = :recording')
+            ->setParameter('recording', PatrolStatusEnum::Recording)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * THE PATROLS THAT WENT OUT FROM ONE POST inside a half-open window, newest
+     * first — *Patrols from here* on the post a person is posted at (#19).
+     *
+     * FROM THE POST means the patrol points at it, or — where it points at no
+     * station at all — names it in words, compared trimmed and case-folded:
+     * the first two rules {@see self::stationFiguresFor()} attributes a patrol
+     * by. The third, a first fix near the post, is left out on purpose: this
+     * is a list of named patrols a person reads by reference, and a patrol
+     * that named no post is not one anybody filed as leaving from theirs.
+     *
+     * Discarded patrols are left out; a patrol still out is in, because it is
+     * the first thing somebody posted there wants to see.
+     *
+     * @return list<Patrol>
+     */
+    public function findFromStationBetween(AreaStation $station, \DateTimeImmutable $from, \DateTimeImmutable $until): array
+    {
+        /** @var list<Patrol> $patrols */
+        $patrols = $this->createQueryBuilder('p')
+            ->leftJoin('p.lead', 'l')->addSelect('l')
+            ->andWhere('p.area = :area')
+            ->andWhere('p.status != :discarded')
+            ->andWhere('p.stationRecord = :station OR (p.stationRecord IS NULL AND LOWER(TRIM(p.station)) = :name)')
+            ->andWhere('p.startedAt >= :from')
+            ->andWhere('p.startedAt < :until')
+            ->setParameter('area', $station->getArea())
+            ->setParameter('discarded', PatrolStatusEnum::Discarded)
+            ->setParameter('station', $station)
+            ->setParameter('name', mb_strtolower(trim((string) $station->getName())))
+            ->setParameter('from', $from)
+            ->setParameter('until', $until)
+            ->orderBy('p.startedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $patrols;
+    }
+
+    /**
+     * The patrols one person led, discards left out — the stem the three
+     * readings above share, so "led by" and "withdrawn" are said once.
+     *
+     * The uuid is bound with its own type, because the lead's uuid column is
+     * whichever the account class maps and a bare string would be compared as
+     * text against it.
+     */
+    private function ledBy(string $personUuid): QueryBuilder
+    {
+        return $this->createQueryBuilder('p')
+            ->innerJoin('p.lead', 'l')
+            ->andWhere('l.uuid = :person')
+            ->andWhere('p.status != :discarded')
+            ->setParameter('person', Uuid::fromString($personUuid), UuidType::NAME)
+            ->setParameter('discarded', PatrolStatusEnum::Discarded);
     }
 }

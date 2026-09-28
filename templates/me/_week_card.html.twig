@@ -1,0 +1,15 @@
+{# DISTANCE COVERED (#19; design a.html ME·06) — the week as a bar a day, Monday to Sunday, the
+   longest day standing full height; then the month against the last, and the
+   month's longest patrol. The bars are this module's sheet (me.css), which the
+   head carries on every page because the dashboard cannot know to link it. #}
+<div class="c" data-me="week"><span class="tab">Distance covered<span class="src">&middot; this week &middot; {{ mine.weekKm|number_format(1) }} km</span></span>
+    <div class="pl-me-bars">
+        {%- for bar in mine.week -%}
+            <div><b>{{ bar.km > 0 ? bar.km|number_format(1) : '' }}</b>{% if bar.km > 0 %}<i style="height:{{ bar.height }}px"></i>{% else %}<i class="pl-me-zero"></i>{% endif %}<span>{{ bar.label }}</span></div>
+        {%- endfor -%}
+    </div>
+    <div class="rln"><span>This month</span><span class="mono d">{{ mine.monthKm|number_format(1) }} km &middot; {{ mine.monthCounted }} patrol{{ mine.monthCounted == 1 ? '' : 's' }}</span></div>
+    <div class="rln"><span>Last month</span><span class="mono d">{{ mine.lastMonthKm|number_format(1) }} km &middot; {{ mine.lastMonthCounted }} patrol{{ mine.lastMonthCounted == 1 ? '' : 's' }}</span></div>
+    <div class="rln"><span>Longest this month</span><span class="mono d">{% if mine.longest %}{{ mine.longest.ref }} &middot; {{ mine.longest.distanceKm|number_format(1) }} km{% else %}none yet{% endif %}</span></div>
+    <div class="sxfoot"><span>counted from my recorded tracks</span></div>
+</div>
