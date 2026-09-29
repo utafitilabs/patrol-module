@@ -113,6 +113,34 @@ final class PatrolSeedMonthTest extends TestCase
         self::assertEquals($this->month()->patrols(), $this->month()->patrols());
     }
 
+    /**
+     * AN AREA WITH POSTS OF ITS OWN IS PATROLLED FROM THEM. The month adds no
+     * post the area does not keep: it takes the area's, busiest first, and
+     * every shift sets out from one of them.
+     */
+    public function testAnAreaWithPostsOfItsOwnIsPatrolledFromThem(): void
+    {
+        $posts = [
+            ['name' => 'Eastgate Post', 'lon' => -29.8, 'lat' => -3.4],
+            ['name' => 'Fig Tree Ranger Post', 'lon' => -29.3, 'lat' => -3.4],
+            ['name' => 'Ridge Outpost', 'lon' => -29.5, 'lat' => -3.0],
+        ];
+        $month = new PatrolSeedMonth(
+            new GeoService(),
+            [[[-30.0, -3.6], [-29.0, -3.6], [-29.0, -2.8], [-30.0, -2.8], [-30.0, -3.6]]],
+            [[-29.9, -3.5], [-29.2, -3.5], [-29.9, -2.9], [-29.2, -2.9], [-29.5, -3.2]],
+            ['foot', 'vehicle', 'drone'],
+            ['wildlife', 'sign', 'infrastructure'],
+            new \DateTimeImmutable('2026-08-22 17:00:00'),
+            posts: $posts,
+        );
+
+        self::assertSame($posts, $month->stations());
+        foreach ($month->patrols() as $patrol) {
+            self::assertContains($patrol['station'], array_column($posts, 'name'), 'every shift sets out from one of the area\'s own posts');
+        }
+    }
+
     private function month(): PatrolSeedMonth
     {
         return new PatrolSeedMonth(

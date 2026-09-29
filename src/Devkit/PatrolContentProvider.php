@@ -206,6 +206,19 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
 
         $this->seedTaxonomy($area);
 
+        // THE AREA'S OWN POSTS, busiest first: its stations in code order, so
+        // the main gate a reserve numbers first is the post most patrols set
+        // out from.
+        $existing = $this->areaStationRepository->findByArea($area);
+        usort($existing, static fn ($a, $b): int => strnatcmp((string) $a->getCode(), (string) $b->getCode()));
+        $posts = [];
+        foreach ($existing as $station) {
+            $point = self::lonLat((string) $station->getPoint());
+            if (null !== $point) {
+                $posts[] = ['name' => (string) $station->getName(), 'lon' => $point[0], 'lat' => $point[1]];
+            }
+        }
+
         $month = new PatrolSeedMonth(
             $this->geo,
             $this->boundaryRings($area),
@@ -213,6 +226,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
             $this->configuredWords($this->types, 'foot'),
             $this->configuredWords($this->categories, 'wildlife'),
             new \DateTimeImmutable(),
+            posts: $posts,
         );
 
         // THE SEED'S WORDS BECOME THE AREA'S WORDS, seeded once: the
@@ -577,5 +591,25 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
         }
 
         return $paths;
+    }
+
+    /**
+     * A station's point as longitude and latitude, from the GeoJSON the point
+     * column hands out (or a POINT(lon lat) text); null when it reads neither.
+     *
+     * @return array{0: float, 1: float}|null
+     */
+    private static function lonLat(string $point): ?array
+    {
+        $decoded = json_decode($point, true);
+        if (\is_array($decoded) && isset($decoded['coordinates']) && \is_array($decoded['coordinates'])
+            && is_numeric($decoded['coordinates'][0] ?? null) && is_numeric($decoded['coordinates'][1] ?? null)) {
+            return [(float) $decoded['coordinates'][0], (float) $decoded['coordinates'][1]];
+        }
+        if (1 === preg_match('/POINT\s*\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s*\)/i', $point, $m)) {
+            return [(float) $m[1], (float) $m[2]];
+        }
+
+        return null;
     }
 }

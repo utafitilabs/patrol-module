@@ -174,12 +174,14 @@ final class PatrolSeedMonth
     private readonly Randomizer $randomizer;
 
     /**
-     * @param list<list<array{0: float, 1: float}>>     $rings      the area's rings (outer and holes alike);
-     *                                                              empty means "everywhere is inside"
-     * @param non-empty-list<array{0: float, 1: float}> $samples    points spread across the area, from
-     *                                                              which the posts are chosen
-     * @param non-empty-list<string>                    $types      the deployment's patrol-type keys
-     * @param non-empty-list<string>                    $categories the deployment's observation-category keys
+     * @param list<list<array{0: float, 1: float}>>             $rings      the area's rings (outer and holes alike);
+     *                                                                      empty means "everywhere is inside"
+     * @param non-empty-list<array{0: float, 1: float}>         $samples    points spread across the area, from
+     *                                                                      which the posts are chosen
+     * @param non-empty-list<string>                            $types      the deployment's patrol-type keys
+     * @param non-empty-list<string>                            $categories the deployment's observation-category keys
+     * @param list<array{name: string, lon: float, lat: float}> $posts      the area's own posts, busiest first;
+     *                                                                      empty means the month places fictional ones
      */
     public function __construct(
         private readonly GeoService $geo,
@@ -189,14 +191,22 @@ final class PatrolSeedMonth
         private readonly array $categories,
         private readonly \DateTimeImmutable $now,
         private readonly int $count = self::PATROLS,
+        array $posts = [],
     ) {
         $this->randomizer = new Randomizer(new Mt19937(self::RANDOM_SEED));
-        $this->stations = $this->chooseStations($samples);
+        // THE AREA'S OWN POSTS WHEN IT HAS THEM. A month patrolled from posts
+        // the area does not keep would add stations to its register that no
+        // map, roster or handset knows; only an area with no post of its own
+        // gets the fictional ones.
+        $this->stations = [] !== $posts
+            ? \array_slice($posts, 0, \count(self::STATIONS))
+            : $this->chooseStations($samples);
     }
 
     /**
-     * The fictional posts this month was patrolled from, in the order they were
-     * chosen — the busiest first, which is what the weights are indexed by.
+     * The posts this month was patrolled from — the area's own, or fictional
+     * ones where it has none — the busiest first, which is what the weights
+     * are indexed by.
      *
      * @return non-empty-list<array{name: string, lon: float, lat: float}>
      */
