@@ -36,7 +36,7 @@ use Uhifadhi\Patrol\Service\TaxonomyAdminService;
 use Uhifadhi\Patrol\Service\TrackIngestService;
 
 /**
- * A MONTH OF PATROLLING TO LOOK AT — the sample month {@see PatrolDemoMonth}
+ * A MONTH OF PATROLLING TO LOOK AT — the sample month {@see PatrolSeedMonth}
  * describes, filed into the area the installation already has, so a developer's
  * first dashboard is a populated one.
  *
@@ -50,10 +50,10 @@ use Uhifadhi\Patrol\Service\TrackIngestService;
  * {@see TaxonomyAdminService}, the service behind the admin screen. Nothing
  * below constructs a record or persists one.
  *
- * SOMEBODY LED EVERY SHIFT, AND THEY ARE ONE OF THE SYNTHETIC DEMO PEOPLE the
+ * SOMEBODY LED EVERY SHIFT, AND THEY ARE ONE OF THE SYNTHETIC SEED PEOPLE the
  * team slice seeds — which is what `dependsOn()` buys. The sample month draws a
  * lead SLOT per shift from its own seed and this resolves it against the roster
- * the installation has, so a re-seeded demo credits the same people again. The
+ * the installation has, so a re-seeded seed credits the same people again. The
  * lead is the first name on the team line: they are on the record as the lead,
  * and the team string names who else was out.
  *
@@ -68,7 +68,7 @@ use Uhifadhi\Patrol\Service\TrackIngestService;
  *   evidence trail exists to prevent.
  *
  * IT SEEDS ONCE. An area that already holds patrols is left exactly as it is:
- * re-running a demo seeder is a developer repeating a command, not an
+ * re-running a seeder is a developer repeating a command, not an
  * instruction to double the month.
  *
  * IT IS COLLECTED, NOT RUN. devkit installs through `require-dev`; in a
@@ -115,7 +115,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
     ];
 
     /**
-     * The interior geometry the demo is allowed to use: the boundary eroded by
+     * The interior geometry the seed is allowed to use: the boundary eroded by
      * INTERIOR_MARGIN of its narrow side, so tracks keep clear of the edge. An
      * area too narrow to erode keeps its own outline. Every sampling query below
      * builds on this common table expression.
@@ -180,7 +180,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
      * BY somebody, and a register whose every shift was led by nobody says
      * nothing about who is doing the work — and credits nobody the hours.
      *
-     * Areas are not named here, deliberately: nothing installed ships area demo
+     * Areas are not named here, deliberately: nothing installed ships area seed
      * content, and devkit refuses an edge to a key no provider declares. The
      * area is taken from whatever the installation has.
      *
@@ -206,7 +206,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
 
         $this->seedTaxonomy($area);
 
-        $month = new PatrolDemoMonth(
+        $month = new PatrolSeedMonth(
             $this->geo,
             $this->boundaryRings($area),
             $this->samplePoints($area),
@@ -215,13 +215,13 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
             new \DateTimeImmutable(),
         );
 
-        // THE DEMO'S WORDS BECOME THE AREA'S WORDS, seeded once: the
+        // THE SEED'S WORDS BECOME THE AREA'S WORDS, seeded once: the
         // installation's configured types, and the posts this month's patrols
         // set out from. Both arrive ACTIVE — they are the area's vocabulary,
         // not strays off a handset — and a second run finds them already there.
         $this->vocabulary->seedTypes($area);
         // The posts are the AREA's stations (core AreaBundle), recorded through
-        // the area's own service where the demo's month names one the area
+        // the area's own service where the seed's month names one the area
         // does not keep yet; a second run finds them by name.
         $stations = [];
         $known = [];
@@ -347,11 +347,11 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
      * A small starting taxonomy for the area, written one call at a time through
      * the service the admin screen calls. A label the area already has is left
      * alone rather than duplicated — the service refuses it, and a refusal here
-     * means the demo is running a second time.
+     * means the seed is running a second time.
      */
     private function seedTaxonomy(AreaOfInterest $area): void
     {
-        foreach (PatrolDemoMonth::TAXONOMY as $kindLabel => $subcategories) {
+        foreach (PatrolSeedMonth::TAXONOMY as $kindLabel => $subcategories) {
             try {
                 $kind = $this->taxonomy->createKind($area, $kindLabel);
             } catch (TaxonomyConflictException) {
@@ -380,7 +380,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
 
     /**
      * The people the installation already has accounts for, oldest first — the
-     * demo team where the team slice has run, which it has, because this is
+     * seed team where the team slice has run, which it has, because this is
      * seeded after it. This creates nobody: accounts belong to whoever owns
      * them, and an installation with none seeds a month nobody is credited for.
      *
@@ -396,7 +396,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
 
     /**
      * The deployment's own words, or a single fallback where it configured none
-     * — a demo with no vocabulary to draw on is still a demo.
+     * — a seed with no vocabulary to draw on is still a seed.
      *
      * @param array<string, array{label: string}> $configured
      *
@@ -441,17 +441,17 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
              FROM (SELECT (ST_Dump(ST_GeneratePoints(interior.geom, %d, %d))).geom AS p FROM interior) d
              ORDER BY ST_Y(p), ST_X(p)',
             self::FALLBACK_SAMPLES,
-            PatrolDemoMonth::RANDOM_SEED,
+            PatrolSeedMonth::RANDOM_SEED,
         ));
         if ([] !== $scattered) {
             return $scattered;
         }
 
-        // No boundary at all: a neutral ring, so the demo still has distinct posts.
+        // No boundary at all: a neutral ring, so the seed still has distinct posts.
         [$lon, $lat] = $this->centroid($area);
         $ring = [];
-        foreach (array_keys(PatrolDemoMonth::STATIONS) as $index) {
-            $angle = 2 * \M_PI * $index / \count(PatrolDemoMonth::STATIONS);
+        foreach (array_keys(PatrolSeedMonth::STATIONS) as $index) {
+            $angle = 2 * \M_PI * $index / \count(PatrolSeedMonth::STATIONS);
             $ring[] = [$lon + self::FALLBACK_SPREAD_DEG * sin($angle), $lat + self::FALLBACK_SPREAD_DEG * cos($angle)];
         }
 
@@ -546,7 +546,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
 
     /**
      * A handful of small JPEGs drawn to temp files, once, so each attachment is
-     * stored from a real image. Empty where GD is unavailable — the demo then
+     * stored from a real image. Empty where GD is unavailable — the seed then
      * seeds patrols and observations without photographs rather than failing on
      * a machine with no image extension.
      *
@@ -571,7 +571,7 @@ final readonly class PatrolContentProvider implements ContentProviderInterface
             if (false !== $band) {
                 imagefilledrectangle($image, 0, (int) (self::PHOTO_HEIGHT * 0.62), self::PHOTO_WIDTH, self::PHOTO_HEIGHT, $band);
             }
-            $path = (string) tempnam(sys_get_temp_dir(), 'patrol_demo_photo_');
+            $path = (string) tempnam(sys_get_temp_dir(), 'patrol_seed_photo_');
             imagejpeg($image, $path, 82);
             $paths[] = $path;
         }

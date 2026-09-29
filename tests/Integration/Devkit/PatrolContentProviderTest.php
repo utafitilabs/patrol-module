@@ -18,7 +18,7 @@ use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Contracts\Devkit\ContentProviderInterface;
 use Uhifadhi\Patrol\Devkit\PatrolContentProvider;
-use Uhifadhi\Patrol\Devkit\PatrolDemoMonth;
+use Uhifadhi\Patrol\Devkit\PatrolSeedMonth;
 use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\ObservationPhoto;
 use Uhifadhi\Patrol\Entity\Patrol;
@@ -29,7 +29,7 @@ use Uhifadhi\Patrol\Tests\Integration\Fixtures\CollectedContentProviders;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
 
 /**
- * A DEMO MONTH, SEEDED THROUGH THE MODULE'S OWN DOORS — and then read back off
+ * A SEED MONTH, SEEDED THROUGH THE MODULE'S OWN DOORS — and then read back off
  * the database.
  *
  * That last part is what this test is for. A seeder writing straight to the
@@ -65,12 +65,12 @@ final class PatrolContentProviderTest extends IntegrationTestCase
         $this->provider()->load();
         $this->em->clear();
 
-        self::assertSame(PatrolDemoMonth::PATROLS, $this->em->getRepository(Patrol::class)->count([]));
+        self::assertSame(PatrolSeedMonth::PATROLS, $this->em->getRepository(Patrol::class)->count([]));
     }
 
     /**
      * THE TWO DOORS, BOTH USED. A roster that was all GPS would be a lie about
-     * how patrolling is recorded, and a demo that only ever exercised one write
+     * how patrolling is recorded, and a seed that only ever exercised one write
      * path would leave the other untested by the thing developers look at first.
      */
     public function testItUsesBothWritePathsAndEachRowSaysWhichOne(): void
@@ -86,7 +86,7 @@ final class PatrolContentProviderTest extends IntegrationTestCase
 
         self::assertNotSame([], $recorded);
         self::assertNotSame([], $written);
-        self::assertCount(PatrolDemoMonth::PATROLS, [...$recorded, ...$written]);
+        self::assertCount(PatrolSeedMonth::PATROLS, [...$recorded, ...$written]);
 
         foreach ($recorded as $patrol) {
             self::assertNotNull($patrol->getTrack(), 'A recorded patrol was ingested from a document, so it has a route.');
@@ -177,11 +177,11 @@ final class PatrolContentProviderTest extends IntegrationTestCase
         $this->em->clear();
 
         self::assertSame(
-            \count(PatrolDemoMonth::TAXONOMY),
+            \count(PatrolSeedMonth::TAXONOMY),
             $this->em->getRepository(TaxonomyKind::class)->count([]),
         );
         self::assertSame(
-            array_sum(array_map(\count(...), PatrolDemoMonth::TAXONOMY)),
+            array_sum(array_map(\count(...), PatrolSeedMonth::TAXONOMY)),
             $this->em->getRepository(TaxonomySubcategory::class)->count([]),
         );
     }
@@ -198,7 +198,7 @@ final class PatrolContentProviderTest extends IntegrationTestCase
         self::assertSame(0, $this->em->getRepository(Patrol::class)->count([]));
     }
 
-    /** Seeding twice is a developer re-running a demo command, not a reason to double the month. */
+    /** Seeding twice is a developer re-running a seed command, not a reason to double the month. */
     public function testItLeavesAnAreaThatAlreadyHasPatrolsAlone(): void
     {
         $this->anArea();
@@ -208,7 +208,7 @@ final class PatrolContentProviderTest extends IntegrationTestCase
         $this->provider()->load();
         $this->em->clear();
 
-        self::assertSame(PatrolDemoMonth::PATROLS, $this->em->getRepository(Patrol::class)->count([]));
+        self::assertSame(PatrolSeedMonth::PATROLS, $this->em->getRepository(Patrol::class)->count([]));
     }
 
     /**
@@ -217,26 +217,26 @@ final class PatrolContentProviderTest extends IntegrationTestCase
      * every patrol below is led by one of them, which is the fact the effort
      * widget credits hours to and the department KPIs read a department off.
      */
-    public function testEveryDemoPatrolIsLedByOneOfTheDemoPeople(): void
+    public function testEverySeedPatrolIsLedByOneOfTheSeedPeople(): void
     {
-        $this->aDemoTeam();
+        $this->aSeedTeam();
         $this->anArea();
 
         $this->provider()->load();
         $this->em->clear();
 
         $roster = $this->rosterEmails();
-        self::assertGreaterThan(1, \count($roster), 'The demo team is the roster the leads are drawn from.');
+        self::assertGreaterThan(1, \count($roster), 'The seed team is the roster the leads are drawn from.');
 
         $led = [];
         foreach ($this->em->getRepository(Patrol::class)->findAll() as $patrol) {
             $lead = $patrol->getLead();
-            self::assertNotNull($lead, 'A demo patrol nobody led credits nobody and reads "Lead —".');
+            self::assertNotNull($lead, 'A seed patrol nobody led credits nobody and reads "Lead —".');
             self::assertContains($lead->getEmail(), $roster);
             $led[] = $lead->getEmail();
         }
 
-        self::assertCount(PatrolDemoMonth::PATROLS, $led);
+        self::assertCount(PatrolSeedMonth::PATROLS, $led);
         self::assertGreaterThan(1, \count(array_unique($led)), 'A month led by one person draws a one-bar effort chart.');
     }
 
@@ -249,7 +249,7 @@ final class PatrolContentProviderTest extends IntegrationTestCase
      */
     public function testTheLeadIsTheFirstNameOnTheTeamLine(): void
     {
-        $this->aDemoTeam();
+        $this->aSeedTeam();
         $this->anArea();
 
         $this->provider()->load();
@@ -270,13 +270,13 @@ final class PatrolContentProviderTest extends IntegrationTestCase
     }
 
     /**
-     * THE SAME SEED PICKS THE SAME LEADS. A demo re-seeded onto a fresh database
+     * THE SAME SEED PICKS THE SAME LEADS. A seed re-seeded onto a fresh database
      * describes the same month it did before, leads included — otherwise a
      * screenshot of the effort chart means nothing the next morning.
      */
     public function testReseedingPicksTheSameLeadsAgain(): void
     {
-        $this->aDemoTeam();
+        $this->aSeedTeam();
         $this->anArea();
         $this->provider()->load();
         $this->em->clear();
@@ -284,7 +284,7 @@ final class PatrolContentProviderTest extends IntegrationTestCase
         $first = $this->leadEmailsInOrder();
 
         $this->rebuildSchema();
-        $this->aDemoTeam();
+        $this->aSeedTeam();
         $this->anArea();
         $this->provider()->load();
         $this->em->clear();
@@ -321,13 +321,13 @@ final class PatrolContentProviderTest extends IntegrationTestCase
     }
 
     /** The people the core's own team slice seeds, collected off devkit's tag as devkit collects them. */
-    private function aDemoTeam(): void
+    private function aSeedTeam(): void
     {
         $providers = $this->service('devkit.content_providers');
         \assert($providers instanceof CollectedContentProviders);
 
         $byKey = $providers->byKey();
-        self::assertArrayHasKey('team', $byKey, 'The people a demo patrol is led by come from team.');
+        self::assertArrayHasKey('team', $byKey, 'The people a seed patrol is led by come from team.');
         $byKey['team']->load();
         $this->em->clear();
     }

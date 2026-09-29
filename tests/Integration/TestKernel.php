@@ -227,7 +227,7 @@ final class TestKernel extends Kernel
         $container->services()->set(FixedRecordVoter::class)->tag('security.voter');
 
         // And DEVKIT's content collector, which the migrations upgrade lock
-        // seeds through: this module's demo month depends on team's people, and
+        // seeds through: this module's seed month depends on team's people, and
         // the tag is where that dependency is actually satisfied. devkit is
         // require-dev and absent here, so the collector is a fixture reading the
         // same tag its command reads.

@@ -17,7 +17,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Contracts\Devkit\ContentProviderInterface;
 use Uhifadhi\Patrol\Devkit\PatrolContentProvider;
-use Uhifadhi\Patrol\Devkit\PatrolDemoMonth;
+use Uhifadhi\Patrol\Devkit\PatrolSeedMonth;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\CollectedContentProviders;
 
 /**
@@ -39,7 +39,7 @@ use Uhifadhi\Patrol\Tests\Integration\Fixtures\CollectedContentProviders;
  *   {@see CollectedContentProviders} — devkit's collector, played by a fixture —
  *   which is the same door devkit uses and keeps the dependency honest.
  *
- *   AN AREA — nothing installed ships area demo content, which is why the
+ *   AN AREA — nothing installed ships area seed content, which is why the
  *   provider takes the first area the installation has and seeds nothing when
  *   there is none. There is no provider to drive, so the area is the smallest
  *   honest fixture: one persisted AreaOfInterest with the boundary its NOT NULL
@@ -69,10 +69,10 @@ final class MigrationsUpgradeKeepsDataTest extends MigrationsTestCase
     {
         $this->emptyDatabase();
         $this->migrateToLatest();
-        $this->seedADemoMonth();
+        $this->seedAMonth();
 
         $before = $this->counts();
-        self::assertSame(PatrolDemoMonth::PATROLS, $before['patrol_patrol'], 'The seeding has to have left something to protect.');
+        self::assertSame(PatrolSeedMonth::PATROLS, $before['patrol_patrol'], 'The seeding has to have left something to protect.');
         self::assertGreaterThan(0, $before['patrol_observation']);
         self::assertGreaterThan(0, $before['patrol_observation_photo']);
 
@@ -225,7 +225,7 @@ final class MigrationsUpgradeKeepsDataTest extends MigrationsTestCase
      * collected off the tag, team's runs first because patrol depends on it, and
      * the area is the one fixture nothing installed ships a provider for.
      */
-    private function seedADemoMonth(): void
+    private function seedAMonth(): void
     {
         /** @var CollectedContentProviders $providers */
         $providers = static::getContainer()->get('test_public.devkit.content_providers');

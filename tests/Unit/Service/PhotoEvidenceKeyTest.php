@@ -106,7 +106,7 @@ final class PhotoEvidenceKeyTest extends TestCase
 
     private function observation(?string $patrolClientUuid): Observation
     {
-        $area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve');
+        $area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve');
         $patrol = new Patrol($area, Vocabulary::type(null, $area, 'walk'));
         if (null !== $patrolClientUuid) {
             $patrol->setClientUuid(Uuid::fromString($patrolClientUuid));

@@ -76,7 +76,7 @@ final class ObservationFileAsIncidentTest extends WebTestCase
         $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
 
-        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve')->setGeom(
+        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve')->setGeom(
             '{"type":"MultiPolygon","coordinates":[[[[5.4,-20.4],[5.9,-20.4],[5.9,-19.9],[5.4,-19.9],[5.4,-20.4]]]]}',
         );
         $this->em->persist($this->area);

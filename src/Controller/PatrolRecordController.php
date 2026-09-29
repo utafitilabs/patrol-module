@@ -97,7 +97,7 @@ use Uhifadhi\Patrol\Upload\PatrolTrackTarget;
  *
  * IT WRITES NO PATROL ITSELF. {@see PatrolRecordingService} is the write path
  * for the whole submission, track and observations and photographs together, and
- * is reachable without a browser — which is what lets demo content be seeded
+ * is reachable without a browser — which is what lets seed content be seeded
  * through the door a person uses. The controller authorises, reads the form,
  * and responds.
  *

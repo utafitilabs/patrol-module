@@ -55,7 +55,7 @@ final class ConfigurePageTest extends WebTestCase
         $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
 
-        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve')->setGeom(
+        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve')->setGeom(
             '{"type":"MultiPolygon","coordinates":[[[[12.2,-5.8],[12.5,-5.8],[12.5,-5.5],[12.2,-5.5],[12.2,-5.8]]]]}',
         );
         $this->em->persist($this->area);
@@ -112,7 +112,7 @@ final class ConfigurePageTest extends WebTestCase
         $crawler = $this->client->request('GET', $this->configureUrl('settings'));
 
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('demo reserve — Patrols · configure', $crawler->filter('h1.pg')->text());
+        self::assertStringContainsString('seed reserve — Patrols · configure', $crawler->filter('h1.pg')->text());
         self::assertSame(
             ['Widget library', 'Patrol types', 'Observation kinds', 'Settings'],
             $crawler->filter('.atabs a')->each(static fn (Crawler $a): string => trim($a->text())),
