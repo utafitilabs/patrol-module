@@ -16,7 +16,9 @@ namespace Uhifadhi\Patrol\Tests\Integration\Service;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Station;
 use Uhifadhi\Patrol\Entity\PatrolType;
+use Uhifadhi\Patrol\Enum\PatrolBaseEnum;
 use Uhifadhi\Patrol\Exception\VocabularyConflictException;
+use Uhifadhi\Patrol\Model\PatrolBaseDefaults;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
 use Uhifadhi\Patrol\Service\PatrolVocabularyService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
@@ -198,6 +200,13 @@ final class PatrolVocabularyServiceTest extends IntegrationTestCase
         // The installation this suite plays configures two (see TestKernel).
         self::assertSame(['walk', 'boat'], array_map(static fn (PatrolType $t): string => $t->getKey(), $seeded));
         self::assertSame(['Walking round', 'Boat'], array_map(static fn (PatrolType $t): string => $t->getLabel(), $seeded));
+        // A BASE THE INSTALLATION ANSWERED ARRIVES WITH ITS DEFAULTS; one it left
+        // open stays open, for the area to answer on the types section.
+        self::assertNull($seeded[0]->getBase());
+        self::assertSame(PatrolBaseEnum::Surface, $seeded[1]->getBase());
+        $surface = PatrolBaseDefaults::of(PatrolBaseEnum::Surface);
+        self::assertSame($surface->coverageBufferM, $seeded[1]->getCoverageBufferM());
+        self::assertSame($surface->paceMaxKmh, $seeded[1]->getPaceMaxKmh());
 
         $this->vocabulary()->renameType($seeded[0], 'On foot');
         self::assertFalse($this->vocabulary()->seedTypes($area));

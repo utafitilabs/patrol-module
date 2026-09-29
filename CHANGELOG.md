@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * a configured patrol type may name its `base` (`surface` or `aerial`), and a new area's type arrives with it and the base's defaults; the shipped three are answered — Foot and Vehicle `surface`, Drone `aerial` — so a new area's Drone type records as aerial from its first patrol. The recipe's `0.10` config writes the three with their bases; an existing installation adds `base:` to its own `types` (see UPGRADE-0.10.md). Areas that already have types are untouched.
+
  * a buffered corridor asks the core (`RecomputeFacts`) to file the patrol's months again at once, so a completed or late-uploaded patrol reaches the figures on the worker's next turn rather than the schedule's next run
 
 - A patrol's track is buffered once, by the queue worker, into `patrol_corridor`

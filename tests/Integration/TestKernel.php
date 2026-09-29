@@ -425,7 +425,7 @@ final class TestKernel extends Kernel
             // real to fire on.
             'types' => [
                 'walk' => ['label' => 'Walking round'],
-                'boat' => ['label' => 'Boat'],
+                'boat' => ['label' => 'Boat', 'base' => 'surface'],
             ],
             'observation_categories' => [
                 'maintenance' => ['label' => 'Maintenance need'],

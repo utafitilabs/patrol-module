@@ -15,6 +15,7 @@ namespace Uhifadhi\Patrol\DependencyInjection;
 
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
+use Uhifadhi\Patrol\Enum\PatrolBaseEnum;
 
 /**
  * The bundle's semantic configuration — how a host declares its patrol
@@ -38,6 +39,15 @@ final class PatrolConfiguration
 {
     /** @var array<string, string> */
     public const array DEFAULT_TYPES = ['foot' => 'Foot', 'vehicle' => 'Vehicle', 'drone' => 'Drone'];
+
+    /**
+     * THE BASE EACH SHIPPED TYPE ARRIVES WITH. Walking and driving put the
+     * ranger's own position on the ground; a drone flies, and its operator's
+     * position is not the coverage. Answered here so a new area's types record
+     * the right way from their first patrol — the handset never guesses a base
+     * from a name.
+     */
+    public const array DEFAULT_BASES = ['foot' => 'surface', 'vehicle' => 'surface', 'drone' => 'aerial'];
 
     /**
      * Ninety days — long enough that a discard made in error can still be found
@@ -74,10 +84,19 @@ final class PatrolConfiguration
                 ->arrayNode('types')
                     ->info('Patrol types this deployment uses (key = stored value, label = what the UI shows).')
                     ->useAttributeAsKey('key')
-                    ->defaultValue(array_map(static fn (string $label): array => ['label' => $label], self::DEFAULT_TYPES))
+                    ->defaultValue(array_map(
+                        static fn (string $key): array => ['label' => self::DEFAULT_TYPES[$key], 'base' => self::DEFAULT_BASES[$key]],
+                        array_combine(array_keys(self::DEFAULT_TYPES), array_keys(self::DEFAULT_TYPES)),
+                    ))
                     ->arrayPrototype()
                         ->children()
                             ->scalarNode('label')->isRequired()->cannotBeEmpty()->end()
+                            // How the type records, copied to a new area with the
+                            // base's own defaults; left out, the area answers it.
+                            ->enumNode('base')
+                                ->values(array_map(static fn (PatrolBaseEnum $base): string => $base->value, PatrolBaseEnum::cases()))
+                                ->defaultNull()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()

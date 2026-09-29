@@ -64,8 +64,8 @@ use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
 final class PatrolVocabularyService
 {
     /**
-     * @param array<string, array{label: string}> $configuredTypes the installation's
-     *                                                             patrol.types — the SEED a new area starts from, and nothing else
+     * @param array<string, array{label: string, base?: string|null}> $configuredTypes the installation's
+     *                                                                                 patrol.types — the SEED a new area starts from, and nothing else
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -280,6 +280,9 @@ final class PatrolVocabularyService
         foreach ($this->configuredTypes as $key => $type) {
             $seeded = new PatrolType($area, (string) $key, $type['label']);
             $seeded->setPosition($position++);
+            // THE BASE THE INSTALLATION ANSWERED, with its defaults — the same
+            // adoption the types section performs when somebody chooses one.
+            self::adoptBase($seeded, PatrolBaseEnum::tryFrom((string) ($type['base'] ?? '')));
             $this->entityManager->persist($seeded);
         }
 

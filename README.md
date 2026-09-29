@@ -197,8 +197,8 @@ area's Configure › Stations, and a patrol points at one of those.
 ```yaml
 patrol:
     types:
-        walk: { label: Walking round }
-        boat: { label: Boat }
+        walk: { label: Walking round, base: surface }
+        boat: { label: Boat, base: surface }
     observation_categories:
         maintenance: { label: Maintenance need }
 ```
@@ -215,6 +215,11 @@ something an installation is expected to have written. What each one carries is
 in [docs/what-it-stands-on.md](docs/what-it-stands-on.md).
 
 ## Upgrading
+
+**Upgrading to 0.10 lets a patrol type carry its base.** Add `base:` to each of
+your `types` so a new area's types record the right way from their first patrol;
+no migration. [UPGRADE-0.10.md](UPGRADE-0.10.md). Coverage moved to the queue
+worker in 0.9: [UPGRADE-0.9.md](UPGRADE-0.9.md).
 
 **Upgrading from 0.5 to 0.6 changes who may do what.** Every gate in this
 module is a `<concern>.<verb>` pair now, reading included, and no migration

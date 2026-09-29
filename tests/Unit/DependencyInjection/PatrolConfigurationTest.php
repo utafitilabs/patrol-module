@@ -77,9 +77,49 @@ final class PatrolConfigurationTest extends TestCase
 
         self::assertSame(['boat', 'horseback'], array_keys((array) $config['types']));
         $types = (array) $config['types'];
-        self::assertSame(['label' => 'Boat'], $types['boat']);
+        self::assertSame(['label' => 'Boat', 'base' => null], $types['boat']);
         self::assertSame(['maintenance'], array_keys((array) $config['observation_categories']));
         self::assertSame(7.5, $config['gap_threshold_minutes']);
+    }
+
+    /**
+     * THE THREE THE MODULE SHIPS ARRIVE ANSWERED: walking and driving put the
+     * ranger's own position on the ground, a drone flies. A new area's Drone
+     * type records as aerial from its first patrol, not after somebody finds
+     * "Choose base" on its row.
+     */
+    public function testTheShippedTypesCarryTheirBases(): void
+    {
+        $types = (array) $this->process([])['types'];
+
+        self::assertSame(
+            ['foot' => 'surface', 'vehicle' => 'surface', 'drone' => 'aerial'],
+            ['foot' => self::baseOf($types, 'foot'), 'vehicle' => self::baseOf($types, 'vehicle'), 'drone' => self::baseOf($types, 'drone')],
+        );
+    }
+
+    public function testAHostMayAnswerTheBaseOfItsOwnTypes(): void
+    {
+        $types = (array) $this->process(['types' => ['boat' => ['label' => 'Boat', 'base' => 'surface'], 'uav' => ['label' => 'UAV', 'base' => 'aerial']]])['types'];
+
+        self::assertSame('surface', self::baseOf($types, 'boat'));
+        self::assertSame('aerial', self::baseOf($types, 'uav'));
+    }
+
+    /** @param array<mixed> $types */
+    private static function baseOf(array $types, string $key): mixed
+    {
+        $type = $types[$key] ?? null;
+        self::assertIsArray($type);
+
+        return $type['base'] ?? null;
+    }
+
+    public function testABaseThePlatformDoesNotKnowIsRefused(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+
+        $this->process(['types' => ['boat' => ['label' => 'Boat', 'base' => 'underwater']]]);
     }
 
     public function testATypeWithoutALabelIsRefused(): void
