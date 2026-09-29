@@ -46,7 +46,7 @@ abstract class PatrolOverviewTestCase extends IntegrationTestCase
     protected const string NOW = '2026-03-21T11:42:00+00:00';
 
     /**
-     * The posts a test's station key stands for, in the module's own demo
+     * The posts a test's station key stands for, in the module's own seed
      * vocabulary. A key with no post of its own becomes a station named after
      * itself, which is all a test that only counts stations needs.
      *

@@ -47,7 +47,7 @@ final class PatrolCalendarTest extends IntegrationTestCase
         self::assertInstanceOf(PatrolCalendar::class, $calendar);
         $this->calendar = $calendar;
 
-        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve');
+        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve');
         $this->em->persist($this->area);
         $this->em->flush();
     }

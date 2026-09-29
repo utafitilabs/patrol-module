@@ -40,7 +40,7 @@ final class TracksAreBufferedOnceTest extends TestCase
         foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS)) as $file) {
             \assert($file instanceof \SplFileInfo);
             $path = substr($file->getPathname(), \strlen($src));
-            // The demo content shrinks an AREA's boundary to seed points inside
+            // The seed content shrinks an AREA's boundary to seed points inside
             // it, on the console, in development; it buffers no track.
             if ('php' !== $file->getExtension() || str_starts_with($path, 'Devkit/')) {
                 continue;

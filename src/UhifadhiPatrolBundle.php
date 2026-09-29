@@ -755,10 +755,10 @@ final class UhifadhiPatrolBundle extends AbstractBundle
          * second one that can disagree with it.
          */
         /*
-                 * A DEMO MONTH, OFFERED THE SAME WAY. An inert provider naming a slice
+                 * A SEED MONTH, OFFERED THE SAME WAY. An inert provider naming a slice
                  * of sample content; devkit collects it and seeds it in a dev install,
                  * and in production nothing collects it. Its load() calls this module's
-                 * own public services and nothing else, so demo content can only ever be
+                 * own public services and nothing else, so seed content can only ever be
                  * shaped the way the product shapes it.
                  *
                  * THE TAG IS A LITERAL STRING for the same reason the command tag is:

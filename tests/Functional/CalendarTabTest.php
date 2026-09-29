@@ -72,7 +72,7 @@ final class CalendarTabTest extends WebTestCase
         $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
 
-        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve')->setGeom(
+        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve')->setGeom(
             '{"type":"MultiPolygon","coordinates":[[[[12.2,-5.8],[12.5,-5.8],[12.5,-5.5],[12.2,-5.5],[12.2,-5.8]]]]}',
         );
         $this->em->persist($this->area);
@@ -177,7 +177,7 @@ final class CalendarTabTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSelectorExists('h1.pg');
-        self::assertSelectorTextContains('h1.pg', 'demo reserve — Patrols');
+        self::assertSelectorTextContains('h1.pg', 'seed reserve — Patrols');
         self::assertStringContainsString(
             'uhifadhipatrol/patrol',
             (string) $this->client->getResponse()->getContent(),

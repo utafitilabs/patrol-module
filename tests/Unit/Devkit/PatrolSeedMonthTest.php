@@ -14,24 +14,24 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Unit\Devkit;
 
 use PHPUnit\Framework\TestCase;
-use Uhifadhi\Patrol\Devkit\PatrolDemoMonth;
+use Uhifadhi\Patrol\Devkit\PatrolSeedMonth;
 use Uhifadhi\Patrol\Service\GeoService;
 
 /**
  * The sample month adds up — and stays inside the boundary it was handed.
  *
- * This is the half of the demo that may invent freely, so it is the half that
+ * This is the half of the seed that may invent freely, so it is the half that
  * has to be checked arithmetically: {@see \Uhifadhi\Patrol\Tests\Integration\Devkit\PatrolContentProviderTest}
  * then proves the same table survives being written through the product's own
  * doors.
  */
-final class PatrolDemoMonthTest extends TestCase
+final class PatrolSeedMonthTest extends TestCase
 {
     public function testAMonthIsTwelveShiftsAndAQuarterOfThemWereWrittenUpByHand(): void
     {
         $patrols = $this->month()->patrols();
 
-        self::assertCount(PatrolDemoMonth::PATROLS, $patrols);
+        self::assertCount(PatrolSeedMonth::PATROLS, $patrols);
 
         $sketched = array_filter($patrols, static fn (array $patrol): bool => null === $patrol['gpx']);
         self::assertCount(3, $sketched, 'A roster that was all GPS would be a lie about how patrolling is recorded.');
@@ -64,7 +64,7 @@ final class PatrolDemoMonthTest extends TestCase
             }
 
             $xml = simplexml_load_string($patrol['gpx']);
-            self::assertNotFalse($xml, 'A demo track that will not parse is a demo that seeds nothing.');
+            self::assertNotFalse($xml, 'A seed track that will not parse is a seed that seeds nothing.');
 
             $points = $xml->trk->trkseg->trkpt;
             self::assertGreaterThan(1, $points->count());
@@ -100,7 +100,7 @@ final class PatrolDemoMonthTest extends TestCase
     {
         $stations = $this->month()->stations();
 
-        self::assertCount(\count(PatrolDemoMonth::STATIONS), $stations);
+        self::assertCount(\count(PatrolSeedMonth::STATIONS), $stations);
         self::assertSame(
             \count($stations),
             \count(array_unique(array_map(static fn (array $s): string => $s['lon'].'/'.$s['lat'], $stations))),
@@ -113,9 +113,9 @@ final class PatrolDemoMonthTest extends TestCase
         self::assertEquals($this->month()->patrols(), $this->month()->patrols());
     }
 
-    private function month(): PatrolDemoMonth
+    private function month(): PatrolSeedMonth
     {
-        return new PatrolDemoMonth(
+        return new PatrolSeedMonth(
             new GeoService(),
             [[[-30.0, -3.6], [-29.0, -3.6], [-29.0, -2.8], [-30.0, -2.8], [-30.0, -3.6]]],
             [[-29.9, -3.5], [-29.2, -3.5], [-29.9, -2.9], [-29.2, -2.9], [-29.5, -3.2]],

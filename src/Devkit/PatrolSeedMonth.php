@@ -23,7 +23,7 @@ use Uhifadhi\Patrol\Service\GeoService;
  * about a database: {@see PatrolContentProvider} takes what this describes and
  * files it through the doors a person uses.
  *
- * THAT SPLIT IS THE POINT. The generator is where a demo may be as elaborate as
+ * THAT SPLIT IS THE POINT. The generator is where a seed may be as elaborate as
  * it likes — it invents geometry, weights the busy gates and spreads the dates
  * so five charts fill — and it is precisely the place that must not be able to
  * store anything, because content written past the product's own rules is
@@ -53,12 +53,12 @@ use Uhifadhi\Patrol\Service\GeoService;
  *
  * DETERMINISTIC. One fixed seed, so the same area always yields the same month.
  */
-final class PatrolDemoMonth
+final class PatrolSeedMonth
 {
-    /** How many patrols a demo month holds. */
+    /** How many patrols a seed month holds. */
     public const int PATROLS = 12;
 
-    /** Fixed seed: the same area always produces the same demo history. */
+    /** Fixed seed: the same area always produces the same seed history. */
     public const int RANDOM_SEED = 20260823;
 
     /**
@@ -75,7 +75,7 @@ final class PatrolDemoMonth
     private const int MIN_TRACK_POINTS = 30;
     private const int MAX_TRACK_POINTS = 120;
 
-    /** Kilometres in a degree of latitude — good enough for demo dead reckoning. */
+    /** Kilometres in a degree of latitude — good enough for seed dead reckoning. */
     private const float KM_PER_DEGREE = 111.195;
 
     /**
@@ -155,9 +155,9 @@ final class PatrolDemoMonth
     private const string SKETCH_NOTE = 'Written up from the duty log — route not recorded.';
 
     /**
-     * The kinds and sub-categories a demo area's observation taxonomy starts
+     * The kinds and sub-categories a seed area's observation taxonomy starts
      * with. Small on purpose: the taxonomy screen's whole point is that an area
-     * writes its own, and a demo that arrived with forty rows would teach the
+     * writes its own, and a seed that arrived with forty rows would teach the
      * opposite.
      *
      * @var array<string, non-empty-list<string>>
@@ -365,7 +365,7 @@ final class PatrolDemoMonth
         $xml->startDocument('1.0', 'UTF-8');
         $xml->startElement('gpx');
         $xml->writeAttribute('version', '1.1');
-        $xml->writeAttribute('creator', 'uhifadhi/patrol-module demo');
+        $xml->writeAttribute('creator', 'uhifadhi/patrol-module seed');
         $xml->writeAttribute('xmlns', 'http://www.topografix.com/GPX/1/1');
         $xml->startElement('trk');
         $xml->startElement('trkseg');
@@ -519,7 +519,7 @@ final class PatrolDemoMonth
         return $heading + $weight * atan2(sin($target - $heading), cos($target - $heading));
     }
 
-    /** Compass bearing in radians (0 = north), on the flat — demo scale. */
+    /** Compass bearing in radians (0 = north), on the flat — seed scale. */
     private function bearing(float $lon, float $lat, float $toLon, float $toLat): float
     {
         return atan2(($toLon - $lon) * max(0.2, cos(deg2rad($lat))), $toLat - $lat);
@@ -610,7 +610,7 @@ final class PatrolDemoMonth
      * towards the current month, so two different widgets both read right.
      *
      * A five-week "patrols per week" chart runs back four weeks before the
-     * current one, so a demo penned entirely into the current month leaves its
+     * current one, so a seed penned entirely into the current month leaves its
      * earliest bars empty for the first weeks of a month. Most of a share
      * ({@see self::THIS_MONTH_PERCENT}) still lands in the current month, keeping
      * the map, log, register and calendar rich, while the rest spread back so
@@ -639,7 +639,7 @@ final class PatrolDemoMonth
 
     /**
      * A station index drawn from {@see self::STATION_WEIGHTS}: busier posts come
-     * up more often, so the demo's per-station counts vary the way a real
+     * up more often, so the seed's per-station counts vary the way a real
      * roster's do.
      */
     private function pickStationIndex(): int
@@ -713,7 +713,7 @@ final class PatrolDemoMonth
         }
 
         // Unknown vocabulary still gets a stable profile, so a deployment naming
-        // its types in another language keeps a varied demo.
+        // its types in another language keeps a varied seed.
         return self::PROFILES[crc32($word) % \count(self::PROFILES)];
     }
 

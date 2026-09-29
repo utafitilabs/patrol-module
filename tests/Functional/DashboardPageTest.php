@@ -59,7 +59,7 @@ final class DashboardPageTest extends WebTestCase
         $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
 
-        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve')->setGeom(
+        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve')->setGeom(
             '{"type":"MultiPolygon","coordinates":[[[[12.2,-5.8],[12.5,-5.8],[12.5,-5.5],[12.2,-5.5],[12.2,-5.8]]]]}',
         );
         $this->em->persist($this->area);
@@ -133,7 +133,7 @@ final class DashboardPageTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         // Page header: "<Area> — Patrols", per the design's title convention.
-        self::assertSelectorTextContains('h1.pg', 'demo reserve — Patrols');
+        self::assertSelectorTextContains('h1.pg', 'seed reserve — Patrols');
 
         // The subtitle is the settled design's own words (index.html pgsub),
         // ported verbatim.
@@ -147,11 +147,11 @@ final class DashboardPageTest extends WebTestCase
          *
          * The shell's document composes it as page — place — brand, where the
          * place is the area the request is in, so a page that names the area
-         * itself prints it twice ("Demo Reserve — Patrols — Demo Reserve —
+         * itself prints it twice ("Seed Reserve — Patrols — Seed Reserve —
          * Uhifadhi"). Every screen of this module did, which is what a
          * `layout.html.twig` that composed nothing left behind.
          */
-        self::assertSame(1, substr_count($crawler->filter('title')->first()->text(), 'demo reserve'));
+        self::assertSame(1, substr_count($crawler->filter('title')->first()->text(), 'seed reserve'));
 
         // KPI strip: this month's count, its per-type breakdown, the distance
         // sum, and PL·03's coverage as a whole percent. The two recorded tracks

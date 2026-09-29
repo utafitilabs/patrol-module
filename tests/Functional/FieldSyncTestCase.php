@@ -61,7 +61,7 @@ abstract class FieldSyncTestCase extends WebTestCase
         $schemaTool->dropSchema($metadata);
         $schemaTool->createSchema($metadata);
 
-        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('demo reserve')->setGeom(
+        $this->area = new AreaOfInterest()->setSource('test fixture')->setName('seed reserve')->setGeom(
             '{"type":"MultiPolygon","coordinates":[[[[-29.59,-3.25],[-29.48,-3.25],[-29.48,-3.15],[-29.59,-3.15],[-29.59,-3.25]]]]}',
         );
         $this->em->persist($this->area);
