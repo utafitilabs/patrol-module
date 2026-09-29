@@ -46,6 +46,8 @@ A [uhifadhi](https://github.com/uhifadhilabs) module bundle.
 
 ## Installation
 
+Commands run through the Symfony CLI — `symfony console …` — which hands the project the addresses of the services the skeleton's `compose.yaml` starts. Served some other way, run `php bin/console …` with those addresses written into `.env.local`.
+
 ```bash
 composer require uhifadhi/patrol-module
 ```
@@ -56,10 +58,10 @@ there is no doctrine block and no asset wiring to write.
 ### The tables
 
 ```console
-php bin/console cache:clear --no-warmup
-php bin/console doctrine:migrations:migrate
-php bin/console registry:sync
-php bin/console cache:warmup
+symfony console cache:clear --no-warmup
+symfony console doctrine:migrations:migrate
+symfony console registry:sync
+symfony console cache:warmup
 ```
 
 Those are the installation's four commands, the same four after every change to it. The second is the whole of this module's schema step, and the third enters the module in the catalogue — `registry:sync` gives every area its row and prints what it added, kept and retired. This module ships the SQL for the `patrol_*`
@@ -70,8 +72,10 @@ installation writes no version for them, exactly as it writes none for the core.
 and it is run against your own namespace:
 
 ```bash
-php bin/console doctrine:migrations:diff --namespace=DoctrineMigrations
+symfony console doctrine:migrations:diff --namespace=DoctrineMigrations
 ```
+
+It answers in red — `[critical] … No changes detected in your mapping information.` — and that is the answer you want: the module brought every table it needs.
 
 Pass `--namespace` every time. Several namespaces are registered in an
 installation — the core's bundles, this module's, yours — and the command's
@@ -90,7 +94,7 @@ track is buffered by the worker from the `async` transport, and the coverage
 figures are filed hourly by the core's schedule on `scheduler_default`:
 
 ```console
-php bin/console messenger:consume async scheduler_default
+symfony console messenger:consume async scheduler_default
 ```
 
 An installation that runs no worker shows "not computed yet · runs hourly" where
@@ -98,8 +102,8 @@ the coverage figures go. After the deploy that brings stored corridors, and
 after a patrol type's coverage width changes, run once:
 
 ```console
-php bin/console patrol:coverage:rebuild
-php bin/console uhifadhi:facts:rebuild --module=patrols --from=2026-01
+symfony console patrol:coverage:rebuild
+symfony console uhifadhi:facts:rebuild --module=patrols --from=2026-01
 ```
 
 The first buffers every complete patrol that has no stored corridor, or a stale
@@ -223,10 +227,10 @@ existing position must also be granted.
 pg_dump ... > backup.sql
 
 # 2. read what it plans to do before it does it
-php bin/console doctrine:migrations:migrate --dry-run
+symfony console doctrine:migrations:migrate --dry-run
 
 # 3. run it
-php bin/console doctrine:migrations:migrate
+symfony console doctrine:migrations:migrate
 ```
 
 `composer update uhifadhi/patrol-module` brings new versions with the code that
@@ -240,7 +244,7 @@ tables are already there and the shipped version must not run. Mark it executed
 without running it:
 
 ```bash
-php bin/console doctrine:migrations:version --add \
+symfony console doctrine:migrations:version --add \
     'Uhifadhi\Patrol\Migrations\Version20260910044923'
 ```
 
