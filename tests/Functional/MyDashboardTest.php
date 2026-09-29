@@ -88,9 +88,9 @@ final class MyDashboardTest extends WebTestCase
         self::assertCount(1, $page->filter('.md-figures [data-me="distance"]'));
         self::assertCount(1, $page->filter('.md-figures [data-me="patrols"]'));
         self::assertCount(1, $page->filter('.md-figures [data-me="observations"]'));
-        self::assertCount(1, $page->filter('.md-beside [data-me="week"] .pl-me-bars'));
-        self::assertCount(1, $page->filter('.md-beside [data-me="my-patrols"]'));
-        self::assertCount(1, $page->filter('.md-row [data-me="my-observations"]'));
+        self::assertCount(1, $page->filter('[data-slot="beside-plate"] [data-me="week"] .pl-me-bars'));
+        self::assertCount(1, $page->filter('[data-slot="beside-plate"] [data-me="my-patrols"]'));
+        self::assertCount(1, $page->filter('[data-slot="row"] [data-me="my-observations"]'));
     }
 
     /** THE BARS ARE DRAWN BY THIS MODULE'S SHEET, and the head carries it because the page cannot know to. */
