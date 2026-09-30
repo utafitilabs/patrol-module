@@ -39,6 +39,13 @@ final class CreatePatrolProcessor extends PatrolSyncProcessor
         $body = $this->api->body();
         $recorder = $this->api->requireRecorder($this->api->findArea(Payload::string($body, 'areaId') ?? ''));
 
+        // A RE-SEND IS ONLY THE SENDER'S: somebody else's patrol id is not a
+        // way in to it, nor a way to learn it exists beyond the refusal.
+        $existing = $this->api->findPatrol(Payload::string($body, 'clientUuid') ?? '');
+        if (null !== $existing) {
+            $this->api->requireWriter($existing);
+        }
+
         [$patrol, $duplicate] = $this->upsert->upsert($body, $recorder);
 
         // 201 the first time, 200 on a re-send — the contract draws that line

@@ -45,6 +45,7 @@ final class UploadPhotoProcessor extends PatrolSyncProcessor
         $this->api->requireRecorder($this->api->findObservation($uuid)?->getPatrol()->getArea());
 
         $observation = $this->api->observation($uuid);
+        $this->api->requireWriter($observation->getPatrol());
         $request = $this->api->request();
 
         $rawUuid = trim((string) $request->request->get('clientUuid'));

@@ -67,6 +67,9 @@ final class FixedRecordVoter extends Voter
     /** May configure this area's patrol vocabulary, and manage records somebody else made. */
     public const string MANAGER_EMAIL = 'manager@example.test';
 
+    /** A second ranger who records in the same area, for whose patrol is whose. */
+    public const string SECOND_RECORDER_EMAIL = 'second-recorder@example.test';
+
     protected function supports(string $attribute, mixed $subject): bool
     {
         return [] !== array_filter(
@@ -131,6 +134,7 @@ final class FixedRecordVoter extends Voter
         return [
             self::BYSTANDER_EMAIL => $reads,
             self::RECORDER_EMAIL => $recorder,
+            self::SECOND_RECORDER_EMAIL => $recorder,
             self::MANAGER_EMAIL => $manager,
         ];
     }

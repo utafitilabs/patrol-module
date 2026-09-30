@@ -35,6 +35,7 @@ final class AppendObservationsProcessor extends PatrolSyncProcessor
         $recorder = $this->api->requireRecorder($this->api->findPatrol($uuid)?->getArea());
 
         $patrol = $this->api->patrol($uuid);
+        $this->api->requireWriter($patrol);
 
         [$accepted, $duplicate] = $this->observations->append($patrol, $this->api->body(), $recorder);
 

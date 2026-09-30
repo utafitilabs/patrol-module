@@ -43,7 +43,7 @@ abstract class FieldSyncTestCase extends WebTestCase
 
     protected KernelBrowser $client;
     /** The bearer token every subsequent request carries, or none. */
-    private ?string $bearer = null;
+    protected ?string $bearer = null;
     protected EntityManagerInterface $em;
     protected AreaOfInterest $area;
     protected User $recorder;

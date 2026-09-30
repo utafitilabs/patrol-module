@@ -35,6 +35,7 @@ final class AppendTrackProcessor extends PatrolSyncProcessor
         $this->api->requireRecorder($this->api->findPatrol($uuid)?->getArea());
 
         $patrol = $this->api->patrol($uuid);
+        $this->api->requireWriter($patrol);
 
         [$accepted, $duplicate] = $this->track->append($patrol, $this->api->body());
 

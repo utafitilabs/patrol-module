@@ -28,6 +28,7 @@ use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Repository\ObservationRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
+use Uhifadhi\Patrol\Security\PatrolWriteVoter;
 
 /**
  * The three questions every sync endpoint asks before it does anything: who is
@@ -94,6 +95,18 @@ final class PatrolApiContext
      * uuid — so a caller can name the ground before it asks the gate, and
      * still answer 404 afterwards.
      */
+    /**
+     * THE PATROL IS THE CALLER'S TO WRITE TO, or a refusal (ruled 30 Sep, #67):
+     * its lead, or the tiers. Asked after the record gate, so a caller who may
+     * not record at all still learns nothing about which patrols exist.
+     */
+    public function requireWriter(Patrol $patrol): void
+    {
+        if (!$this->authorizationChecker->isGranted(PatrolWriteVoter::WRITE, $patrol)) {
+            throw PatrolApiException::forbidden();
+        }
+    }
+
     public function findPatrol(string $uuid): ?Patrol
     {
         return Uuid::isValid($uuid)

@@ -83,6 +83,7 @@ use Uhifadhi\Patrol\Repository\TaxonomySubcategoryRepository;
 use Uhifadhi\Patrol\Repository\TrackBatchRepository;
 use Uhifadhi\Patrol\Repository\TrackPointRepository;
 use Uhifadhi\Patrol\Security\PatrolEvidenceVoter;
+use Uhifadhi\Patrol\Security\PatrolWriteVoter;
 use Uhifadhi\Patrol\Service\Api\FlightSyncService;
 use Uhifadhi\Patrol\Service\Api\ObservationSyncService;
 use Uhifadhi\Patrol\Service\Api\PatrolCompletionService;
@@ -389,6 +390,10 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 service(ObservationPhotoRepository::class),
                 service('storage.evidence_storage'),
             ]);
+
+        // ONLY THE RECORDER, OR THE TIERS, WRITE TO A PATROL (ruled 30 Sep, #67).
+        $services->set('patrol.write_voter', PatrolWriteVoter::class)
+            ->tag('security.voter');
 
         $services->set('patrol.evidence_voter', PatrolEvidenceVoter::class)
             ->args([

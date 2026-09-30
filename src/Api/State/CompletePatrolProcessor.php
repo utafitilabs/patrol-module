@@ -36,6 +36,7 @@ final class CompletePatrolProcessor extends PatrolSyncProcessor
         $this->api->requireRecorder($this->api->findPatrol($uuid)?->getArea());
 
         $patrol = $this->api->patrol($uuid);
+        $this->api->requireWriter($patrol);
 
         // The body is optional here — empty for an ordinary complete, and
         // carrying the discard when the ranger threw the patrol away instead.
