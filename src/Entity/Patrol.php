@@ -20,6 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
+use Uhifadhi\Contracts\Deletion\LinkedRecordsInterface;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Entity\Trait\TimestampableTrait;
 use Uhifadhi\Patrol\Enum\PatrolEventKindEnum;
@@ -42,7 +43,7 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
 #[ORM\Entity(repositoryClass: PatrolRepository::class)]
 #[ORM\Table(name: 'patrol_patrol')]
 #[ORM\HasLifecycleCallbacks]
-class Patrol
+class Patrol implements LinkedRecordsInterface
 {
     use TimestampableTrait;
 
@@ -904,6 +905,21 @@ class Patrol
     }
 
     /** Display reference ("P-0142") — presentation only, derived from the id. */
+    /**
+     * WHAT A DELETE OF THIS PATROL TAKES THAT OTHERS LINK TO BY ID (ruled
+     * 28 Sep, #48): its observations, which an incident filed from one names
+     * by uuid. Those incidents stay and drop the link.
+     */
+    public function linkedRecordUuids(): array
+    {
+        $uuids = [];
+        foreach ($this->observations as $observation) {
+            $uuids[] = (string) $observation->getUuid();
+        }
+
+        return $uuids;
+    }
+
     public function getRef(): string
     {
         return \sprintf('P-%04d', $this->id ?? 0);

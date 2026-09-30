@@ -28,6 +28,7 @@ use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Service\AreaMapPayload;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
+use Uhifadhi\Bundle\ShellBundle\Contract\DeletionPageInterface;
 use Uhifadhi\Contracts\Atlas\PlatePalette;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\DependencyInjection\PatrolConfiguration;
@@ -88,6 +89,8 @@ final class PatrolDetailController
         private readonly PatrolScreenAccessService $screens,
         private readonly int $discardRetentionDays = PatrolConfiguration::DEFAULT_DISCARD_RETENTION_DAYS,
         private readonly ?CsrfTokenManagerInterface $csrfTokenManager = null,
+        /** A SUPER ADMIN DELETES A PATROL (ruled 28 Sep, #48): the core's one delete page. */
+        private readonly ?DeletionPageInterface $deletionPage = null,
     ) {
     }
 
@@ -572,6 +575,29 @@ final class PatrolDetailController
         $hours = ($endedAt->getTimestamp() - $startedAt->getTimestamp()) / 3600;
 
         return $hours > 0 ? $distanceKm / $hours : null;
+    }
+
+    /** A SUPER ADMIN DELETES A PATROL (ruled 28 Sep, #48, design C): counted, typed, one audit line. */
+    #[Route(
+        '/areas/{uuid}/modules/patrols/{patrol}/delete',
+        name: 'patrol_delete',
+        requirements: ['uuid' => Requirement::UUID, 'patrol' => Requirement::UUID],
+        methods: ['GET', 'POST'],
+    )]
+    // The page asks the Super Admin tier itself; the pair keeps this module's
+    // rule that every route names what it enforces, and the tiers hold it.
+    #[IsGranted('patrols.read', subject: 'area')]
+    public function delete(
+        Request $request,
+        #[MapEntity(mapping: ['uuid' => 'uuid'])] AreaOfInterest $area,
+        #[MapEntity(mapping: ['patrol' => 'uuid'])] Patrol $patrol,
+    ): Response {
+        $this->assertPatrolBelongsTo($area, $patrol);
+        if (null === $this->deletionPage) {
+            throw new NotFoundHttpException('Deleting is not installed here.');
+        }
+
+        return $this->deletionPage->respond($request, $patrol);
     }
 
     private function assertPatrolBelongsTo(AreaOfInterest $area, Patrol $patrol): void

@@ -46,6 +46,8 @@
     {% if patrol.hasRecordedTrack %}
         <a class="tgl patrol-act" href="{{ path('patrol_export_gpx', {uuid: area.uuid, patrol: patrol.uuid}) }}" download="{{ patrol.ref }}.gpx">{{ ux_icon('patrol:download') }}Export GPX</a>
     {% endif %}
+    {# A SUPER ADMIN DELETES (ruled 28 Sep, #48, design C): its own page, counted and typed. #}
+    {% if may_delete() %}<a class="tgl patrol-act" href="{{ path('patrol_delete', {uuid: area.uuid, patrol: patrol.uuid}) }}">{{ ux_icon('shell:trash-2') }}Delete</a>{% endif %}
 {% endblock %}
 
 {% block patrol_page %}

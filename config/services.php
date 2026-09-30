@@ -16,10 +16,12 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Uhifadhi\Bundle\AreaBundle\Repository\AreaOfInterestRepository;
 use Uhifadhi\Bundle\AreaBundle\Repository\StationRepository as AreaStationRepository;
 use Uhifadhi\Bundle\AtlasBundle\Map\MapBuilderInterface;
+use Uhifadhi\Bundle\ShellBundle\Contract\DeletionPageInterface;
 use Uhifadhi\Bundle\ShellBundle\Contract\StylesheetSourceInterface;
 use Uhifadhi\Bundle\TeamBundle\Access\Door;
 use Uhifadhi\Contracts\Access\ConcernSourceInterface;
 use Uhifadhi\Contracts\Area\StationSectionsInterface;
+use Uhifadhi\Contracts\Deletion\DeletionContributorInterface;
 use Uhifadhi\Contracts\Facts\FactProviderInterface;
 use Uhifadhi\Contracts\Facts\FactReaderInterface;
 use Uhifadhi\Contracts\Me\MyCardProviderInterface;
@@ -33,6 +35,9 @@ use Uhifadhi\Patrol\Controller\PatrolDetailController;
 use Uhifadhi\Patrol\Controller\PatrolExportController;
 use Uhifadhi\Patrol\Controller\PatrolKindsOverviewController;
 use Uhifadhi\Patrol\Controller\PatrolListController;
+use Uhifadhi\Patrol\Deletion\PatrolDeletion;
+use Uhifadhi\Patrol\Deletion\PatrolFileRemover;
+use Uhifadhi\Patrol\Deletion\PersonPatrolDeletion;
 use Uhifadhi\Patrol\Facts\PatrolFactProvider;
 use Uhifadhi\Patrol\Me\PatrolMyCards;
 use Uhifadhi\Patrol\Message\BufferPatrolCorridor;
@@ -633,10 +638,22 @@ return static function (ContainerConfigurator $container): void {
             service('patrol.screen_access'),
             param('patrol.discard_retention_days'),
             service('security.csrf.token_manager')->nullOnInvalid(),
+            service(DeletionPageInterface::SERVICE)->nullOnInvalid(),
         ])
         ->public();
 
     $services->alias(PatrolDetailController::class, 'patrol.controller.detail')->public();
+
+    // A SUPER ADMIN DELETES (ruled 28 Sep, #48): a patrol, and what a deleted
+    // person recorded; the bytes go with the rows.
+    $services->set('patrol.deletion.files', PatrolFileRemover::class)
+        ->args([service('storage.evidence_storage')]);
+    $services->set('patrol.deletion.patrol', PatrolDeletion::class)
+        ->args([service('doctrine.orm.entity_manager'), service('router'), service('patrol.deletion.files')])
+        ->tag(DeletionContributorInterface::TAG);
+    $services->set('patrol.deletion.person', PersonPatrolDeletion::class)
+        ->args([service('doctrine.orm.entity_manager'), service('patrol.deletion.files')])
+        ->tag(DeletionContributorInterface::TAG);
 
     /*
      * THE READ-ONLY KINDS TAB. Registered beside the dashboard rather than
