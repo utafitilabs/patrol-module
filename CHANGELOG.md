@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * a patrol is written only by the ranger who recorded it (its lead) or by an Admin or a Super Admin (ruled 30 Sep, #67): `PatrolWriteVoter` (`patrol.write`) is asked by every handset write - track, observations, events, flights, photographs, completion, and re-sending a patrol's id. Before, any holder of `patrols.record` in the area could write to somebody else's patrol.
+
  * a configured patrol type may name its `base` (`surface` or `aerial`), and a new area's type arrives with it and the base's defaults; the shipped three are answered — Foot and Vehicle `surface`, Drone `aerial` — so a new area's Drone type records as aerial from its first patrol. The recipe's `0.10` config writes the three with their bases; an existing installation adds `base:` to its own `types` (see UPGRADE-0.10.md). Areas that already have types are untouched.
 
  * a buffered corridor asks the core (`RecomputeFacts`) to file the patrol's months again at once, so a completed or late-uploaded patrol reaches the figures on the worker's next turn rather than the schedule's next run
