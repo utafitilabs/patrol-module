@@ -61,12 +61,15 @@ final class PatrolListPageTest extends WebTestCase
         $this->em->persist($lead);
 
         // A month with more patrols than one page holds, so the pager has work.
+        // Five minutes apart in today's small hours, so every one is in this
+        // month on any day the suite runs - an hour apart reached back past
+        // midnight, and on the 1st into last month.
         for ($i = 0; $i < self::PATROL_COUNT; ++$i) {
             $walk = new Patrol($this->area, Vocabulary::type($this->em, $this->area, 0 === $i % 5 ? 'boat' : 'walk'))
                 ->setStationRecord(Vocabulary::station($this->em, $this->area, 0 === $i % 5 ? 'South landing' : 'North post'))
                 ->setLead($lead)
-                ->setStartedAt(new \DateTimeImmutable('today 06:10')->modify('-'.$i.' hours'))
-                ->setEndedAt(new \DateTimeImmutable('today 12:30')->modify('-'.$i.' hours'))
+                ->setStartedAt(new \DateTimeImmutable('today 03:00')->modify('-'.(5 * $i).' minutes'))
+                ->setEndedAt(new \DateTimeImmutable('today 09:20')->modify('-'.(5 * $i).' minutes'))
                 ->setDistanceKm(12.0 + $i);
             $this->em->persist($walk);
         }
