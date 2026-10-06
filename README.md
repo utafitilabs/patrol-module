@@ -85,7 +85,7 @@ package that command must report no changes; if it wants to create a
 
 ### What it requires
 
-This module requires the core (`uhifadhi/uhifadhi`) and the evidence store (`uhifadhi/storage-module`); both are on Packagist and resolve from the caret constraints in this package's manifest, so an installation names nothing.
+This module requires the core (`uhifadhi/uhifadhi` 0.2) and the evidence store (`uhifadhi/storage-module` 0.4); both are on Packagist and resolve from the caret constraints in this package's manifest, so an installation names nothing.
 
 ### The worker
 
@@ -113,6 +113,10 @@ the second files the months from `--from` on. See [docs/coverage.md](docs/covera
 ### Switching it on
 
 A module is installed but **parked**: every page of it answers 404 in an area that has not taken it. An administrator switches it on per area from that area's module grid, and grants the module's permissions to the positions that need them from the positions screen. Reading needs the module's `read` grant; nothing else is required to see it.
+
+Somebody reaches the module where their placement does: the area, and their one department. Everybody but Admins and Super Admins belongs to exactly one department and may support others; where a department runs Patrols, a person reaches its records through the department they belong to or one they support, and a person with no department reaches none.
+
+A patrol is written — its track, observations, events, flights, photographs and completion — only by the ranger who led it, an Admin or a Super Admin (`patrol.write`). That is a power over somebody else's record, and the module declares it, so Team › Permissions lists who may *add to or complete another ranger's patrol*.
 
 ### Who the records point at
 

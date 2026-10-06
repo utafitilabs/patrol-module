@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+ * the module runs on core 0.2 and storage 0.4 (`uhifadhi/uhifadhi` `^0.2`, `uhifadhi/storage-module` `^0.4`). Everybody but the tiers belongs to one department: a person reaches this module's records through the department they belong to or one they support, and somebody with no department reaches none.
+
+ * `PatrolWriteVoter` names the one question it answers (`supportsAttribute()`, `supportsType()`) and answers for the account the token carries, so Team › Permissions can ask it about anybody.
+
+ * the module declares its power over somebody else's record, `PatrolPowers` (tagged `uhifadhi.access.powers`): "add to or complete another ranger’s patrol", asked with `patrol.write` about a colleague's most recent patrol.
+
+ * the authority table: every route of the module called as every kind of person, against the reviewed `tests/Functional/authority-table.md`.
+
  * a Super Admin deletes a patrol (ruled 28 Sep, #48): a Delete action on the patrol's page opens the core's delete page (`/areas/{uuid}/modules/patrols/{patrol}/delete`), which counts what goes - the track, its observations, events and photographs, whose files leave storage too - and names what stays. Deleting a person takes the patrols they led with them. `Patrol` lists its observations' ids (`LinkedRecordsInterface`), so an incident filed from one keeps its record and loses only the link. Needs core 0.1.24.
 
  * a patrol is written only by the ranger who recorded it (its lead) or by an Admin or a Super Admin (ruled 30 Sep, #67): `PatrolWriteVoter` (`patrol.write`) is asked by every handset write - track, observations, events, flights, photographs, completion, and re-sending a patrol's id. Before, any holder of `patrols.record` in the area could write to somebody else's patrol.

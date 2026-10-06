@@ -4,6 +4,7 @@
 
 - [The one command](#the-one-command)
 - [The test database](#the-test-database)
+- [The authority table](#the-authority-table)
 - [Migrations](#migrations)
 - [Upgrading to 0.7](#upgrading-to-07)
 - [Upgrading to 0.6](#upgrading-to-06)
@@ -19,6 +20,23 @@ composer check       # cs:check → phpstan (max) → phpunit
 Integration tests run against a real PostGIS database — never SQLite — named by
 `PATROL_TEST_DATABASE_URL` in `phpunit.dist.xml`. The local one is the PostGIS
 test container on port 5434; CI runs the same image as a service on 5432.
+
+## The authority table
+
+`tests/Functional/AuthorityTableTest.php` calls every route of this module as
+every kind of person — signed out, deactivated, Staff with no position, Staff
+holding exactly the pair the route checks, holding all but it, holding it at
+another area, an Admin and a Super Admin — and compares the outcomes with
+`tests/Functional/authority-table.md`. It boots the test kernel's `authority`
+environment, where the core's voters decide alone and a stranger is sent to
+sign in. A change in who may open what fails the build until the table is
+recorded again and its diff is read:
+
+```bash
+UHIFADHI_RECORD_AUTHORITY_TABLE=1 vendor/bin/phpunit tests/Functional/AuthorityTableTest.php
+```
+
+A new route needs a probe in that test, or a stated reason, or the build fails.
 
 ## Migrations
 
