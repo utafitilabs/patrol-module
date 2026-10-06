@@ -20,6 +20,7 @@ use Uhifadhi\Bundle\ShellBundle\Contract\DeletionPageInterface;
 use Uhifadhi\Bundle\ShellBundle\Contract\StylesheetSourceInterface;
 use Uhifadhi\Bundle\TeamBundle\Access\Door;
 use Uhifadhi\Contracts\Access\ConcernSourceInterface;
+use Uhifadhi\Contracts\Access\PowerSourceInterface;
 use Uhifadhi\Contracts\Area\StationSectionsInterface;
 use Uhifadhi\Contracts\Deletion\DeletionContributorInterface;
 use Uhifadhi\Contracts\Facts\FactProviderInterface;
@@ -28,6 +29,7 @@ use Uhifadhi\Contracts\Me\MyCardProviderInterface;
 use Uhifadhi\Contracts\Shell\ConfigurationSectionsInterface;
 use Uhifadhi\Contracts\Shell\ModuleTabsInterface;
 use Uhifadhi\Patrol\Access\PatrolConcerns;
+use Uhifadhi\Patrol\Access\PatrolPowers;
 use Uhifadhi\Patrol\Command\CoverageRebuildCommand;
 use Uhifadhi\Patrol\Controller\PatrolCalendarController;
 use Uhifadhi\Patrol\Controller\PatrolController;
@@ -428,6 +430,15 @@ return static function (ContainerConfigurator $container): void {
      */
     $services->set('patrol.access.concerns', PatrolConcerns::class)
         ->tag(ConcernSourceInterface::TAG);
+
+    /*
+     * THE POWER THIS MODULE CONFERS OVER SOMEBODY ELSE'S RECORD, for Team ›
+     * Permissions: writing to a patrol another ranger recorded. Tagged by
+     * hand, like the concerns above.
+     */
+    $services->set('patrol.access.powers', PatrolPowers::class)
+        ->args([service(PatrolRepository::class)])
+        ->tag(PowerSourceInterface::TAG);
 
     /*
      * WHETHER TO DRAW A DOOR — asked in one place, through the core's Door

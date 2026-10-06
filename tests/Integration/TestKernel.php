@@ -32,6 +32,7 @@ use Uhifadhi\Bundle\AreaBundle\AreaBundle;
 use Uhifadhi\Bundle\AtlasBundle\AtlasBundle;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
 use Uhifadhi\Bundle\ShellBundle\ShellBundle;
+use Uhifadhi\Bundle\TeamBundle\Controller\SecurityController;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Bundle\TeamBundle\Security\ApiTokenAuthenticator;
 use Uhifadhi\Bundle\TeamBundle\TeamBundle;
@@ -74,6 +75,15 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\tagged_it
 final class TestKernel extends Kernel
 {
     use MicroKernelTrait;
+
+    /**
+     * THE RULES AS AN INSTALLATION RUNS THEM: no fixture voter beside the
+     * core's, and a sign-in page the firewall sends a stranger to. The
+     * authority table boots this environment, because a table recorded under
+     * a fixture that hands every signed-in account the reads would record
+     * the fixture.
+     */
+    public const string AUTHORITY_ENVIRONMENT = 'authority';
 
     public function registerBundles(): iterable
     {
@@ -213,7 +223,14 @@ final class TestKernel extends Kernel
                     'lazy' => true,
                     'provider' => 'team_user_provider',
                     'user_checker' => 'team.user_checker',
-                ],
+                ] + (self::AUTHORITY_ENVIRONMENT === $this->environment ? [
+                    'form_login' => [
+                        'login_path' => 'team_login',
+                        'check_path' => 'team_login',
+                        'enable_csrf' => true,
+                        'default_target_path' => '/',
+                    ],
+                ] : []),
             ],
             'access_control' => [
                 ['path' => '^/api', 'roles' => 'ROLE_USER'],
@@ -224,7 +241,9 @@ final class TestKernel extends Kernel
         // "patrols.record" and grants it to nobody, so something has to decide
         // who holds it. Tagged by hand — a reusable-bundle test kernel does not
         // autoconfigure.
-        $container->services()->set(FixedRecordVoter::class)->tag('security.voter');
+        if (self::AUTHORITY_ENVIRONMENT !== $this->environment) {
+            $container->services()->set(FixedRecordVoter::class)->tag('security.voter');
+        }
 
         // And DEVKIT's content collector, which the migrations upgrade lock
         // seeds through: this module's seed month depends on team's people, and
@@ -299,6 +318,7 @@ final class TestKernel extends Kernel
             // their integration test.
             \Uhifadhi\Patrol\Service\PatrolVocabularyService::class => 'patrol.vocabulary',
             \Uhifadhi\Patrol\Repository\StationRepository::class => \Uhifadhi\Patrol\Repository\StationRepository::class,
+            \Uhifadhi\Patrol\Repository\PatrolTypeRepository::class => \Uhifadhi\Patrol\Repository\PatrolTypeRepository::class,
             // The inert descriptor devkit materialises into a command. Nothing
             // collects it here — devkit is not in this kernel — so a test holds
             // it and calls the handler devkit would have called.
@@ -313,6 +333,10 @@ final class TestKernel extends Kernel
             // installed package declares. A test that composes a real position
             // needs it, because writing grants onto one validates against it.
             \Uhifadhi\Bundle\TeamBundle\Access\ConcernCatalogue::class => 'team.access.catalogue',
+            // The power this module declares, and the installation's catalogue
+            // of every package's powers that Team › Permissions reads.
+            \Uhifadhi\Patrol\Access\PatrolPowers::class => 'patrol.access.powers',
+            \Uhifadhi\Bundle\TeamBundle\Permissions\PowerCatalogue::class => 'team.permissions.powers',
             // The module's six contributions to the host's area overview, and
             // the one reading behind all of them. A host reaches them through
             // their TAGS; these aliases only let a test hold one directly.
@@ -480,6 +504,15 @@ final class TestKernel extends Kernel
         // without the page behind them a declared section has no address and the
         // strip drops it.
         $routes->import(ShellBundle::CONFIGURE_ROUTES);
+
+        // THE SIGN-IN PAGE, where the authority table's firewall sends
+        // somebody signed out, mounted from the bundle that owns it.
+        if (self::AUTHORITY_ENVIRONMENT === $this->environment) {
+            $signIn = new \ReflectionClass(SecurityController::class)->getFileName();
+            if (\is_string($signIn)) {
+                $routes->import($signIn, 'attribute');
+            }
+        }
 
         // THE INCIDENTS MODULE'S FRONT DOOR, STUBBED — but only in the
         // `incident_contract` environment. The File-as-incident button exists
