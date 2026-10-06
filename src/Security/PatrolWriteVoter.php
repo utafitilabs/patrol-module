@@ -31,6 +31,9 @@ use Uhifadhi\Patrol\Entity\Patrol;
  * THE TIERS ARE READ FROM THE TOKEN'S ROLES, not from a class of the Team:
  * a module knows the platform's roles and never its entities' methods.
  *
+ * IT ANSWERS FOR THE USER THE TOKEN CARRIES, never the session's: the
+ * Permissions page asks it of other accounts through isGrantedForUser().
+ *
  * @see https://symfony.com/doc/current/security/voters.html
  *
  * @extends Voter<string, Patrol>
@@ -40,6 +43,18 @@ final class PatrolWriteVoter extends Voter
     public const string WRITE = 'patrol.write';
 
     private const array TIERS = ['ROLE_ADMIN', 'ROLE_SUPER_ADMIN'];
+
+    /** @see https://symfony.com/doc/current/security/voters.html#improving-voter-performance */
+    public function supportsAttribute(string $attribute): bool
+    {
+        return self::WRITE === $attribute;
+    }
+
+    /** A Doctrine proxy extends the entity, so the type is matched with is_a(), as the documentation's example does. */
+    public function supportsType(string $subjectType): bool
+    {
+        return is_a($subjectType, Patrol::class, true);
+    }
 
     protected function supports(string $attribute, mixed $subject): bool
     {
