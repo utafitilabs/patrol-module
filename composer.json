@@ -20,16 +20,6 @@
             "homepage": "https://github.com/eemjema"
         }
     ],
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/utafitilabs/uhifadhi"
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/utafitilabs/storage-module"
-        }
-    ],
     "require": {
         "php": ">=8.4",
         "ext-simplexml": "*",
@@ -49,8 +39,8 @@
         "symfony/uid": "^7.3 || ^8.0",
         "symfony/ux-icons": "^3.4",
         "symfony/ux-map": "^2.20 || ^3.0",
-        "uhifadhi/storage-module": "^0.3",
-        "uhifadhi/uhifadhi": "^0.1.24",
+        "uhifadhi/storage-module": "^0.4",
+        "uhifadhi/uhifadhi": "^0.2",
         "utafitilabs/postgis-bundle": "^0.1"
     },
     "autoload": {

@@ -19,6 +19,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\TeamBundle\Access\ConcernCatalogue;
+use Uhifadhi\Bundle\TeamBundle\Entity\Department;
 use Uhifadhi\Bundle\TeamBundle\Entity\Placement;
 use Uhifadhi\Bundle\TeamBundle\Entity\Position;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
@@ -146,6 +147,20 @@ final class RouteByComposedPositionTest extends WebTestCase
     }
 
     /**
+     * NO DEPARTMENT REACHES NOTHING. Everybody but the tiers belongs to
+     * exactly one department; a placement on the right ground that names
+     * none is an unfinished record and opens no page of this module.
+     */
+    public function testSomebodyOnTheRightGroundWithNoDepartmentReachesNothing(): void
+    {
+        $this->client->loginUser($this->placedAt($this->theirs, [self::pair(PatrolConcerns::PATROLS, Verb::Read)], belonging: false));
+
+        $this->client->request('GET', $this->url($this->theirs, ''));
+
+        self::assertResponseStatusCodeSame(403);
+    }
+
+    /**
      * Every GET this module ships, with the pair its gate names.
      *
      * @return \Generator<string, array{string, list<string>}>
@@ -168,11 +183,12 @@ final class RouteByComposedPositionTest extends WebTestCase
 
     /**
      * Somebody holding a position that grants exactly these pairs, placed at
-     * one named area — or at none at all.
+     * one named area — or at none at all — and belonging to one department,
+     * as everybody but the tiers does, unless the test says otherwise.
      *
      * @param list<string> $pairs
      */
-    private function placedAt(?AreaOfInterest $area, array $pairs): User
+    private function placedAt(?AreaOfInterest $area, array $pairs, bool $belonging = true): User
     {
         $catalogue = static::getContainer()->get('test_public.'.ConcernCatalogue::class);
         \assert($catalogue instanceof ConcernCatalogue);
@@ -189,7 +205,12 @@ final class RouteByComposedPositionTest extends WebTestCase
             ->setPosition($position);
 
         if (null !== $area) {
-            $placement = new Placement()->inAreas([$area])->acrossAllDepartments();
+            $placement = new Placement()->inAreas([$area]);
+            if ($belonging) {
+                $department = new Department()->setName('Operations '.bin2hex(random_bytes(4)));
+                $this->em->persist($department);
+                $placement->inDepartment($department);
+            }
             $this->em->persist($placement);
             $user->setPlacement($placement);
         }

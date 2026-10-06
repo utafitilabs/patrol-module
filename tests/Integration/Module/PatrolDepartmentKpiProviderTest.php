@@ -449,13 +449,14 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
     }
 
     /**
-     * Somebody holding a position, placed across the organization and against
-     * one named department. The placement is what makes them a member of it,
-     * and it is written on the person rather than on the position.
+     * Somebody holding a position, placed across the organization and
+     * belonging to one named department. The placement is what makes them a
+     * member of it, and it is written on the person rather than on the
+     * position.
      */
     private function user(string $first, string $last, Position $position, Department $department): User
     {
-        $placement = new Placement()->acrossTheOrganization()->inDepartments([$department]);
+        $placement = new Placement()->acrossTheOrganization()->inDepartment($department);
         $this->em->persist($placement);
 
         $user = new User()->setPassword('x')
