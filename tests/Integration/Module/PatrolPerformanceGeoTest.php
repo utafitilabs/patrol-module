@@ -290,7 +290,7 @@ final class PatrolPerformanceGeoTest extends IntegrationTestCase
         $this->em->flush();
         $this->fileFacts(self::period()->from);
 
-        return new PatrolPerformanceGeo($this->em, $areaModules, new PatrolFigureService($repository, $this->corridors(), $this->facts()), 'patrols', 'Patrols');
+        return new PatrolPerformanceGeo($this->em, $areaModules, new PatrolFigureService($repository, $this->facts()), $this->facts(), 'patrols', 'Patrols');
     }
 
     /** @param list<GeoSeries> $series */

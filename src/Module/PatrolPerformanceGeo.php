@@ -18,12 +18,15 @@ use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Zone;
 use Uhifadhi\Bundle\RegistryBundle\Service\AreaModuleService;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
 use Uhifadhi\Contracts\Kpi\FigurePeriod;
 use Uhifadhi\Contracts\Performance\ColumnPolarity;
 use Uhifadhi\Contracts\Performance\GeoFigure;
 use Uhifadhi\Contracts\Performance\GeoSeries;
 use Uhifadhi\Contracts\Performance\PerformanceGeoProviderInterface;
 use Uhifadhi\Contracts\Performance\PerformanceScope;
+use Uhifadhi\Patrol\Model\PatrolTopicGround;
+use Uhifadhi\Patrol\Model\PatrolTopicReadings;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
 use Uhifadhi\Patrol\Service\PatrolFigureService;
 
@@ -49,9 +52,10 @@ use Uhifadhi\Patrol\Service\PatrolFigureService;
  * whose zones they are. The organization's page gets no zone series at all —
  * "the zones of one area" has no answer when there is no one area.
  *
- * COVERAGE IS THE SAME SHARE THE TOPIC PUBLISHES, made in the same place
- * ({@see PatrolFigureService}), so a director reading 54 % on the card and 54 %
- * on the plate is reading one measurement rather than two that agree today.
+ * COVERAGE IS THE SAME SHARE THE TOPIC PUBLISHES, read from the same row of
+ * the facts ledger ({@see PatrolTopicReadings}), so a director reading 54 % on
+ * the card and 54 % on the plate is reading one measurement rather than two
+ * that agree today.
  *
  * THE TWO ABSENCES ARE KEPT APART, and they are different facts:
  *
@@ -87,6 +91,7 @@ final readonly class PatrolPerformanceGeo implements PerformanceGeoProviderInter
         private EntityManagerInterface $entityManager,
         private AreaModuleService $areaModules,
         private PatrolFigureService $figures,
+        private FactReaderInterface $facts,
         /** The slug this module is registered under in the registry's catalogue. */
         private string $slug,
         private string $name = 'Patrols',
@@ -132,12 +137,14 @@ final readonly class PatrolPerformanceGeo implements PerformanceGeoProviderInter
      */
     private function coverageByArea(array $areas, FigurePeriod $period): GeoSeries
     {
+        // WHAT THE WORKER FILED for each area, in one read.
+        $read = new PatrolTopicReadings($this->facts, array_map(static fn (AreaOfInterest $area): string => (string) $area->getUuidString(), $areas));
         $figures = [];
         foreach ($areas as $area) {
             $figures[] = new GeoFigure(
                 uuid: (string) $area->getUuidString(),
                 label: (string) $area->getName(),
-                value: $this->figures->coverage($area, $period->from, $period->until),
+                value: $read->coverage(new PatrolTopicGround([$area], $area), $period),
             );
         }
 

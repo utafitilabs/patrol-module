@@ -824,14 +824,13 @@ final class UhifadhiPatrolBundle extends AbstractBundle
         $services->set('patrol.figure_service', PatrolFigureService::class)
             ->args([
                 service(PatrolRepository::class),
-                service(PatrolCorridorRepository::class),
                 service(FactReaderInterface::class),
             ]);
         $services->alias(PatrolFigureService::class, 'patrol.figure_service');
 
         $services->set('patrol.department_kpi_provider', PatrolDepartmentKpiProvider::class)
             ->args([
-                service('patrol.figure_service'),
+                service(FactReaderInterface::class),
                 service('doctrine.orm.entity_manager'),
                 'patrols',
                 'Patrols',
@@ -952,6 +951,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 service('doctrine.orm.entity_manager'),
                 service('registry.area_modules'),
                 service('patrol.figure_service'),
+                service(FactReaderInterface::class),
                 'patrols',
                 'Patrols',
             ])

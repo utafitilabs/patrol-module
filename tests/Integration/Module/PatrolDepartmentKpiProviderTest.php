@@ -14,19 +14,19 @@ declare(strict_types=1);
 namespace Uhifadhi\Patrol\Tests\Integration\Module;
 
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\RegistryBundle\Service\FactRebuildService;
 use Uhifadhi\Bundle\TeamBundle\Entity\Department;
 use Uhifadhi\Bundle\TeamBundle\Entity\Placement;
 use Uhifadhi\Bundle\TeamBundle\Entity\Position;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
+use Uhifadhi\Contracts\Facts\FactPeriod;
 use Uhifadhi\Contracts\Kpi\DepartmentKpi;
 use Uhifadhi\Contracts\Kpi\DepartmentRef;
 use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
 use Uhifadhi\Patrol\Module\PatrolDepartmentKpiProvider;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
-use Uhifadhi\Patrol\Service\PatrolFigureService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
@@ -401,14 +401,14 @@ final class PatrolDepartmentKpiProviderTest extends IntegrationTestCase
 
     private function provider(): PatrolDepartmentKpiProvider
     {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
-
-        // The patrols buffered, as the worker would have by now.
+        // EVERY MONTH THE SPARKLINES RUN OVER, FILED as the worker would have
+        // by now: the plates read the ledger and count nothing themselves.
         $this->em->flush();
-        $this->bufferCorridors();
+        $rebuild = static::getContainer()->get('test_public.'.FactRebuildService::class);
+        \assert($rebuild instanceof FactRebuildService);
+        $rebuild->rebuild(FactPeriod::monthsBetween(new \DateTimeImmutable('2026-03-01'), new \DateTimeImmutable(self::NOW)), 'patrols');
 
-        return new PatrolDepartmentKpiProvider(new PatrolFigureService($repository, $this->corridors(), $this->facts()), $this->em, 'patrols', 'Patrols');
+        return new PatrolDepartmentKpiProvider($this->facts(), $this->em, 'patrols', 'Patrols');
     }
 
     private function department(string $name): Department

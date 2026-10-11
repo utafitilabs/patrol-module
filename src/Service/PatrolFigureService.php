@@ -19,7 +19,6 @@ use Uhifadhi\Contracts\Facts\FactSubject;
 use Uhifadhi\Patrol\Facts\PatrolFactPeriod;
 use Uhifadhi\Patrol\Facts\PatrolFactProvider;
 use Uhifadhi\Patrol\Model\PatrolTally;
-use Uhifadhi\Patrol\Repository\PatrolCorridorRepository;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 
 /**
@@ -41,7 +40,6 @@ final readonly class PatrolFigureService
 {
     public function __construct(
         private PatrolRepository $patrols,
-        private PatrolCorridorRepository $corridors,
         private FactReaderInterface $facts,
     ) {
     }
@@ -79,31 +77,6 @@ final readonly class PatrolFigureService
         }
 
         return new PatrolTally($patrols, $distanceKm, $observations);
-    }
-
-    /**
-     * THE SHARE OF THE GROUND WITHIN THE MODULE'S ONE WIDTH OF A COMPLETE
-     * TRACK, IN POINTS — 54.0 for 54 %.
-     *
-     * Read from the STORED CORRIDORS ({@see PatrolCorridorRepository}): the
-     * window's corridors unioned and clipped, and no track buffered. Every
-     * contract this module publishes carries a share as the number a plate
-     * prints, and its movement is read in POINTS.
-     *
-     * `$within` null asks across every area as ONE ratio — the ground covered
-     * over those areas' boundaries added together — rather than as a mean of
-     * their shares, which would let a small area outvote a large one.
-     *
-     * NULL STAYS NULL THE WHOLE WAY. No track recorded in the window is not
-     * zero coverage, and every surface draws that absence in words.
-     */
-    public function coverage(?AreaOfInterest $within, \DateTimeImmutable $from, \DateTimeImmutable $until): ?float
-    {
-        $fraction = null === $within
-            ? $this->corridors->fractionAcrossAreas($from, $until)
-            : $this->corridors->fractionWithin($within, $from, $until);
-
-        return null === $fraction ? null : $fraction * 100.0;
     }
 
     /**
