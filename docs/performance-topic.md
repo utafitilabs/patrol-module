@@ -129,12 +129,21 @@ adds them together.
 
 ## Where the history comes from
 
-**Computed from this module's own records, not read back from the core's period
-ledger.** The host's own topics have to read theirs — how many seats were
-filled in July cannot be recomputed from people who have since moved — but a
-patrol carries the instant it started and the kilometres it ran, so every past
-period is still here and re-measuring it today gives the answer it gave then.
-Nothing in this topic writes a figure down, and nothing in it can go stale.
+**Read from the facts ledger, where the worker filed it.** The fact provider
+files, per area and per month, the complete patrols, their kilometres and their
+observations (additive, so a quarter is its months added up), each area's
+coverage and the organization's combined coverage (a quarter and a year filed
+as periods of their own). The topic reads them once a period for the whole page
+— its figures, every row and every chart line — so a page asks the same number
+of questions however many patrols were run. Counting every patrol of every
+period on every request grew with the history.
+
+A figure of a period still open says when it was true (*as of 13:00*), and one
+the worker has not filed yet is no figure. A closed month is filed again when
+one of its patrols changes: recording, discarding, deleting or moving a complete
+patrol, or adding an observation to one, asks for its months
+(`EventListener\PatrolFactsListener`). After an update, closed months are filed
+once by hand — `uhifadhi:facts:rebuild --module=patrols --from=<a year back>`.
 
 ## Three absences, kept apart
 
