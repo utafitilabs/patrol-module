@@ -16,6 +16,7 @@ namespace Uhifadhi\Patrol\Module;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Contracts\Facts\FactReaderInterface;
 use Uhifadhi\Contracts\Kpi\FigurePeriod;
 use Uhifadhi\Contracts\Performance\ChartKind;
 use Uhifadhi\Contracts\Performance\ChartSeries;
@@ -31,21 +32,20 @@ use Uhifadhi\Contracts\Performance\TopicChart;
 use Uhifadhi\Contracts\Performance\TopicKpi;
 use Uhifadhi\Contracts\Performance\TopicMatrix;
 use Uhifadhi\Patrol\Model\PatrolTopicGround;
+use Uhifadhi\Patrol\Model\PatrolTopicReadings;
 use Uhifadhi\Patrol\Model\PatrolTopicSlice;
 use Uhifadhi\Patrol\Service\PatrolDashboardService;
-use Uhifadhi\Patrol\Service\PatrolFigureService;
 
 /**
  * THE PATROLS TOPIC ON THE PERFORMANCE PAGE — five headline figures, two
  * charts, and a matrix of only the departments that read this module.
  *
- * THE HISTORY IS COMPUTED FROM THIS MODULE'S OWN RECORDS, not read back out of
- * the core's period ledger. The core's own topics have to read theirs — how
- * many seats were filled in July cannot be recomputed from people who have
- * since moved — but a patrol carries the instant it started and the kilometres
- * it ran, so every past period is still here and re-measuring it gives the
- * same answer today as it did then. Nothing here writes a figure down, and
- * nothing here can go stale.
+ * EVERY FIGURE IS READ FROM THE FACTS LEDGER, where the worker filed it per
+ * area and per month ({@see \Uhifadhi\Patrol\Facts\PatrolFactProvider}),
+ * so a page asks a fixed number of questions however many patrols were run:
+ * counting every patrol of every period on every request grew with the
+ * history. A figure of a period still open says when it was true, and one
+ * nobody filed yet is no figure.
  *
  * A DEPARTMENT IS A LENS OVER GROUND, NEVER A FILTER ON RECORDS. Who led a
  * patrol, whether they hold a position and which department that position is
@@ -93,7 +93,7 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
     public function __construct(
         private EntityManagerInterface $entityManager,
         private DepartmentDirectoryInterface $directory,
-        private PatrolFigureService $figures,
+        private FactReaderInterface $facts,
         /** The slug this module is registered under in the registry's catalogue. */
         private string $slug,
         private string $name = 'Patrols',
@@ -153,6 +153,7 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
             return $this->nothingRunsHere($scope);
         }
 
+        $read = $this->readings($scope);
         $run = self::run($period, self::PERIODS);
         $previous = $period->previous();
 
@@ -161,39 +162,42 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
         $observations = [];
         $coverage = [];
         foreach ($run as $past) {
-            $tally = $ground->measured($past) ? $this->figures->tally($ground->areas, $past->from, $past->until) : null;
+            $tally = $ground->measured($past) ? $read->tally($ground, $past) : null;
 
             $patrols[] = null === $tally ? null : (float) $tally->patrols;
             $distance[] = $tally?->distanceKm;
             $observations[] = null === $tally ? null : (float) $tally->observations;
-            $coverage[] = $ground->measured($past) ? $this->figures->coverage($ground->within, $past->from, $past->until) : null;
+            $coverage[] = $ground->measured($past) ? $read->coverage($ground, $past) : null;
         }
 
-        $now = $this->figures->tally($ground->areas, $period->from, $period->until);
-        $was = $this->figures->tally($ground->areas, $previous->from, $previous->until);
-        $share = $this->figures->coverage($ground->within, $period->from, $period->until);
-        $wasShare = $this->figures->coverage($ground->within, $previous->from, $previous->until);
+        $now = $read->tally($ground, $period);
+        $was = $read->tally($ground, $previous);
+        $share = $read->coverage($ground, $period);
+        $wasShare = $read->coverage($ground, $previous);
+        $asOf = $read->asOf($ground, $period);
         $rows = \count($entries);
 
         return [
             new TopicKpi(
                 key: 'patrols.patrols',
                 label: 'Patrols',
-                value: (float) $now->patrols,
-                delta: (float) ($now->patrols - $was->patrols),
+                value: null === $now ? null : (float) $now->patrols,
+                delta: null === $now || null === $was ? null : (float) ($now->patrols - $was->patrols),
                 history: $patrols,
                 caption: \sprintf('across %d department%s that read %s', $rows, 1 === $rows ? '' : 's', $this->name),
                 polarity: ColumnPolarity::Up,
+                asOf: $asOf,
             ),
             new TopicKpi(
                 key: 'patrols.distance',
                 label: 'Distance',
-                value: $now->distanceKm,
+                value: $now?->distanceKm,
                 unit: 'km',
-                delta: $now->distanceKm - $was->distanceKm,
+                delta: null === $now || null === $was ? null : $now->distanceKm - $was->distanceKm,
                 history: $distance,
-                caption: 0 === $now->patrols ? '' : \sprintf('%s km a patrol', self::plainly($now->distanceKm / $now->patrols, 1)),
+                caption: null === $now || 0 === $now->patrols ? '' : \sprintf('%s km a patrol', self::plainly($now->distanceKm / $now->patrols, 1)),
                 polarity: ColumnPolarity::Up,
+                asOf: $asOf,
             ),
             new TopicKpi(
                 key: 'patrols.coverage',
@@ -204,15 +208,17 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
                 history: $coverage,
                 caption: $this->coverageCaption($ground),
                 polarity: ColumnPolarity::Up,
+                asOf: $asOf,
             ),
             new TopicKpi(
                 key: 'patrols.observations',
                 label: 'Observations',
-                value: (float) $now->observations,
-                delta: (float) ($now->observations - $was->observations),
+                value: null === $now ? null : (float) $now->observations,
+                delta: null === $now || null === $was ? null : (float) ($now->observations - $was->observations),
                 history: $observations,
-                caption: 0 === $now->patrols ? '' : \sprintf('%s a patrol', self::plainly($now->observations / $now->patrols, 1)),
+                caption: null === $now || 0 === $now->patrols ? '' : \sprintf('%s a patrol', self::plainly($now->observations / $now->patrols, 1)),
                 polarity: ColumnPolarity::Up,
+                asOf: $asOf,
             ),
         ];
     }
@@ -221,16 +227,18 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
     {
         $run = self::run($period, self::CHART_PERIODS);
         $labels = array_map(static fn (FigurePeriod $past): string => mb_strtolower($past->from->format('M')), $run);
+        $read = $this->readings($scope);
 
         return [
-            $this->distanceByDepartment($scope, $run, $labels),
-            $this->coverageOverTime($scope, $run, $labels),
+            $this->distanceByDepartment($scope, $run, $labels, $read),
+            $this->coverageOverTime($scope, $run, $labels, $read),
         ];
     }
 
     public function matrix(PerformanceScope $scope, FigurePeriod $period): TopicMatrix
     {
         $run = self::run($period, self::PERIODS);
+        $read = $this->readings($scope);
 
         $rows = [];
         foreach ($this->rowsIn($scope) as $entry) {
@@ -241,7 +249,7 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
                 departmentUuid: $entry->uuid,
                 departmentName: $entry->name,
                 cells: $entry->canAnswerFor($this->slug)
-                    ? $this->cellsFor($this->groundOf($slice->areaUuid, $entry->runningSince[$this->slug] ?? null), $period, $run)
+                    ? $this->cellsFor($this->groundOf($slice->areaUuid, $entry->runningSince[$this->slug] ?? null), $period, $run, $read)
                     : self::notMineCells(),
                 band: $entry->band,
                 mark: $entry->mark,
@@ -266,7 +274,7 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
      *
      * @return array<string, MatrixCell>
      */
-    private function cellsFor(PatrolTopicGround $ground, FigurePeriod $period, array $run): array
+    private function cellsFor(PatrolTopicGround $ground, FigurePeriod $period, array $run, PatrolTopicReadings $read): array
     {
         if ($ground->isUnrun()) {
             return self::notMineCells();
@@ -277,29 +285,40 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
         $observations = [];
         $coverage = [];
         foreach ($run as $past) {
-            $tally = $ground->measured($past) ? $this->figures->tally($ground->areas, $past->from, $past->until) : null;
+            $tally = $ground->measured($past) ? $read->tally($ground, $past) : null;
 
             $patrols[] = null === $tally ? null : (float) $tally->patrols;
             $distance[] = $tally?->distanceKm;
             $observations[] = null === $tally ? null : (float) $tally->observations;
-            $coverage[] = $ground->measured($past) ? $this->figures->coverage($ground->within, $past->from, $past->until) : null;
+            $coverage[] = $ground->measured($past) ? $read->coverage($ground, $past) : null;
         }
 
-        $previous = $period->previous();
-        $now = $this->figures->tally($ground->areas, $period->from, $period->until);
-        $was = $this->figures->tally($ground->areas, $previous->from, $previous->until);
-        $share = $this->figures->coverage($ground->within, $period->from, $period->until);
-        $wasShare = $this->figures->coverage($ground->within, $previous->from, $previous->until);
+        $now = $read->tally($ground, $period);
+        $was = $read->tally($ground, $period->previous());
+        $share = $read->coverage($ground, $period);
+        $wasShare = $read->coverage($ground, $period->previous());
 
         return [
-            'patrols.patrols' => new MatrixCell((float) $now->patrols, (float) ($now->patrols - $was->patrols), $patrols),
-            'patrols.distance' => new MatrixCell($now->distanceKm, $now->distanceKm - $was->distanceKm, $distance),
+            'patrols.patrols' => new MatrixCell(
+                null === $now ? null : (float) $now->patrols,
+                null === $now || null === $was ? null : (float) ($now->patrols - $was->patrols),
+                $patrols,
+            ),
+            'patrols.distance' => new MatrixCell(
+                $now?->distanceKm,
+                null === $now || null === $was ? null : $now->distanceKm - $was->distanceKm,
+                $distance,
+            ),
             'patrols.coverage' => new MatrixCell(
                 $share,
                 null === $share || null === $wasShare ? null : $share - $wasShare,
                 $coverage,
             ),
-            'patrols.observations' => new MatrixCell((float) $now->observations, (float) ($now->observations - $was->observations), $observations),
+            'patrols.observations' => new MatrixCell(
+                null === $now ? null : (float) $now->observations,
+                null === $now || null === $was ? null : (float) ($now->observations - $was->observations),
+                $observations,
+            ),
         ];
     }
 
@@ -330,7 +349,7 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
      * @param list<FigurePeriod> $run
      * @param list<string>       $labels
      */
-    private function distanceByDepartment(PerformanceScope $scope, array $run, array $labels): TopicChart
+    private function distanceByDepartment(PerformanceScope $scope, array $run, array $labels, PatrolTopicReadings $read): TopicChart
     {
         $series = [];
         $reads = [];
@@ -346,9 +365,7 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
 
             $points = [];
             foreach ($run as $past) {
-                $points[] = $ground->measured($past)
-                    ? $this->figures->tally($ground->areas, $past->from, $past->until)->distanceKm
-                    : null;
+                $points[] = $ground->measured($past) ? $read->tally($ground, $past)?->distanceKm : null;
             }
 
             $name = $entry->name;
@@ -378,15 +395,13 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
      * @param list<FigurePeriod> $run
      * @param list<string>       $labels
      */
-    private function coverageOverTime(PerformanceScope $scope, array $run, array $labels): TopicChart
+    private function coverageOverTime(PerformanceScope $scope, array $run, array $labels, PatrolTopicReadings $read): TopicChart
     {
         $ground = $this->groundOf($scope->areaUuid, $this->runningSince($this->answering($scope)));
 
         $points = [];
         foreach ($run as $past) {
-            $points[] = !$ground->isUnrun() && $ground->measured($past)
-                ? $this->figures->coverage($ground->within, $past->from, $past->until)
-                : null;
+            $points[] = !$ground->isUnrun() && $ground->measured($past) ? $read->coverage($ground, $past) : null;
         }
 
         return new TopicChart(
@@ -427,6 +442,18 @@ final readonly class PatrolPerformanceTopic implements PerformanceTopicProviderI
             $this->directory->forScope($scope)->entries,
             fn (DepartmentEntry $entry): bool => $entry->attaches($this->slug),
         ));
+    }
+
+    /**
+     * WHAT THE WORKER FILED FOR EVERY AREA OF THE PAGE'S SCOPE, read once a
+     * period and shared by every figure, row and line of one drawing.
+     */
+    private function readings(PerformanceScope $scope): PatrolTopicReadings
+    {
+        return new PatrolTopicReadings(
+            $this->facts,
+            array_map(static fn (AreaOfInterest $area): string => (string) $area->getUuidString(), $this->groundOf($scope->areaUuid, null)->areas),
+        );
     }
 
     /**

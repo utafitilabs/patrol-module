@@ -44,6 +44,15 @@ use Uhifadhi\Patrol\Service\PatrolCorridorService;
  * | `patrols.zone_last_entered_at` | zone | when the last such patrol started, as a Unix time | no |
  * | `patrols.zone_last_patrol` | zone | that patrol's id | no |
  * | `patrols.area_coverage_uniform` | area | % of the area within the module's one width of a complete track | no |
+ * | `patrols.area_patrols` | area | complete patrols that started in the area | yes |
+ * | `patrols.area_distance_km` | area | the kilometres those patrols ran | yes |
+ * | `patrols.area_observations` | area | what was logged on them | yes |
+ * | `patrols.installation_coverage_uniform` | installation | % of every area's ground combined within the module's one width of a complete track | no |
+ *
+ * EVERY AREA IS FILED, A NOUGHT WHERE NOBODY WENT OUT: an area patrolled
+ * nothing that month, which is a measurement. The organization's coverage
+ * is one share of all the boundaries combined, never a mean of the areas',
+ * which would let a small area outvote a large one.
  *
  * A share is filed as the number a plate prints — 54.0 for 54 % — like every
  * share this module publishes. NULL IS UNKNOWN, as the ledger defines it: an
@@ -74,6 +83,10 @@ final readonly class PatrolFactProvider implements FactProviderInterface
     public const string ZONE_LAST_ENTERED_AT = 'patrols.zone_last_entered_at';
     public const string ZONE_LAST_PATROL = 'patrols.zone_last_patrol';
     public const string AREA_COVERAGE_UNIFORM = 'patrols.area_coverage_uniform';
+    public const string AREA_PATROLS = 'patrols.area_patrols';
+    public const string AREA_DISTANCE_KM = 'patrols.area_distance_km';
+    public const string AREA_OBSERVATIONS = 'patrols.area_observations';
+    public const string INSTALLATION_COVERAGE_UNIFORM = 'patrols.installation_coverage_uniform';
 
     /** Every zone figure, for a page that reads a zone's whole set in one batch. */
     public const array ZONE_FIGURES = [
@@ -113,6 +126,10 @@ final readonly class PatrolFactProvider implements FactProviderInterface
             new FigureDefinition(self::ZONE_LAST_ENTERED_AT, FactSubject::ZONE, additive: false),
             new FigureDefinition(self::ZONE_LAST_PATROL, FactSubject::ZONE, additive: false),
             new FigureDefinition(self::AREA_COVERAGE_UNIFORM, FactSubject::AREA, additive: false),
+            new FigureDefinition(self::AREA_PATROLS, FactSubject::AREA, additive: true),
+            new FigureDefinition(self::AREA_DISTANCE_KM, FactSubject::AREA, additive: true),
+            new FigureDefinition(self::AREA_OBSERVATIONS, FactSubject::AREA, additive: true),
+            new FigureDefinition(self::INSTALLATION_COVERAGE_UNIFORM, FactSubject::INSTALLATION, additive: false),
         ];
     }
 
@@ -144,6 +161,27 @@ final readonly class PatrolFactProvider implements FactProviderInterface
                     if ($request->covers($area)) {
                         yield new FactValue(FactSubject::AREA, $area, self::AREA_COVERAGE_UNIFORM, self::points($share));
                     }
+                }
+            }
+        }
+
+        if ($request->asks(self::INSTALLATION_COVERAGE_UNIFORM) && $request->covers(FactSubject::INSTALLATION_UUID)) {
+            yield new FactValue(FactSubject::INSTALLATION, FactSubject::INSTALLATION_UUID, self::INSTALLATION_COVERAGE_UNIFORM, self::points($this->corridors->fractionAcrossAreas($from, $until)));
+        }
+
+        if ($request->asks(self::AREA_PATROLS) || $request->asks(self::AREA_DISTANCE_KM) || $request->asks(self::AREA_OBSERVATIONS)) {
+            foreach ($this->patrols->areaTalliesBetween($from, $until) as $area => $tally) {
+                if (!$request->covers($area)) {
+                    continue;
+                }
+                if ($request->asks(self::AREA_PATROLS)) {
+                    yield new FactValue(FactSubject::AREA, $area, self::AREA_PATROLS, (float) $tally['patrols']);
+                }
+                if ($request->asks(self::AREA_DISTANCE_KM)) {
+                    yield new FactValue(FactSubject::AREA, $area, self::AREA_DISTANCE_KM, $tally['km']);
+                }
+                if ($request->asks(self::AREA_OBSERVATIONS)) {
+                    yield new FactValue(FactSubject::AREA, $area, self::AREA_OBSERVATIONS, (float) $tally['observations']);
                 }
             }
         }

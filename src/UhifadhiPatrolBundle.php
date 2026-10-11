@@ -913,7 +913,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 ->args([
                     service('doctrine.orm.entity_manager'),
                     service(DepartmentDirectoryInterface::class),
-                    service('patrol.figure_service'),
+                    service(FactReaderInterface::class),
                     'patrols',
                     'Patrols',
                 ])

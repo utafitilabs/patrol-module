@@ -23,6 +23,7 @@ use Symfony\Component\Uid\Uuid;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Station as AreaStation;
 use Uhifadhi\Bundle\AreaBundle\Entity\Zone;
+use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Entity\Station;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
@@ -366,6 +367,74 @@ final class PatrolRepository extends ServiceEntityRepository
             ->getResult();
 
         return $patrols;
+    }
+
+    /**
+     * WHAT EACH AREA'S PATROLS COME TO IN A HALF-OPEN WINDOW — how many went
+     * out and were recorded, their kilometres, and what was logged on them —
+     * for every area, a nought where none went out. One statement; the
+     * worker asks it, never a page.
+     *
+     * Only COMPLETE patrols count, as for every figure here: a discard
+     * withdraws the whole outing, observations included, and a recording
+     * track is still arriving. A patrol is the window's by when it started.
+     *
+     * @return array<string, array{patrols: int, km: float, observations: int}> area uuid to its figures, every area present
+     */
+    public function areaTalliesBetween(\DateTimeImmutable $from, \DateTimeImmutable $until): array
+    {
+        $entityManager = $this->getEntityManager();
+        $patrol = $this->getClassMetadata();
+        $area = $entityManager->getClassMetadata(AreaOfInterest::class);
+        $observation = $entityManager->getClassMetadata(Observation::class);
+
+        $sql = \sprintf(
+            <<<'SQL'
+                WITH counted AS (
+                    SELECT p.%2$s AS id, p.%6$s AS area_id, p.%3$s AS km
+                    FROM %5$s p
+                    WHERE p.%8$s = :counted
+                      AND p.%9$s >= :from
+                      AND p.%9$s < :until
+                )
+                SELECT CAST(a.%1$s AS TEXT) AS area_uuid,
+                       COUNT(c.id) AS patrols,
+                       COALESCE(SUM(c.km), 0) AS km,
+                       COALESCE(SUM((SELECT COUNT(*) FROM %11$s o WHERE o.%10$s = c.id)), 0) AS observations
+                FROM %4$s a
+                LEFT JOIN counted c ON c.area_id = a.%7$s
+                GROUP BY a.%7$s, a.%1$s
+                SQL,
+            $area->getColumnName('uuid'),
+            $patrol->getSingleIdentifierColumnName(),
+            $patrol->getColumnName('distanceKm'),
+            $area->getTableName(),
+            $patrol->getTableName(),
+            $patrol->getSingleAssociationJoinColumnName('area'),
+            $area->getSingleIdentifierColumnName(),
+            $patrol->getColumnName('status'),
+            $patrol->getColumnName('startedAt'),
+            $observation->getSingleAssociationJoinColumnName('patrol'),
+            $observation->getTableName(),
+        );
+
+        /** @var list<array{area_uuid: string, patrols: int|string, km: float|string, observations: int|string}> $rows */
+        $rows = $entityManager->getConnection()->fetchAllAssociative($sql, [
+            'counted' => PatrolStatusEnum::Complete->value,
+            'from' => $from,
+            'until' => $until,
+        ], [
+            'counted' => Types::STRING,
+            'from' => Types::DATETIME_IMMUTABLE,
+            'until' => Types::DATETIME_IMMUTABLE,
+        ]);
+
+        $tallies = [];
+        foreach ($rows as $row) {
+            $tallies[$row['area_uuid']] = ['patrols' => (int) $row['patrols'], 'km' => (float) $row['km'], 'observations' => (int) $row['observations']];
+        }
+
+        return $tallies;
     }
 
     /**

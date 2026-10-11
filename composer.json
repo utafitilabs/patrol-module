@@ -40,7 +40,7 @@
         "symfony/ux-icons": "^3.4",
         "symfony/ux-map": "^2.20 || ^3.0",
         "uhifadhi/storage-module": "^0.4",
-        "uhifadhi/uhifadhi": "^0.2",
+        "uhifadhi/uhifadhi": "^0.2.1",
         "utafitilabs/postgis-bundle": "^0.1"
     },
     "autoload": {

@@ -78,6 +78,10 @@ final class PatrolFactProviderTest extends IntegrationTestCase
             PatrolFactProvider::ZONE_LAST_ENTERED_AT => [FactSubject::ZONE, false],
             PatrolFactProvider::ZONE_LAST_PATROL => [FactSubject::ZONE, false],
             PatrolFactProvider::AREA_COVERAGE_UNIFORM => [FactSubject::AREA, false],
+            PatrolFactProvider::AREA_PATROLS => [FactSubject::AREA, true],
+            PatrolFactProvider::AREA_DISTANCE_KM => [FactSubject::AREA, true],
+            PatrolFactProvider::AREA_OBSERVATIONS => [FactSubject::AREA, true],
+            PatrolFactProvider::INSTALLATION_COVERAGE_UNIFORM => [FactSubject::INSTALLATION, false],
         ], $declared);
         self::assertContainsOnlyInstancesOf(FigureDefinition::class, $provider->figures());
     }
@@ -113,6 +117,58 @@ final class PatrolFactProviderTest extends IntegrationTestCase
         self::assertNotNull($area);
         self::assertGreaterThan(0.0, (float) $area->value);
         self::assertLessThan(100.0, (float) $area->value);
+    }
+
+    /**
+     * WHAT THE PERFORMANCE PAGE COUNTS, per area and per month: the patrols
+     * that went out and were recorded, their kilometres and what was logged
+     * on them. A discard withdraws the whole outing and a patrol still
+     * arriving is not all here yet, so neither counts.
+     */
+    public function testAnAreasPatrolsKilometresAndObservationsAreFiledForTheMonth(): void
+    {
+        $first = $this->patrol('2026-03-10T06:00:00Z', self::ACROSS_NORTH)->setDistanceKm(11.0);
+        new \Uhifadhi\Patrol\Entity\Observation($first, 'maintenance');
+        new \Uhifadhi\Patrol\Entity\Observation($first, 'maintenance');
+        $this->patrol('2026-03-20T06:00:00Z', self::ACROSS_NORTH)->setDistanceKm(4.5);
+        $this->patrol('2026-03-21T06:00:00Z', self::ACROSS_NORTH, PatrolStatusEnum::Discarded)->setDistanceKm(9.0);
+        $this->patrol('2026-03-22T06:00:00Z', self::ACROSS_NORTH, PatrolStatusEnum::Recording)->setDistanceKm(9.0);
+        $this->patrol('2026-04-02T06:00:00Z', self::ACROSS_NORTH)->setDistanceKm(9.0);
+        $this->em->flush();
+
+        $this->fileFacts(new \DateTimeImmutable('2026-03-15'));
+
+        $march = $this->areaFacts(self::MARCH);
+        self::assertSame(2.0, $march[PatrolFactProvider::AREA_PATROLS]->value);
+        self::assertEqualsWithDelta(15.5, (float) $march[PatrolFactProvider::AREA_DISTANCE_KM]->value, 0.001);
+        self::assertSame(2.0, $march[PatrolFactProvider::AREA_OBSERVATIONS]->value);
+    }
+
+    /** An area nobody patrolled in the month patrolled nothing: a nought, filed, never a hole. */
+    public function testAnAreaWithNoPatrolsFilesNoughts(): void
+    {
+        $this->fileFacts(new \DateTimeImmutable('2026-03-15'));
+
+        $march = $this->areaFacts(self::MARCH);
+        self::assertSame(0.0, $march[PatrolFactProvider::AREA_PATROLS]->value);
+        self::assertSame(0.0, $march[PatrolFactProvider::AREA_DISTANCE_KM]->value);
+        self::assertSame(0.0, $march[PatrolFactProvider::AREA_OBSERVATIONS]->value);
+    }
+
+    /**
+     * THE ORGANIZATION'S COVERAGE IS ONE SHARE of every area's ground
+     * combined, filed for the installation — not a mean of the areas'.
+     */
+    public function testTheOrganizationsCoverageIsFiledForTheInstallation(): void
+    {
+        $this->patrol('2026-03-10T06:00:00Z', self::ACROSS_NORTH);
+        $this->fileFacts(new \DateTimeImmutable('2026-03-15'));
+
+        $organization = $this->facts()->latest(FactSubject::INSTALLATION, FactSubject::INSTALLATION_UUID, PatrolFactProvider::INSTALLATION_COVERAGE_UNIFORM, self::MARCH);
+        $area = $this->facts()->latest(FactSubject::AREA, (string) $this->area->getUuidString(), PatrolFactProvider::AREA_COVERAGE_UNIFORM, self::MARCH);
+        self::assertNotNull($organization);
+        self::assertNotNull($area);
+        self::assertEqualsWithDelta((float) $area->value, (float) $organization->value, 0.0001, 'one area: the organization’s share is its share');
     }
 
     /** An area that recorded no track has no share to state — unknown, never a nought. */
@@ -178,6 +234,14 @@ final class PatrolFactProviderTest extends IntegrationTestCase
         $quarter = $this->facts()->latest(FactSubject::ZONE, (string) $this->north->getUuidString(), PatrolFactProvider::ZONE_COVERAGE_UNIFORM, '2026-Q1');
         self::assertNotNull($quarter);
         self::assertEqualsWithDelta((float) $this->zoneFacts($this->north)[PatrolFactProvider::ZONE_COVERAGE_UNIFORM]->value, (float) $quarter->value, 0.0001);
+    }
+
+    /** @return array<string, Fact> */
+    private function areaFacts(string $periodKey): array
+    {
+        $uuid = (string) $this->area->getUuidString();
+
+        return $this->facts()->batch(FactSubject::AREA, [$uuid], [PatrolFactProvider::AREA_PATROLS, PatrolFactProvider::AREA_DISTANCE_KM, PatrolFactProvider::AREA_OBSERVATIONS], $periodKey)[$uuid] ?? [];
     }
 
     /** @return array<string, Fact> */

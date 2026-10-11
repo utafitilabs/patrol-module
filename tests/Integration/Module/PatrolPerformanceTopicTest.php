@@ -13,11 +13,14 @@ declare(strict_types=1);
 
 namespace Uhifadhi\Patrol\Tests\Integration\Module;
 
+use Doctrine\Bundle\DoctrineBundle\Middleware\BacktraceDebugDataHolder;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\RegistryBundle\Entity\AreaModule;
 use Uhifadhi\Bundle\RegistryBundle\Entity\Module;
+use Uhifadhi\Bundle\RegistryBundle\Service\FactRebuildService;
 use Uhifadhi\Bundle\TeamBundle\Entity\Department;
 use Uhifadhi\Bundle\TeamBundle\Service\PerformanceTopics;
+use Uhifadhi\Contracts\Facts\FactPeriod;
 use Uhifadhi\Contracts\Kpi\FigurePeriod;
 use Uhifadhi\Contracts\Performance\ChartSeries;
 use Uhifadhi\Contracts\Performance\DepartmentDirectoryInterface;
@@ -30,8 +33,6 @@ use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Enum\PatrolStatusEnum;
 use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Module\PatrolPerformanceTopic;
-use Uhifadhi\Patrol\Repository\PatrolRepository;
-use Uhifadhi\Patrol\Service\PatrolFigureService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 use Uhifadhi\Patrol\Tests\Integration\Fixtures\StoredCoverage;
 use Uhifadhi\Patrol\Tests\Integration\IntegrationTestCase;
@@ -333,6 +334,50 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
         ));
     }
 
+    /** BEFORE THE WORKER HAS RUN there is nothing to read, and the topic counts nothing itself. */
+    public function testBeforeTheWorkerRanThereIsNoFigure(): void
+    {
+        $this->world();
+
+        foreach ($this->topic(filed: false)->kpis(PerformanceScope::organization(), self::period()) as $kpi) {
+            self::assertNull($kpi->value, $kpi->key);
+        }
+    }
+
+    /**
+     * WHAT A DRAWING OF THE TOPIC ASKS THE DATABASE does not grow with the
+     * patrols run: ten times the patrols, the same questions.
+     */
+    public function testTheTopicAsksAsMuchOfManyPatrolsAsOfAFew(): void
+    {
+        $world = $this->world();
+        $few = $this->statementsToDraw();
+        self::assertGreaterThan(0, $few, 'the query log is on');
+
+        foreach (range(1, 60) as $i) {
+            $patrol = $this->patrol($i % 2 ? $world['area'] : $world['second'], 3.0, \sprintf('2026-%02d-05 07:00:00', 6 + $i % 3));
+            $this->em->persist(new Observation($patrol, 'sighting'));
+        }
+        $this->em->flush();
+
+        self::assertSame($few, $this->statementsToDraw());
+    }
+
+    private function statementsToDraw(): int
+    {
+        $topic = $this->topic();
+        $log = static::getContainer()->get('doctrine.debug_data_holder');
+        self::assertInstanceOf(BacktraceDebugDataHolder::class, $log);
+        $log->reset();
+
+        $organization = PerformanceScope::organization();
+        $topic->kpis($organization, self::period());
+        $topic->charts($organization, self::period());
+        $topic->matrix($organization, self::period());
+
+        return \count($log->getData()['default'] ?? []);
+    }
+
     /**
      * ONE ORGANIZATION: two areas that run Patrols, an org-wide Ecology and a
      * Protection Service confined to the first, five counted patrols of 112 km
@@ -430,19 +475,22 @@ final class PatrolPerformanceTopicTest extends IntegrationTestCase
         return $patrol;
     }
 
-    private function topic(): PatrolPerformanceTopic
+    private function topic(bool $filed = true): PatrolPerformanceTopic
     {
-        $repository = $this->em->getRepository(Patrol::class);
-        \assert($repository instanceof PatrolRepository);
-
         $directory = static::getContainer()->get('test_public.'.DepartmentDirectoryInterface::class);
         \assert($directory instanceof DepartmentDirectoryInterface);
 
-        // The patrols buffered, as the worker would have by now.
+        // EVERY MONTH THE CHARTS RUN OVER, FILED as the worker would have by
+        // now: the topic reads the ledger and counts nothing itself.
         $this->em->flush();
-        $this->bufferCorridors();
+        if (!$filed) {
+            return new PatrolPerformanceTopic($this->em, $directory, $this->facts(), 'patrols', 'Patrols');
+        }
+        $rebuild = static::getContainer()->get('test_public.'.FactRebuildService::class);
+        \assert($rebuild instanceof FactRebuildService);
+        $rebuild->rebuild(FactPeriod::monthsBetween(new \DateTimeImmutable('2025-09-01'), new \DateTimeImmutable(self::NOW)), 'patrols');
 
-        return new PatrolPerformanceTopic($this->em, $directory, new PatrolFigureService($repository, $this->corridors(), $this->facts()), 'patrols', 'Patrols');
+        return new PatrolPerformanceTopic($this->em, $directory, $this->facts(), 'patrols', 'Patrols');
     }
 
     private static function period(): FigurePeriod

@@ -40,6 +40,7 @@ use Uhifadhi\Patrol\Controller\PatrolListController;
 use Uhifadhi\Patrol\Deletion\PatrolDeletion;
 use Uhifadhi\Patrol\Deletion\PatrolFileRemover;
 use Uhifadhi\Patrol\Deletion\PersonPatrolDeletion;
+use Uhifadhi\Patrol\EventListener\PatrolFactsListener;
 use Uhifadhi\Patrol\Facts\PatrolFactProvider;
 use Uhifadhi\Patrol\Me\PatrolMyCards;
 use Uhifadhi\Patrol\Message\BufferPatrolCorridor;
@@ -268,6 +269,17 @@ return static function (ContainerConfigurator $container): void {
     $services->set('patrol.corridor_handler', BufferPatrolCorridorHandler::class)
         ->args([service('patrol.corridors'), service('messenger.default_bus')])
         ->tag('messenger.message_handler', ['handles' => BufferPatrolCorridor::class]);
+
+    /*
+     * A CHANGE TO WHAT THE FIGURES COUNT asks the core to file its months
+     * again, since the schedule refiles open periods only. Tagged by hand —
+     * a reusable bundle is not autoconfigured.
+     * @see https://symfony.com/bundles/DoctrineBundle/current/event-listeners.html
+     */
+    $services->set('patrol.facts_listener', PatrolFactsListener::class)
+        ->args([service('messenger.default_bus')])
+        ->tag('doctrine.event_listener', ['event' => 'onFlush'])
+        ->tag('doctrine.event_listener', ['event' => 'postFlush']);
 
     $services->set('patrol.facts', PatrolFactProvider::class)
         ->args([

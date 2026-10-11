@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+ * THE PERFORMANCE TOPIC READS STORED FIGURES (#71): the fact provider files, per area and per month, the complete patrols, their kilometres and their observations (`patrols.area_patrols`, `patrols.area_distance_km`, `patrols.area_observations`, additive, a nought where nobody went out) and the organization's combined coverage (`patrols.installation_coverage_uniform`). `PatrolPerformanceTopic` reads them and the area coverage from the facts ledger, once a period for the whole page, instead of loading every patrol of every period; a figure of an open period prints when it was true, and one the worker has not filed yet is no figure. Needs core `^0.2.1`.
+
+ * `EventListener\PatrolFactsListener`: recording, discarding, deleting or moving a complete patrol, or adding an observation to one, asks the core to file its months again (`RecomputeFacts`), since the schedule refiles only open periods. A patrol still recording asks for nothing.
+
+## 0.11.0
+
  * the module runs on core 0.2 and storage 0.4 (`uhifadhi/uhifadhi` `^0.2`, `uhifadhi/storage-module` `^0.4`). Everybody but the tiers belongs to one department: a person reaches this module's records through the department they belong to or one they support, and somebody with no department reaches none.
 
  * `PatrolWriteVoter` names the one question it answers (`supportsAttribute()`, `supportsType()`) and answers for the account the token carries, so Team › Permissions can ask it about anybody.

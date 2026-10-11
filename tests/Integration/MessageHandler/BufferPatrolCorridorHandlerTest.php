@@ -54,6 +54,9 @@ final class BufferPatrolCorridorHandlerTest extends IntegrationTestCase
     public function testABufferedCorridorAsksTheCoreToFileThisMonthsFiguresAgain(): void
     {
         $patrol = $this->patrol('{"type":"LineString","coordinates":[[-30.0,-2.95],[-29.9,-2.95]]}', 150);
+        // RECORDING IT ASKED ALREADY (PatrolFactsListener); what is asserted
+        // here is what the handler asks.
+        $this->em->getConnection()->executeStatement('DELETE FROM messenger_messages');
 
         ($this->handler())(new BufferPatrolCorridor((int) $patrol->getId()));
 

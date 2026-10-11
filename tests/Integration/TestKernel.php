@@ -396,6 +396,7 @@ final class TestKernel extends Kernel
             \Uhifadhi\Patrol\Service\PatrolCorridorService::class => 'patrol.corridors',
             \Uhifadhi\Patrol\Facts\PatrolFactProvider::class => 'patrol.facts',
             \Uhifadhi\Patrol\MessageHandler\BufferPatrolCorridorHandler::class => 'patrol.corridor_handler',
+            \Uhifadhi\Patrol\EventListener\PatrolFactsListener::class => 'patrol.facts_listener',
             \Uhifadhi\Patrol\Service\Api\PatrolCompletionService::class => 'patrol.api.completion',
             'messenger.transport.async' => 'messenger.transport.async',
         ] as $class => $serviceId) {
