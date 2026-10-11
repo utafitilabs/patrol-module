@@ -17,25 +17,32 @@ use Uhifadhi\Contracts\Access\Power;
 use Uhifadhi\Contracts\Access\PowerGroup;
 use Uhifadhi\Contracts\Access\PowerSourceInterface;
 use Uhifadhi\Contracts\Access\PowerTarget;
+use Uhifadhi\Contracts\Access\Verb;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Security\PatrolWriteVoter;
 
 /**
- * THE MODULE'S ONE POWER OVER SOMEBODY ELSE'S RECORD: adding to or completing
- * another ranger's patrol — its track, observations, events, flights,
- * photographs and completion, every write the handset makes. A patrol is
- * evidence of who was where, so the Permissions page shows who may write to
- * one they did not record.
+ * THE MODULE'S POWERS OVER SOMEBODY ELSE'S RECORD. A patrol is evidence of who
+ * was where, so the Permissions page shows who may change one they did not
+ * record:
  *
- * It is asked of the colleague's most recently recorded patrol: one row,
- * however many they have led.
+ *  - adding to or completing another ranger's patrol — its track,
+ *    observations, events, flights, photographs and completion, every write
+ *    the handset makes — asked of the colleague's most recently recorded
+ *    patrol: one row, however many they have led;
+ *  - correcting an observation on it, the signed amendment the web appends,
+ *    asked as its route asks: `patrols.manage` of the area that patrol ran in.
  *
  * @see PatrolWriteVoter the question it asks
  */
 final readonly class PatrolPowers implements PowerSourceInterface
 {
     public const string WRITE_ANOTHER_RANGERS_PATROL = 'add-to-or-complete-another-rangers-patrol';
+    public const string AMEND_ANOTHER_RANGERS_OBSERVATION = 'correct-an-observation-on-another-rangers-patrol';
+
+    /** The pair the amendment route asks of the area. */
+    private const string MANAGE = PatrolConcerns::PATROLS.'.'.Verb::Manage->value;
 
     public function __construct(
         private PatrolRepository $patrols,
@@ -51,6 +58,14 @@ final readonly class PatrolPowers implements PowerSourceInterface
             [PatrolWriteVoter::WRITE],
             [PowerTarget::AColleague],
         );
+
+        yield new Power(
+            self::AMEND_ANOTHER_RANGERS_OBSERVATION,
+            PowerGroup::OthersRecords,
+            'correct an observation on another ranger’s patrol',
+            [self::MANAGE],
+            [PowerTarget::AColleague, PowerTarget::SomebodyBeyondTheirArea],
+        );
     }
 
     public function subject(Power $power, string $question, PowerTarget $kind, ?object $target): mixed
@@ -59,6 +74,8 @@ final readonly class PatrolPowers implements PowerSourceInterface
             return null;
         }
 
-        return $this->patrols->findOneBy(['lead' => $target], ['id' => 'DESC']);
+        $latest = $this->patrols->findOneBy(['lead' => $target], ['id' => 'DESC']);
+
+        return self::AMEND_ANOTHER_RANGERS_OBSERVATION === $power->key ? $latest?->getArea() : $latest;
     }
 }

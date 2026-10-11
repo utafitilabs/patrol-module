@@ -99,6 +99,20 @@ final class PatrolPowersTest extends IntegrationTestCase
         self::assertTrue($checker->isGrantedForUser($superAdmin, PatrolWriteVoter::WRITE, $subject), 'a Super Admin does');
     }
 
+    /** A correction is asked of the area the colleague's latest patrol ran in, the pair the amendment route asks. */
+    public function testTheAmendmentIsAskedOfTheAreaTheColleaguesLatestPatrolRanIn(): void
+    {
+        $colleague = $this->person('Naserian', 'Lekishon');
+        $this->patrol($colleague);
+
+        $amend = $this->power(PatrolPowers::AMEND_ANOTHER_RANGERS_OBSERVATION);
+        $subject = $this->powers()->subject($amend, 'patrols.manage', PowerTarget::AColleague, $colleague);
+
+        self::assertInstanceOf(AreaOfInterest::class, $subject);
+        self::assertSame($this->area->getId(), $subject->getId());
+        self::assertNull($this->powers()->subject($amend, 'patrols.manage', PowerTarget::AColleague, $this->person('Lomayani', 'Laizer')), 'nobody who never led a patrol made an observation to correct');
+    }
+
     private function powers(): PatrolPowers
     {
         $powers = $this->service(PatrolPowers::class);
@@ -107,13 +121,13 @@ final class PatrolPowersTest extends IntegrationTestCase
         return $powers;
     }
 
-    private function power(): Power
+    private function power(string $key = PatrolPowers::WRITE_ANOTHER_RANGERS_PATROL): Power
     {
         $catalogue = $this->service(PowerCatalogue::class);
         self::assertInstanceOf(PowerCatalogue::class, $catalogue);
 
-        $found = array_values(array_filter($catalogue->all(), static fn (Power $power): bool => 'add-to-or-complete-another-rangers-patrol' === $power->key));
-        self::assertCount(1, $found, 'the patrol power is in the catalogue once');
+        $found = array_values(array_filter($catalogue->all(), static fn (Power $power): bool => $key === $power->key));
+        self::assertCount(1, $found, 'the power is in the catalogue once');
 
         return $found[0];
     }

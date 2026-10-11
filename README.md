@@ -116,7 +116,9 @@ A module is installed but **parked**: every page of it answers 404 in an area th
 
 Somebody reaches the module where their placement does: the area, and their one department. Everybody but Admins and Super Admins belongs to exactly one department and may support others; where a department runs Patrols, a person reaches its records through the department they belong to or one they support, and a person with no department reaches none.
 
-A patrol is written — its track, observations, events, flights, photographs and completion — only by the ranger who led it, an Admin or a Super Admin (`patrol.write`). That is a power over somebody else's record, and the module declares it, so Team › Permissions lists who may *add to or complete another ranger's patrol*.
+A patrol is written — its track, observations, events, flights, photographs and completion — only by the ranger who led it, an Admin or a Super Admin (`patrol.write`). That is a power over somebody else's record, and the module declares it, so Team › Permissions lists who may *add to or complete another ranger's patrol*. Correcting an observation on one (`patrols.manage` at the area) is declared beside it, as *correct an observation on another ranger's patrol*.
+
+A patrol's lead is chosen from the recorder and the active people placed at the patrol's area, in a department, whom the recorder's own placement reaches: the lead owns the patrol and its figures are filed under them.
 
 ### Who the records point at
 

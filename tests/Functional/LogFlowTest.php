@@ -21,6 +21,8 @@ use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\AreaBundle\Entity\Station;
+use Uhifadhi\Bundle\TeamBundle\Entity\Department;
+use Uhifadhi\Bundle\TeamBundle\Entity\Placement;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Patrol\Entity\Patrol;
 use Uhifadhi\Patrol\Entity\PatrolDraft;
@@ -61,6 +63,7 @@ final class LogFlowTest extends WebTestCase
     private AreaOfInterest $area;
     private User $recorder;
     private User $staff;
+    private ?Department $operations = null;
 
     protected function setUp(): void
     {
@@ -450,6 +453,89 @@ final class LogFlowTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(302);
         self::assertNull($this->onlyPatrol()->getLead());
+    }
+
+    /**
+     * THE LEAD IS SOMEBODY WHO WORKS WHERE THE PATROL RAN, and whom the
+     * recorder's own placement reaches — the lead owns the patrol and its
+     * figures are filed under them, so naming a person from another area, a
+     * person placed across the organization by somebody placed at one area, or
+     * a person who has left, or somebody who belongs to no department and so
+     * runs no module, would credit work to the wrong ground. The
+     * recorder is always offered: logging one's own patrol needs no reach.
+     */
+    public function testTheLeadIsChosenFromThePeopleTheRecorderReachesInThisArea(): void
+    {
+        $this->placeTheRecorderHere();
+        $this->person('Cora', 'Colleague', [$this->area]);
+        $this->person('Otto', 'Outsider', [$this->otherArea()]);
+        $this->person('Willa', 'Wide', null);
+        $this->person('Lena', 'Left', [$this->area])->deactivate();
+        $this->person('Nadia', 'Nowhere', [$this->area], belongs: false);
+        $this->em->flush();
+
+        $this->client->loginUser($this->recorder);
+        $offered = $this->client->request('GET', $this->logUrl())
+            ->filter('select[name="lead"] option')->each(static fn (Crawler $option): string => trim($option->text()));
+
+        self::assertSame(['—', 'Cora Colleague', 'Rita Recorder'], $offered);
+    }
+
+    public function testALeadBeyondTheRecordersReachRecordsNoLead(): void
+    {
+        $this->placeTheRecorderHere();
+        $outsider = $this->person('Otto', 'Outsider', [$this->otherArea()]);
+        $this->em->flush();
+
+        $this->client->loginUser($this->recorder);
+        $draft = $this->openDraft();
+        $this->client->request('POST', $this->logUrl(), [
+            ...$this->validSubmission($draft),
+            'lead' => (string) $outsider->getId(),
+        ]);
+
+        self::assertResponseStatusCodeSame(302);
+        self::assertNull($this->onlyPatrol()->getLead());
+    }
+
+    private function placeTheRecorderHere(): void
+    {
+        $placement = new Placement()->inAreas([$this->area])->inDepartment($this->department());
+        $this->em->persist($placement);
+        $this->recorder->setPlacement($placement);
+    }
+
+    /** @param list<AreaOfInterest>|null $areas null places them across the organization */
+    private function person(string $first, string $last, ?array $areas, bool $belongs = true): User
+    {
+        $placement = null === $areas ? new Placement()->acrossTheOrganization() : new Placement()->inAreas($areas);
+        if ($belongs) {
+            $placement->inDepartment($this->department());
+        }
+        $this->em->persist($placement);
+        $person = new User()->setPassword('x')->setEmail(strtolower($first).'@example.test')
+            ->setFirstName($first)->setLastName($last)->setPlacement($placement);
+        $this->em->persist($person);
+
+        return $person;
+    }
+
+    private function department(): Department
+    {
+        $this->operations ??= new Department()->setName('Operations');
+        $this->em->persist($this->operations);
+
+        return $this->operations;
+    }
+
+    private function otherArea(): AreaOfInterest
+    {
+        $area = new AreaOfInterest()->setSource('test fixture')->setName('other reserve')->setGeom(
+            '{"type":"MultiPolygon","coordinates":[[[[-20.1,-1.1],[-19.9,-1.1],[-19.9,-0.9],[-20.1,-0.9],[-20.1,-1.1]]]]}',
+        );
+        $this->em->persist($area);
+
+        return $area;
     }
 
     /**

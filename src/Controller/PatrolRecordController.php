@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Uhifadhi\Patrol\Controller;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -48,6 +47,7 @@ use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Repository\PatrolTypeRepository;
 use Uhifadhi\Patrol\Repository\TaxonomyKindRepository;
 use Uhifadhi\Patrol\Service\PatrolDraftService;
+use Uhifadhi\Patrol\Service\PatrolLeadService;
 use Uhifadhi\Patrol\Service\PatrolMapService;
 use Uhifadhi\Patrol\Service\PatrolRecordingService;
 use Uhifadhi\Patrol\Service\PatrolVocabularyService;
@@ -121,7 +121,6 @@ final class PatrolRecordController
     public function __construct(
         private readonly Environment $twig,
         private readonly UrlGeneratorInterface $urlGenerator,
-        private readonly EntityManagerInterface $entityManager,
         private readonly PatrolTypeRepository $types,
         private readonly StationRepository $stations,
         private readonly TaxonomyKindRepository $kinds,
@@ -132,6 +131,7 @@ final class PatrolRecordController
         private readonly AreaMapPayload $ground,
         private readonly PatrolDraftService $drafts,
         private readonly PatrolRecordingService $recording,
+        private readonly PatrolLeadService $leads,
         private readonly TokenStorageInterface $tokenStorage,
         private readonly CsrfTokenManagerInterface $csrf,
     ) {
@@ -205,7 +205,7 @@ final class PatrolRecordController
                 'types' => $this->offeredTypes($area),
                 'stations' => array_values(array_filter($this->stations->findByArea($area), static fn (Station $s): bool => $s->isActive())),
                 'kinds' => $this->kinds->forArea($area),
-                'users' => $this->users(),
+                'users' => $this->leads->candidates($area, $this->signedInPerson()),
                 'form' => $form,
                 'observations' => $this->withHeldEvidence($draft, $observations),
                 // A sketched route is offered only where step 1 was skipped — a
@@ -253,7 +253,7 @@ final class PatrolRecordController
                     startedAt: self::parseMoment($form['startedAt']),
                     endedAt: self::parseMoment($form['endedAt']),
                     station: $this->chosenStation($area, $form['station']),
-                    lead: $this->lead($form['lead']),
+                    lead: $this->leads->chosen($area, $this->signedInPerson(), $form['lead']),
                     team: $form['team'],
                     note: $form['note'],
                     distanceKm: $form['distanceKm'],
@@ -500,11 +500,6 @@ final class PatrolRecordController
         }
     }
 
-    private function lead(?int $id): ?UserInterface
-    {
-        return null !== $id ? $this->entityManager->getRepository(UserInterface::class)->find($id) : null;
-    }
-
     /**
      * The signed-in account, narrowed to the platform's person. Null where the
      * installation's account class is not one — a draft nobody owns takes no
@@ -515,21 +510,6 @@ final class PatrolRecordController
         $user = $this->tokenStorage->getToken()?->getUser();
 
         return $user instanceof UserInterface ? $user : null;
-    }
-
-    /**
-     * The people the deployment can name as a lead. `lead` is a relation to a
-     * person, never free text — the detail screen prints "A. Alpha" from the
-     * record. The repository is asked for by the CONTRACT, which the
-     * installation has resolved to its own account class; this module never
-     * learns what that class is.
-     *
-     * @return list<UserInterface>
-     */
-    private function users(): array
-    {
-        return $this->entityManager->getRepository(UserInterface::class)
-            ->findBy([], ['lastName' => 'ASC', 'firstName' => 'ASC']);
     }
 
     /**

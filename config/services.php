@@ -76,6 +76,7 @@ use Uhifadhi\Patrol\Service\PatrolDraftService;
 use Uhifadhi\Patrol\Service\PatrolHoldService;
 use Uhifadhi\Patrol\Service\PatrolKindsOverviewService;
 use Uhifadhi\Patrol\Service\PatrolKindsService;
+use Uhifadhi\Patrol\Service\PatrolLeadService;
 use Uhifadhi\Patrol\Service\PatrolListService;
 use Uhifadhi\Patrol\Service\PatrolMapService;
 use Uhifadhi\Patrol\Service\PatrolRecordingService;
@@ -221,6 +222,11 @@ return static function (ContainerConfigurator $container): void {
      * call and one place the rules live. Registered beside 'patrol.track_ingest'
      * and unconditionally, for the reason above.
      */
+    // Who may be named a patrol's lead: the recorder, and the people their
+    // placement reaches who work in the patrol's area.
+    $services->set('patrol.leads', PatrolLeadService::class)
+        ->args([service('doctrine.orm.entity_manager')]);
+
     $services->set('patrol.recording', PatrolRecordingService::class)
         ->args([
             service('doctrine.orm.entity_manager'),

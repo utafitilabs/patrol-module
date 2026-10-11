@@ -24,24 +24,42 @@ use Uhifadhi\Patrol\Repository\PatrolRepository;
 use Uhifadhi\Patrol\Security\PatrolWriteVoter;
 
 /**
- * THE MODULE'S ONE POWER OVER SOMEBODY ELSE'S RECORD, as the Permissions page
- * reads it: adding to or completing another ranger's patrol, asked with the
- * question every handset write asks.
+ * THE MODULE'S POWERS OVER SOMEBODY ELSE'S RECORD, as the Permissions page
+ * reads them: adding to or completing another ranger's patrol, asked with the
+ * question every handset write asks, and correcting an observation on it.
  */
 final class PatrolPowersTest extends TestCase
 {
     public function testItDeclaresOnePowerOverAnotherRangersPatrol(): void
     {
-        $powers = [...$this->source()->powers()];
+        $power = $this->powerKeyed(PatrolPowers::WRITE_ANOTHER_RANGERS_PATROL);
 
-        self::assertCount(1, $powers);
-        $power = $powers[0];
-        self::assertInstanceOf(Power::class, $power);
-        self::assertSame('add-to-or-complete-another-rangers-patrol', $power->key);
         self::assertSame(PowerGroup::OthersRecords, $power->group);
         self::assertSame('add to or complete another ranger’s patrol', $power->label);
         self::assertSame([PatrolWriteVoter::WRITE], $power->questions);
         self::assertSame([PowerTarget::AColleague], $power->targets);
+    }
+
+    /**
+     * A CORRECTION IS SIGNED ONTO SOMEBODY ELSE'S RECORD. Whoever holds
+     * `patrols.manage` at the area appends one to an observation another
+     * ranger made, so the Permissions page lists who may, asked of the area
+     * the colleague patrols, for a colleague and for somebody beyond the
+     * asker's area alike.
+     */
+    public function testItDeclaresThePowerToAmendAnotherRangersObservation(): void
+    {
+        $power = $this->powerKeyed(PatrolPowers::AMEND_ANOTHER_RANGERS_OBSERVATION);
+
+        self::assertSame(PowerGroup::OthersRecords, $power->group);
+        self::assertSame('correct an observation on another ranger’s patrol', $power->label);
+        self::assertSame(['patrols.manage'], $power->questions);
+        self::assertSame([PowerTarget::AColleague, PowerTarget::SomebodyBeyondTheirArea], $power->targets);
+    }
+
+    public function testItDeclaresNoOtherPower(): void
+    {
+        self::assertCount(2, [...$this->source()->powers()]);
     }
 
     /**
@@ -61,6 +79,17 @@ final class PatrolPowersTest extends TestCase
     public function testItIsAPowerSource(): void
     {
         self::assertInstanceOf(PowerSourceInterface::class, $this->source());
+    }
+
+    private function powerKeyed(string $key): Power
+    {
+        foreach ($this->source()->powers() as $power) {
+            if ($key === $power->key) {
+                return $power;
+            }
+        }
+
+        self::fail('no power keyed '.$key);
     }
 
     private function source(): PatrolPowers

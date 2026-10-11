@@ -477,7 +477,6 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 ->args([
                     service('twig'),
                     service('router'),
-                    service('doctrine.orm.entity_manager'),
                     service(PatrolTypeRepository::class),
                     service(AreaStationRepository::class),
                     service(TaxonomyKindRepository::class),
@@ -487,6 +486,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                     service('area.map_payload'),
                     service('patrol.drafts'),
                     service('patrol.recording'),
+                    service('patrol.leads'),
                     service('security.token_storage'),
                     service('security.csrf.token_manager'),
                 ])

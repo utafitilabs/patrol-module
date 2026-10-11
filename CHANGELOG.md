@@ -6,6 +6,10 @@
 
  * `EventListener\PatrolFactsListener`: recording, discarding, deleting or moving a complete patrol, or adding an observation to one, asks the core to file its months again (`RecomputeFacts`), since the schedule refiles only open periods. A patrol still recording asks for nothing.
 
+ * THE LEAD IS SOMEBODY WHO WORKS WHERE THE PATROL RAN: the entry flow's lead select offers the recorder, and the active people placed at the patrol's area, in a department, whom the recorder's own placement reaches (`Service\PatrolLeadService`, on the core's `Reach`). A recorder placed at one area no longer names somebody from another area or somebody placed across the organization; an Admin names nobody from another area either. A lead posted from outside the offer records no lead, as a stale form.
+
+ * `PatrolPowers` declares a second power, "correct an observation on another ranger’s patrol" (`correct-an-observation-on-another-rangers-patrol`), asked with `patrols.manage` of the area the colleague's latest patrol ran in — the pair the amendment route asks — so Team › Permissions lists who may sign a correction onto somebody else's observation.
+
 ## 0.11.0
 
  * the module runs on core 0.2 and storage 0.4 (`uhifadhi/uhifadhi` `^0.2`, `uhifadhi/storage-module` `^0.4`). Everybody but the tiers belongs to one department: a person reaches this module's records through the department they belong to or one they support, and somebody with no department reaches none.
