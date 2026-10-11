@@ -207,13 +207,11 @@ final class AuthorityTableTest extends AuthorityTableTestCase
             Probe::get('patrol_export', $area + ['_format' => 'csv']),
             Probe::get('patrol_types', $area),
             Probe::get('patrol_kinds', $area),
-            Probe::get('patrol_taxonomy', $area),
             Probe::get('patrol_kinds_overview', $area + ['kind' => $this->kind]),
             Probe::get('patrol_show', $patrol),
             Probe::get('patrol_export_gpx', $patrol),
             Probe::get('patrol_observation_show', $observation),
             Probe::get('patrol_delete', $patrol),
-            Probe::get('patrol_import', $area),
             Probe::get('patrol_log', $area),
 
             Probe::post('patrol_log', $area, PatrolRecordController::CSRF_TOKEN_ID, [

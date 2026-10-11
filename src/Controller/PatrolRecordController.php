@@ -138,28 +138,6 @@ final class PatrolRecordController
     }
 
     /**
-     * THE RETIRED SCREEN. Importing a GPX is step 1 of logging a patrol now, so
-     * the old address is a permanent redirect rather than a second door — a link
-     * in somebody's notes, a bookmark, or a training slide still arrives
-     * somewhere that works.
-     */
-    #[Route(
-        '/areas/{uuid}/modules/patrols/import',
-        name: 'patrol_import',
-        requirements: ['uuid' => Requirement::UUID],
-        methods: ['GET'],
-    )]
-    #[IsGranted('patrols.record', subject: 'area')]
-    public function import(
-        #[MapEntity(mapping: ['uuid' => 'uuid'])] AreaOfInterest $area,
-    ): RedirectResponse {
-        return new RedirectResponse(
-            $this->urlGenerator->generate('patrol_log', ['uuid' => $area->getUuidString()]),
-            Response::HTTP_MOVED_PERMANENTLY,
-        );
-    }
-
-    /**
      * Log a patrol — PL·01 the track, PL·02 the details, PL·03 the observations,
      * one submit.
      */

@@ -110,27 +110,6 @@ final class PatrolTaxonomyController
         ]));
     }
 
-    /**
-     * THE OLD ADDRESS, KEPT ALIVE. The screen was `…/taxonomy` before the word a
-     * person reads became "kinds"; a link somebody saved, or a bookmark, must
-     * not become a 404 over a rename. Permanent, because the move is.
-     */
-    #[Route(
-        '/areas/{uuid}/modules/patrols/taxonomy',
-        name: 'patrol_taxonomy',
-        requirements: ['uuid' => Requirement::UUID],
-        methods: ['GET'],
-        priority: 2,
-    )]
-    #[IsGranted('observation-kinds.configure', subject: 'area')]
-    public function legacyTaxonomyAddress(#[MapEntity(mapping: ['uuid' => 'uuid'])] AreaOfInterest $area): RedirectResponse
-    {
-        return new RedirectResponse(
-            $this->router->generate('patrol_kinds', ['uuid' => $area->getUuidString()]),
-            Response::HTTP_MOVED_PERMANENTLY,
-        );
-    }
-
     // ── kinds ────────────────────────────────────────────────────────────────
 
     #[Route('/areas/{uuid}/modules/patrols/kinds', name: 'patrol_kinds_kind_create', requirements: ['uuid' => Requirement::UUID], methods: ['POST'])]

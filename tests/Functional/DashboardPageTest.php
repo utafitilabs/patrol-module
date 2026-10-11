@@ -604,12 +604,8 @@ final class DashboardPageTest extends WebTestCase
         self::assertStringNotContainsString('Settings', $actions);
     }
 
-    /**
-     * THE OLD ADDRESS IS KEPT ALIVE. `…/taxonomy` was the screen's address
-     * before the word a person reads became "kinds"; a saved link must not
-     * become a 404 over a rename.
-     */
-    public function testTheOldTaxonomyAddressRedirectsToTheKindsScreen(): void
+    /** A renamed screen has one address: `…/taxonomy` is gone, not redirected. */
+    public function testTheOldTaxonomyAddressIsGone(): void
     {
         $manager = new User()->setPassword('x')->setEmail(FixedRecordVoter::MANAGER_EMAIL)
             ->setFirstName('Mara')->setLastName('Manager');
@@ -619,8 +615,7 @@ final class DashboardPageTest extends WebTestCase
 
         $this->client->request('GET', '/areas/'.$this->area->getUuidString().'/modules/patrols/taxonomy');
 
-        self::assertResponseStatusCodeSame(301);
-        self::assertResponseRedirects('/areas/'.$this->area->getUuidString().'/modules/patrols/kinds');
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testSomebodyWhoMayManageOpensTheKindsScreen(): void

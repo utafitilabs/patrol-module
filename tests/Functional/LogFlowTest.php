@@ -565,13 +565,13 @@ final class LogFlowTest extends WebTestCase
 
     // ── the retired screen ────────────────────────────────────────────────────
 
-    public function testTheImportScreenIsGoneAndPointsHere(): void
+    /** Importing a GPX is step 1 of logging a patrol; the old screen's address is gone. */
+    public function testTheImportScreenIsGone(): void
     {
         $this->client->loginUser($this->recorder);
         $this->client->request('GET', '/areas/'.$this->area->getUuidString().'/modules/patrols/import');
 
-        self::assertResponseStatusCodeSame(301);
-        self::assertResponseRedirects($this->logUrl());
+        self::assertResponseStatusCodeSame(404);
     }
 
     // ── fixtures and helpers ──────────────────────────────────────────────────

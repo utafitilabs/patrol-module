@@ -20,13 +20,11 @@ department confined to Kilimani.
 | patrol_export | GET /areas/{kilimani}/modules/patrols/export.csv | `patrols.export` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_types | GET /areas/{kilimani}/modules/patrols/types | `patrol-types.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_kinds | GET /areas/{kilimani}/modules/patrols/kinds | `observation-kinds.configure` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
-| patrol_taxonomy | GET /areas/{kilimani}/modules/patrols/taxonomy | `observation-kinds.configure` | sign-in | sign-in | refused | → /areas/{kilimani}/modules/patrols/kinds | refused | refused | → /areas/{kilimani}/modules/patrols/kinds | → /areas/{kilimani}/modules/patrols/kinds |
 | patrol_kinds_overview | GET /areas/{kilimani}/modules/patrols/observation-kinds/{new} | `patrols.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_show | GET /areas/{kilimani}/modules/patrols/{new} | `patrols.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_export_gpx | GET /areas/{kilimani}/modules/patrols/{new}/export.gpx | `patrols.export` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_observation_show | GET /areas/{kilimani}/modules/patrols/{new}/observations/{new} | `patrols.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_delete | GET /areas/{kilimani}/modules/patrols/{new}/delete | `patrols.read` | sign-in | sign-in | refused | refused | refused | refused | refused | allowed |
-| patrol_import | GET /areas/{kilimani}/modules/patrols/import | `patrols.record` | sign-in | sign-in | refused | → /areas/{kilimani}/modules/patrols/log | refused | refused | → /areas/{kilimani}/modules/patrols/log | → /areas/{kilimani}/modules/patrols/log |
 | patrol_log | GET /areas/{kilimani}/modules/patrols/log | `patrols.record` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_log | POST /areas/{kilimani}/modules/patrols/log | `patrols.record` | sign-in | sign-in | refused | → /areas/{kilimani}/modules/patrols/{new} | refused | refused | → /areas/{kilimani}/modules/patrols/{new} | → /areas/{kilimani}/modules/patrols/{new} |
 | patrol_delete | POST /areas/{kilimani}/modules/patrols/{new}/delete | `patrols.read` | sign-in | sign-in | refused | refused | refused | refused | refused | → /areas/{kilimani}/modules/patrols/patrols |

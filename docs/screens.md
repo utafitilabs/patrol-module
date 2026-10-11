@@ -30,10 +30,7 @@
 | Rename / retire / reactivate one patrol type | `patrol_type_act` |
 | Save the module's thresholds | `patrol_settings_save` |
 
-`patrol_taxonomy` (`…/patrols/taxonomy`) still answers, permanently redirecting to
-`patrol_kinds` (`…/patrols/kinds`) — a saved link does not become a 404 over a
-rename. `patrol_import` (`…/patrols/import`) does the same, into `patrol_log`:
-importing a GPX is step 1 of logging a patrol, not a screen of its own.
+Importing a GPX is step 1 of logging a patrol (`patrol_log`), not a screen of its own.
 
 The dashboard and the widget library are compositions on the shell's widget
 framework — see [what-it-stands-on.md](what-it-stands-on.md).
