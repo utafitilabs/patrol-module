@@ -180,16 +180,27 @@ storage:
 
 ### Stimulus controllers
 
-Nothing to do. The package declares `symfony-ux`, so Flex reads
-`assets/package.json` and maintains the two controllers — `filters` and
-`calendar` — in the application's `assets/controllers.json` for you, and removes
-them again on uninstall.
+Nothing to do on a fresh install. The package declares `symfony-ux`, so Flex
+reads `assets/package.json` and maintains its controllers in the application's
+`assets/controllers.json` for you, and removes them again on uninstall:
+`calendar` (the month grid's navigation), `disclose` and `point` (the configure
+sections) and `query` (the organization-level filter bar). `filters` is empty and
+disabled.
 
-Neither draws a map, and neither filters anything: `filters` is a dropdown's
-manners (open one panel at a time, close on Escape or an outside click) and
-`calendar` is the month grid's navigation. Every map on a patrol screen is the
-atlas's plate — the module states what is on it in PHP and the template calls
-`render_map()` — and the filter itself is a query, so every chip is a link.
+An installation that keeps its own `assets/controllers.json` from an earlier
+release adds the one entry the organization-level Patrols pages need, under
+`@uhifadhi/patrol-module`:
+
+```json
+"query": {"enabled": true, "fetch": "eager"}
+```
+
+Without it the pages render and the search still submits, but choosing an option
+in a dropdown does not re-ask the server.
+
+No controller draws a map. Every map on a patrol screen is the atlas's plate —
+the module states what is on it in PHP and the template calls `render_map()` —
+and the filter itself is a query.
 
 ### Deployment vocabulary
 

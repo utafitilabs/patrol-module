@@ -48,6 +48,7 @@ use Uhifadhi\Patrol\Api\State\VocabularyProvider;
 use Uhifadhi\Patrol\Command\PurgeDiscardedCommand;
 use Uhifadhi\Patrol\Controller\ObservationAmendmentController;
 use Uhifadhi\Patrol\Controller\PatrolHoldController;
+use Uhifadhi\Patrol\Controller\PatrolOrgController;
 use Uhifadhi\Patrol\Controller\PatrolRecordController;
 use Uhifadhi\Patrol\Controller\PatrolSettingsController;
 use Uhifadhi\Patrol\Controller\PatrolTaxonomyController;
@@ -95,6 +96,7 @@ use Uhifadhi\Patrol\Service\Api\TrackBatchService;
 use Uhifadhi\Patrol\Service\Api\VocabularySyncService;
 use Uhifadhi\Patrol\Service\PatrolFigureService;
 use Uhifadhi\Patrol\Service\PatrolOrgOverviewService;
+use Uhifadhi\Patrol\Service\PatrolOrgService;
 use Uhifadhi\Patrol\Service\PatrolOverviewService;
 use Uhifadhi\Patrol\Service\PhotoThumbnailBackfillService;
 use Uhifadhi\Patrol\Storage\PatrolFileSource;
@@ -279,7 +281,11 @@ final class UhifadhiPatrolBundle extends AbstractBundle
         $category = \is_string($config['module_category'] ?? null) ? $config['module_category'] : 'operations';
         $services->set('patrol.module_provider', PatrolModuleProvider::class)
             ->args([$category])
-            ->tag('uhifadhi.module');
+            ->tag('uhifadhi.module')
+            // AND IT ANSWERS AT ORGANIZATION LEVEL TOO: the same provider names
+            // the screens read once across every area; the shell mounts them
+            // and draws the chrome. The tag is ShellBundle::ORG_PAGES_TAG.
+            ->tag('shell.org_pages');
 
         // The deployment's vocabulary (patrol types, observation categories) and
         // ingest thresholds, exposed as parameters for the services that need them.
@@ -1053,5 +1059,35 @@ final class UhifadhiPatrolBundle extends AbstractBundle
         $services->set('patrol.org_widgets', PatrolOrgWidgets::class)
             ->args([service('patrol.org_overview')])
             ->tag(OrgOverviewContributorInterface::TAG);
+
+        /*
+         * THE ORGANIZATION-LEVEL SCREENS — the area module's three, one scope
+         * wider. 'patrol.org' folds what the per-area services answer; the
+         * controller sits inside the security guard because every one of its
+         * routes states its pair with #[IsGranted].
+         */
+        $services->set('patrol.org', PatrolOrgService::class)
+            ->args([
+                service(AreaOfInterestRepository::class),
+                service('registry.area_modules'),
+                service('patrol.overview'),
+                service('patrol.figure_service'),
+                service(PatrolRepository::class),
+                service(PatrolTypeRepository::class),
+                service('patrol.list'),
+            ]);
+
+        if ($hasSecurity) {
+            $services->set('patrol.controller.org', PatrolOrgController::class)
+                ->args([
+                    service('twig'),
+                    service('patrol.org'),
+                    service('shell.scopes'),
+                    service('shell.table_page'),
+                    service('security.authorization_checker'),
+                ])
+                ->public();
+            $services->alias(PatrolOrgController::class, 'patrol.controller.org')->public();
+        }
     }
 }

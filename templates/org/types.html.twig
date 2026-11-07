@@ -1,0 +1,100 @@
+{# THE PATROL TYPES, EVERY AREA — the types on the left, who runs them on the
+   right. A type is the area's, base and tunables with it, so the same word can
+   sit on a different buffer in two areas; the matrix says so rather than
+   averaging it away.
+
+   READ-ONLY, ON PURPOSE. Every row's door goes to that area's own Patrol
+   types section, where the type is edited. Each type on the left is an
+   address of its own (`?type=`), so the pane is links and needs no script. #}
+{% extends '@UhifadhiPatrol/org/base.html.twig' %}
+
+{% block title %}Patrols · patrol types · {{ scope.label }}{% endblock %}
+
+{% block shell_page_subtitle %}Which areas run each type, on which base, and how much.{% endblock %}
+
+{% block patrol_org_page %}
+    {%- set here = constant('Uhifadhi\\Patrol\\Controller\\PatrolOrgController::TYPES_ROUTE') -%}
+    {%- set scopeKey = constant('Uhifadhi\\Bundle\\ShellBundle\\Service\\Scopes::PARAMETER') -%}
+    {%- set keep = scope.areaUuid ? {(scopeKey): scope.areaUuid} : {} -%}
+
+    {%- if unset is not empty -%}
+        {%- set n = unset|length -%}
+        {%- set cause -%}
+            {%- for type in unset %}{{ type.label }} in {{ type.cells|filter(c => c.baseNotSet)|map(c => c.areaName)|join(', ') }}{% if not loop.last %}; {% endif %}{% endfor -%}
+        {%- endset -%}
+        {{ include('@Shell/_banner.html.twig', {
+            title: n ~ (n == 1 ? ' patrol type has' : ' patrol types have') ~ ' no base set',
+            text: cause ~ ' — the handset cannot tell what a patrol of it records',
+            actions: {'Open': path(here, keep|merge({type: unset[0].key}))},
+        }, with_context: false) }}
+    {%- endif -%}
+
+    {% if chosen is null %}
+        <div class="c"><p class="use">No area in scope keeps a patrol type yet.</p></div>
+    {% else %}
+    <div class="kpane">
+        <div class="l">
+            {%- set retired = types|filter(t => t.retired)|length -%}
+            <div class="kpane-hd">types<span class="n">{{ types|length - retired }}{% if retired %} &middot; {{ retired }} retired{% endif %}</span></div>
+            {% for type in types %}
+                {%- set bases = type.baseNotSetSomewhere ? 'base not set' : (type.retired ? 'retired in ' ~ type.retiredIn : (type.baseLabels|join(' · ') ?: 'base not set')) -%}
+                <a class="krow{{ type.key == chosen.key ? ' on' }}{{ type.retired ? ' gone' }}" data-kind="{{ type.key }}" href="{{ path(here, keep|merge({type: type.key})) }}"{% if type.key == chosen.key %} aria-current="page"{% endif %}>
+                    <i class="dot patrol-kcat" data-cat="{{ type.position }}"></i>
+                    <span class="nm">{{ type.label }}<em>{{ type.key }} &middot; {{ bases }}</em></span>
+                    <span class="n">{{ type.retired ? '—' : type.thisMonth }}<em>this month</em></span>
+                    <span class="n patrol-kareas">{{ type.areasRunning }}<em>{{ type.areasRunning == 1 ? 'area' : 'areas' }}</em></span>
+                </a>
+            {% endfor %}
+        </div>
+        <div class="r">
+            <form class="lfilt patrol-kbar" method="get" action="{{ path(here) }}" data-controller="uhifadhi--patrol-module--query" data-action="uhifadhi--shell-bundle--dropdown:choose->uhifadhi--patrol-module--query#chosen">
+                {% if scope.areaUuid %}<input type="hidden" name="{{ scopeKey }}" value="{{ scope.areaUuid }}">{% endif %}
+                <input type="hidden" name="type" value="{{ chosen.key }}">
+                {% if state %}<input type="hidden" name="state" value="{{ state }}">{% endif %}
+                {{ include('@Shell/_dropdown.html.twig', {
+                    name: 'state', label: 'Every state', icon: 'shell:layers', default: '', value: state,
+                    groups: [
+                        {label: null, options: [{value: '', label: 'Every state', count: states|reduce((sum, n) => sum + n, 0)}]},
+                        {label: 'States', options: [
+                            {value: 'in-use', label: 'In use', count: states['in-use']},
+                            {value: 'base-not-set', label: 'Base not set', count: states['base-not-set']},
+                            {value: 'not-in-use', label: 'Not in use', count: states['not-in-use']},
+                        ]},
+                    ],
+                }, with_context: false) }}
+            </form>
+            <div class="patrol-orgkt">
+            <table class="tbl">
+                <thead><tr><th>Area</th><th class="num">This month</th><th class="num">All time</th><th class="num">Base</th><th class="num">Buffer</th><th></th></tr></thead>
+                <tbody>
+                {% for row in cells %}
+                    <tr>
+                        <td><span class="orgarea" data-cat="{{ row.position }}"><i></i>{{ row.areaName }}</span></td>
+                        <td class="num">{{ row.kept and row.thisMonth ? row.thisMonth : '—' }}</td>
+                        <td class="num">{{ row.kept and row.allTime ? row.allTime|number_format : '—' }}</td>
+                        <td class="num">
+                            {%- if not row.kept -%}<span class="chip idle">not in use</span>
+                            {%- elseif row.base is null -%}<span class="chip warn">base not set</span>
+                            {%- else -%}<span class="chip">{{ row.base.label }}</span>{%- endif -%}
+                        </td>
+                        <td class="num">{{ row.kept and row.bufferM is not null ? row.bufferM ~ ' m' : '—' }}</td>
+                        <td class="door"><a class="open-btn" href="{{ path('patrol_types', {uuid: row.areaUuid}) }}">Configure &rarr;</a></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="fog">No area matches.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {{ include('@Shell/_foot.html.twig', {
+                count: table.total, noun: 'areas', one: 'area',
+                perPage: table.size, page: table.page, pages: table.pages, links: links,
+            }, with_context: false) }}
+        </div>
+    </div>
+    {% endif %}
+
+    <p class="use patrol-kuse"><b>Read-only.</b> A type carries what it records.
+        {%- for base in bases %}<br><b>{{ base.label }}</b> &mdash; {{ base.records }}.{% endfor %}
+        <br>Base, pace and buffer are the area&rsquo;s. <b>Edited behind its door.</b></p>
+{% endblock %}

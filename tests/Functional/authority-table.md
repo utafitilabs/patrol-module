@@ -13,6 +13,9 @@ department confined to Kilimani.
 
 | Route | Request | Checks | signed out | deactivated | no position | the pair | all but the pair | the pair, elsewhere | Admin | Super Admin |
 |---|---|---|---|---|---|---|---|---|---|---|
+| patrol_org_overview | GET /patrols | `areas.read` | sign-in | sign-in | refused | allowed | refused | allowed | allowed | allowed |
+| patrol_org_patrols | GET /patrols/patrols | `areas.read` | sign-in | sign-in | refused | allowed | refused | allowed | allowed | allowed |
+| patrol_org_types | GET /patrols/types | `areas.read` | sign-in | sign-in | refused | allowed | refused | allowed | allowed | allowed |
 | patrol_dashboard | GET /areas/{kilimani}/modules/patrols | `patrols.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_list | GET /areas/{kilimani}/modules/patrols/patrols | `patrols.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |
 | patrol_calendar | GET /areas/{kilimani}/modules/patrols/calendar | `patrols.read` | sign-in | sign-in | refused | allowed | refused | refused | allowed | allowed |

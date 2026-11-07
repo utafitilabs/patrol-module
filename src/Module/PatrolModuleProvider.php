@@ -15,13 +15,16 @@ namespace Uhifadhi\Patrol\Module;
 
 use Uhifadhi\Contracts\ModuleProviderInterface;
 use Uhifadhi\Contracts\ModuleProviderTrait;
+use Uhifadhi\Contracts\Shell\OrgPage;
+use Uhifadhi\Contracts\Shell\OrgPagesInterface;
+use Uhifadhi\Patrol\Controller\PatrolOrgController;
 
 /**
  * Declares the one module this bundle contributes — "Patrols". It owns its
  * pages (entryRoute), so the host links straight to the patrol dashboard
  * instead of rendering it through the generic module page.
  */
-final class PatrolModuleProvider implements ModuleProviderInterface
+final class PatrolModuleProvider implements ModuleProviderInterface, OrgPagesInterface
 {
     use ModuleProviderTrait;
 
@@ -66,7 +69,7 @@ final class PatrolModuleProvider implements ModuleProviderInterface
 
     public function icon(): string
     {
-        return 'footprints';
+        return 'patrol:footprints';
     }
 
     public function entryRoute(): string
@@ -82,4 +85,18 @@ final class PatrolModuleProvider implements ModuleProviderInterface
      * naming the same power would let an administrator grant it twice and
      * revoke it once.
      */
+
+    /**
+     * THE SAME THREE SCREENS AN AREA HAS, read across every area the module
+     * is switched on in. The shell mounts them in the sidebar and draws their
+     * strip; the first is the one the row opens.
+     */
+    public function orgPages(): array
+    {
+        return [
+            new OrgPage('overview', 'Overview', PatrolOrgController::OVERVIEW_ROUTE),
+            new OrgPage('patrols', 'Patrols', PatrolOrgController::PATROLS_ROUTE),
+            new OrgPage('types', 'Patrol types', PatrolOrgController::TYPES_ROUTE),
+        ];
+    }
 }

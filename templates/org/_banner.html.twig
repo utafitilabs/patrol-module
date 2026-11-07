@@ -1,0 +1,17 @@
+{# THE PATROLS OUT NOW THAT HAVE GONE SILENT, anywhere in scope — attention
+   sits here and nowhere else on the page. Drawn only when one has: how many
+   and in how many areas, then which, and the door to the list. #}
+{%- if silent is not empty -%}
+    {%- set n = silent|length -%}
+    {%- set inAreas = silent|map(row => row.areaName)|reduce((carry, name) => name in carry ? carry : carry|merge([name]), [])|length -%}
+    {%- set shown = silent|slice(0, 4) -%}
+    {%- set cause -%}
+        {%- for row in shown %}{{ row.ref }} in {{ row.areaName }}{% if row.pingLabel %}, {{ row.pingLabel }}{% endif %}{% if not loop.last %}; {% endif %}{% endfor -%}
+        {%- if n > shown|length %}, and {{ n - shown|length }} more{% endif -%}
+    {%- endset -%}
+    {{ include('@Shell/_banner.html.twig', {
+        title: n ~ (n == 1 ? ' patrol out has' : ' patrols out have') ~ ' not pinged, in ' ~ inAreas ~ (inAreas == 1 ? ' area' : ' areas'),
+        text: cause,
+        actions: door is null ? {} : {(door.label): door.href},
+    }, with_context: false) }}
+{%- endif -%}

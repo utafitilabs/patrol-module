@@ -23,6 +23,11 @@
                 "main": "controllers/point_controller.js",
                 "fetch": "eager",
                 "enabled": true
+            },
+            "query": {
+                "main": "controllers/query_controller.js",
+                "fetch": "eager",
+                "enabled": true
             }
         },
         "importmap": {}

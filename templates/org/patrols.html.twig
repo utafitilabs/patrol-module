@@ -1,0 +1,125 @@
+{# EVERY PATROL, EVERY AREA — the area module's own list one scope wider: the
+   same columns and the same filter, with an area column and an area choice.
+
+   THE AREA CHOICE IS THE SCOPE. It writes the shell's own `?area=`, so the
+   bar and the scope control can never be pointing at two different slices.
+
+   ONE GET DRIVES EVERYTHING: the bar, its counts, the rows and the foot are
+   readings of one query. The bar is a GET form of the shell's dropdowns; a
+   choice is carried into the form and sent (assets/controllers/query). #}
+{% extends '@UhifadhiPatrol/org/base.html.twig' %}
+{% import '@UhifadhiPatrol/dashboard/_ui.html.twig' as ui %}
+
+{% block title %}Patrols · all patrols · {{ scope.label }}{% endblock %}
+
+{% block shell_page_subtitle %}Every area, newest first. Scope narrows the list.{% endblock %}
+
+{% block patrol_org_page %}
+    {%- set here = constant('Uhifadhi\\Patrol\\Controller\\PatrolOrgController::PATROLS_ROUTE') -%}
+    {%- set scopeKey = constant('Uhifadhi\\Bundle\\ShellBundle\\Service\\Scopes::PARAMETER') -%}
+    {{ include('@UhifadhiPatrol/org/_banner.html.twig', {silent: silent, door: null}, with_context: false) }}
+
+    <div class="c">
+        <span class="tab">Every patrol<span class="src">&middot; {{ filter.month|date('F')|lower }} &middot; {{ list.rows|length }}</span></span>
+
+        <form class="lfilt" method="get" action="{{ path(here) }}" data-controller="uhifadhi--patrol-module--query" data-action="uhifadhi--shell-bundle--dropdown:choose->uhifadhi--patrol-module--query#chosen">
+            {% if scope.areaUuid %}<input type="hidden" name="{{ scopeKey }}" value="{{ scope.areaUuid }}">{% endif %}
+            {% for key, value in filter.toQuery %}{% if key != 'q' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+
+            {{ include('@Shell/_dropdown.html.twig', {
+                name: scopeKey, label: 'All areas', icon: 'shell:map', default: '', value: scope.areaUuid ?? '',
+                groups: [
+                    {label: null, options: [{value: '', label: 'All areas', count: list.areaCounts|reduce((sum, a) => sum + a.count, 0)}]},
+                    {label: 'Areas', options: list.areaCounts|map(a => {value: a.uuid, label: a.name, count: a.count})},
+                ],
+            }, with_context: false) }}
+
+            {%- set typeOptions = [] -%}
+            {%- for key, label in list.typeLabels -%}{%- set typeOptions = typeOptions|merge([{value: key, label: label, count: list.typeCounts[key] ?? 0}]) -%}{%- endfor -%}
+            {{ include('@Shell/_dropdown.html.twig', {
+                name: 'type', label: 'All types', icon: 'patrol:route', default: '', value: filter.type ?? '',
+                groups: [
+                    {label: null, options: [{value: '', label: 'All types', count: list.allCount}]},
+                    {label: 'Types', options: typeOptions},
+                ],
+            }, with_context: false) }}
+
+            {%- set stationOptions = [] -%}
+            {%- for key, label in list.stations -%}{%- set stationOptions = stationOptions|merge([{value: key, label: label, count: list.stationCounts[key] ?? 0}]) -%}{%- endfor -%}
+            {{ include('@Shell/_dropdown.html.twig', {
+                name: 'station', label: 'All stations', icon: 'shell:map-pin', default: '', value: filter.station ?? '',
+                groups: [
+                    {label: null, options: [{value: '', label: 'All stations', count: null}]},
+                    {label: 'Stations', options: stationOptions},
+                ],
+            }, with_context: false) }}
+
+            {%- set anchor = now|date_modify('first day of this month') -%}
+            {%- set monthOptions = [] -%}
+            {%- for i in 0..5 -%}
+                {%- set m = anchor|date_modify('-' ~ i ~ ' months') -%}
+                {%- set monthOptions = monthOptions|merge([{value: m|date('Y-m'), label: m|date('F Y'), count: null}]) -%}
+            {%- endfor -%}
+            {{ include('@Shell/_dropdown.html.twig', {
+                name: 'month', label: 'Month', icon: 'patrol:calendar', default: anchor|date('Y-m'), value: filter.month|date('Y-m'),
+                groups: [{label: 'Months', options: monthOptions}],
+            }, with_context: false) }}
+
+            <span class="lsearch">{{ ux_icon('shell:search') }}<input class="fld" type="search" name="q" value="{{ filter.search }}" placeholder="Search patrols&hellip;" aria-label="Search patrols"></span>
+        </form>
+
+        {%- set typePlaces = {} -%}
+        {%- for key, label in list.typeLabels -%}{%- set typePlaces = typePlaces|merge({(key): loop.index}) -%}{%- endfor -%}
+        <div class="patrol-orgtbl">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>patrol</th>
+                    <th>area</th>
+                    <th>type</th>
+                    <th>station</th>
+                    <th>lead</th>
+                    <th class="num">duration</th>
+                    <th class="num">distance</th>
+                    <th>observations</th>
+                    <th>status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+                {%- set patrol = row.patrol -%}
+                <tr class="{{ patrol.discarded ? 'patrol-abandoned' }}">
+                    <td><span class="mono patrol-ref">{{ patrol.ref }}</span>{% if patrol.startedAt %}<span class="sub"><time datetime="{{ patrol.startedAt|date('c') }}" data-localtime-format="day">{{ patrol.startedAt|date('D j M')|lower }}</time></span>{% endif %}</td>
+                    <td><span class="orgarea" data-cat="{{ row.position }}"><i></i>{{ row.areaName }}</span></td>
+                    <td>{{ ui.type_chip(patrol.type, row.types, typePlaces) }}</td>
+                    <td>{{ patrol.station ?: '—' }}</td>
+                    <td>{{ ui.lead_name(patrol.lead) }}</td>
+                    <td class="num">{{ ui.duration(patrol) }}</td>
+                    <td class="num">{{ ui.distance(patrol) }}</td>
+                    <td>
+                        {% if patrol.observations|length %}<span class="chip warn">{{ patrol.observations|length }} obs</span>{% else %}<span class="chip idle">&mdash;</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if patrol.discarded %}
+                            {% if patrol.held %}<span class="chip warn">held for review</span>{% else %}<span class="chip patrol-discard-pill">discarded</span>{% endif %}
+                        {% elseif patrol.status.value == 'recording' %}
+                            <span class="chip acc">out now</span>
+                        {% else %}
+                            <span class="chip ok">logged</span>
+                        {% endif %}
+                    </td>
+                    <td class="door"><a class="open-btn" href="{{ path('patrol_show', {uuid: row.areaUuid, patrol: patrol.uuid}) }}">Open &rarr;</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="10" class="fog">{{ filter.isNarrowed or not scope.isOrganization ? 'No patrols match this filter.' : 'No patrols recorded this month in any area.' }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {{ include('@Shell/_foot.html.twig', {
+            count: table.total, noun: 'patrols', one: 'patrol',
+            perPage: table.size, page: table.page, pages: table.pages, links: links,
+        }, with_context: false) }}
+    </div>
+{% endblock %}

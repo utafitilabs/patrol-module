@@ -945,3 +945,17 @@ button.spoint{cursor:pointer;font-family:"JetBrains Mono",ui-monospace,monospace
 summary.sact,summary.sbase{list-style:none;cursor:pointer}
 .sact::-webkit-details-marker,.sbase::-webkit-details-marker{display:none}
 .sact::marker,.sbase::marker{content:''}
+
+/* ---- the organization-level screens --------------------------------------- *
+ * The design's org sheet (uhifadhi-web/org/org.css): a wide table scrolls
+ * sideways inside its card rather than pushing the page, and the types matrix
+ * sits on the right pane with its bar and its foot inset like the pane's rows. */
+.patrol-orgtbl { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.patrol-orgtbl table.tbl { min-width: 1040px; }
+.patrol-orgkt { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; padding: 0 14px; }
+.patrol-orgkt table.tbl { min-width: 520px; }
+.kpane .r .patrol-kbar { padding: 12px 14px 0; }
+.kpane .r .rdf-foot { margin: 0 14px 10px; }
+.krow i.dot.patrol-kcat { background: var(--cat); }
+.krow .n.patrol-kareas { min-width: 36px; }
+.patrol-kuse { margin: 16px 0 0; }

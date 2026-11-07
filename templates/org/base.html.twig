@@ -1,0 +1,18 @@
+{# PATROLS AT ORGANIZATION SCOPE — the frame its three screens share.
+
+   THE FRAME IS THE SHELL'S, WHOLE. The trail, the tab strip and the scope
+   control are drawn by `@Shell/org_page.html.twig` from the same `orgPages()`
+   declaration the sidebar row is mounted from, so a tab and a sidebar row
+   cannot disagree about which screens this module has.
+
+   WHAT IS LEFT HERE is what only this module can say: the sheet its own
+   vocabulary lives in. There is no area anywhere in it — an
+   organization-level screen is the area screen one scope wider. #}
+{% extends '@Shell/org_page.html.twig' %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="stylesheet" href="{{ asset(constant('Uhifadhi\\Patrol\\UhifadhiPatrolBundle::STYLESHEET')) }}">
+{% endblock %}
+
+{% block shell_page %}{% block patrol_org_page %}{% endblock %}{% endblock %}

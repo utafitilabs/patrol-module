@@ -4,6 +4,7 @@
 
 - [The routes](#the-routes)
 - [The one entry flow](#the-one-entry-flow)
+- [Organization-level screens](#organization-level-screens)
 - [The dashboard's filter](#the-dashboards-filter)
 - [The module frame](#the-module-frame)
 - [Patrol types](#patrol-types)
@@ -29,6 +30,9 @@
 | Save the Patrol types section | `patrol_types_save` |
 | Rename / retire / reactivate one patrol type | `patrol_type_act` |
 | Save the module's thresholds | `patrol_settings_save` |
+| Organization: Overview — the facts strip across every area running the module (`/patrols`) | `patrol_org_overview` |
+| Organization: Patrols — every patrol, every area, the area a column (`/patrols/patrols`) | `patrol_org_patrols` |
+| Organization: Patrol types — the types against the areas that run them (`/patrols/types`) | `patrol_org_types` |
 
 Importing a GPX is step 1 of logging a patrol (`patrol_log`), not a screen of its own.
 
@@ -112,6 +116,36 @@ code the storage module exists to abolish.
 - **The design's `PL·01` card indices do not ship.** They are the design
   workspace's referencing system; see `NoWorkshopLabelsTest`. The card tab says
   `step 1` instead.
+
+## Organization-level screens
+
+The area module's three screens, read once across every area the module is
+switched on in. `PatrolModuleProvider` declares them through
+`Contracts\Shell\OrgPagesInterface` (tagged `shell.org_pages`); the shell mounts
+the sidebar row under Observatory, draws the strip — Overview · Patrols · Patrol
+types — and the scope control, and the module draws only the bodies
+(`templates/org/`, `Controller\PatrolOrgController`).
+
+**Every figure is the area reading one scope wider.** `Service\PatrolOrgService`
+counts nothing of its own: it resolves the scope to the areas running the module,
+in the declared order, and asks the services and repositories the area pages ask
+— `PatrolOverviewService`, `PatrolFigureService`, `PatrolListService`,
+`PatrolTypeRepository` — once per area, folding the answers.
+
+**Who reads what.** The routes ask `areas.read`, as every organization-level
+screen does; the areas read are then the scope's, narrowed to those where the
+reader holds `patrols.read`.
+
+| Screen | What it holds |
+|---|---|
+| Overview | the banner for patrols out that have not pinged; the strip — areas (and how many have ever patrolled), out now, finished today with the week, distance this week; a card naming the three tabs |
+| Patrols | the house bar — area (the shell's `?area=`, so the bar and the scope control are one choice), type, station (the stations of the areas in scope), month — and the search; `table.tbl` with the area column and a door to the area's own patrol page; the foot |
+| Patrol types | the banner for types with no base set somewhere; the types on the left (`?type=`), and per type one row per area: this month, all time, base, buffer, a door to that area's Patrol types section; a state chip (in use · base not set · not in use) and the foot. Read-only. |
+
+Not built: the Patrols page's Export action and its department chip — the first
+needs an organization-level export route, the second a ruling on which
+department a patrol belongs to (a patrol records none, and the contract reads
+figures by scope, never by who led them today).
 
 ## The module frame
 

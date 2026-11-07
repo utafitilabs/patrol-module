@@ -31,7 +31,7 @@ final class PatrolModuleProviderTest extends TestCase
         self::assertSame('Patrols', $provider->name());
         self::assertSame('operations', $provider->category());
         self::assertSame('GPS field tracks', $provider->dataSource());
-        self::assertSame('footprints', $provider->icon());
+        self::assertSame('patrol:footprints', $provider->icon(), 'Namespaced: the shell draws it with ux_icon in the sidebar row.');
         self::assertSame('patrol_dashboard', $provider->entryRoute());
     }
 
