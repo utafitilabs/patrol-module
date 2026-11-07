@@ -200,7 +200,6 @@ final class AuthorityTableTest extends AuthorityTableTestCase
         $mine = $area + ['presetUuid' => $this->preset];
 
         return [
-            Probe::get('patrol_org_overview', []),
             Probe::get('patrol_org_patrols', []),
             Probe::get('patrol_org_types', []),
             Probe::get('patrol_dashboard', $area),

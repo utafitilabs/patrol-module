@@ -17,7 +17,7 @@
 {% block patrol_org_page %}
     {%- set here = constant('Uhifadhi\\Patrol\\Controller\\PatrolOrgController::PATROLS_ROUTE') -%}
     {%- set scopeKey = constant('Uhifadhi\\Bundle\\ShellBundle\\Service\\Scopes::PARAMETER') -%}
-    {{ include('@UhifadhiPatrol/org/_banner.html.twig', {silent: silent, door: null}, with_context: false) }}
+    {{ include('@UhifadhiPatrol/org/_banner.html.twig', {silent: silent}, with_context: false) }}
 
     <div class="c">
         <span class="tab">Every patrol<span class="src">&middot; {{ filter.month|date('F')|lower }} &middot; {{ list.rows|length }}</span></span>

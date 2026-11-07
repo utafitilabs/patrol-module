@@ -18,7 +18,6 @@ use Uhifadhi\Bundle\AreaBundle\Repository\AreaOfInterestRepository;
 use Uhifadhi\Bundle\RegistryBundle\Service\AreaModuleService;
 use Uhifadhi\Contracts\Shell\Scope;
 use Uhifadhi\Patrol\Model\PatrolFilter;
-use Uhifadhi\Patrol\Model\PatrolOrgFacts;
 use Uhifadhi\Patrol\Model\PatrolOrgList;
 use Uhifadhi\Patrol\Model\PatrolOrgRow;
 use Uhifadhi\Patrol\Model\PatrolOrgTypeCell;
@@ -52,7 +51,6 @@ final readonly class PatrolOrgService
         private AreaOfInterestRepository $areas,
         private AreaModuleService $areaModules,
         private PatrolOverviewService $overview,
-        private PatrolFigureService $figures,
         private PatrolRepository $patrols,
         private PatrolTypeRepository $types,
         private PatrolListService $list,
@@ -109,46 +107,6 @@ final readonly class PatrolOrgService
         }
 
         return 0;
-    }
-
-    /**
-     * THE OVERVIEW'S STRIP — each area's morning and week, added.
-     *
-     * @param list<AreaOfInterest> $areas
-     */
-    public function facts(array $areas, \DateTimeImmutable $now): PatrolOrgFacts
-    {
-        $reporting = [];
-        $outNow = 0;
-        $outAreas = 0;
-        $finished = 0;
-
-        foreach ($areas as $area) {
-            $out = \count($this->overview->out($area, $now));
-            $outNow += $out;
-            $outAreas += $out > 0 ? 1 : 0;
-
-            if ($this->overview->hasRegister($area)) {
-                $reporting[] = $area;
-                $finished += $this->overview->today($area, $now)['closed'];
-            }
-        }
-
-        // THE WEEK BY THE MODULE'S OWN COUNTING RULE, in the one place it is
-        // written: a discarded outing did not happen, and one still recording
-        // has not finished happening.
-        $week = $this->figures->tally($reporting, PatrolOrgOverviewService::weekStart($now), $now);
-
-        return new PatrolOrgFacts(
-            areas: \count($areas),
-            reporting: \count($reporting),
-            outNow: $outNow,
-            outAreas: $outAreas,
-            finishedToday: $finished,
-            thisWeek: $week->patrols,
-            // NO PATROL, NO DISTANCE: nothing counted is not 0 km walked.
-            weekDistanceKm: 0 === $week->patrols ? null : $week->distanceKm,
-        );
     }
 
     /**

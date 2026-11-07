@@ -29,8 +29,9 @@ use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 
 /**
- * PATROLS AT ORGANIZATION SCOPE — three screens, read across every area the
- * module is switched on in.
+ * PATROLS AT ORGANIZATION SCOPE — two screens, read across every area the
+ * module is switched on in: the list, which is where the module lands, and
+ * the patrol types.
  *
  * WHAT IS ASSERTED IS THE WIDENING. Every figure here has to be the area
  * reading with the area filter widened, so the tests that matter compare the
@@ -48,8 +49,7 @@ final class OrgPatrolsTest extends WebTestCase
     use EveryAreaRunsPatrols;
     use SomebodyIsSignedIn;
 
-    private const string OVERVIEW = '/patrols';
-    private const string PATROLS = '/patrols/patrols';
+    private const string PATROLS = '/patrols';
     private const string TYPES = '/patrols/types';
 
     private KernelBrowser $client;
@@ -150,61 +150,53 @@ final class OrgPatrolsTest extends WebTestCase
         return (string) $area->getUuidString();
     }
 
-    public function testTheThreeScreensAnswer(): void
+    public function testTheTwoScreensAnswer(): void
     {
-        foreach ([self::OVERVIEW, self::PATROLS, self::TYPES] as $path) {
+        foreach ([self::PATROLS, self::TYPES] as $path) {
             $this->client->request('GET', $path);
             self::assertResponseIsSuccessful($path.' is one of the organization-level screens.');
         }
+
+        $this->client->request('GET', '/patrols/patrols');
+        self::assertResponseStatusCodeSame(404, 'The list answers at the module\'s own address and nowhere else.');
     }
 
     /** ONE STRIP, THE SHELL'S, from the declaration the sidebar is mounted from. */
-    public function testTheStripIsTheThreeScreensTheModuleContributes(): void
+    public function testTheStripIsTheTwoScreensTheModuleContributes(): void
     {
         $page = $this->open(self::PATROLS);
 
-        self::assertSame(['Overview', 'Patrols', 'Patrol types'], $page->filter('.atabs a')->each(static fn (Crawler $a): string => trim($a->text())));
+        self::assertSame(['Patrols', 'Patrol types'], $page->filter('.atabs a')->each(static fn (Crawler $a): string => trim($a->text())));
         self::assertSame('Patrols', trim($page->filter('.atabs a.on')->text()));
         self::assertSame(
-            ['overview', 'patrols', 'types'],
+            ['patrols', 'types'],
             array_map(static fn (OrgPage $page): string => $page->key, new PatrolModuleProvider('operations')->orgPages()),
         );
     }
 
-    /** THE SIDEBAR CARRIES THE ROW, and it opens the Overview. */
-    public function testTheSidebarOpensTheOverview(): void
+    /** THE SIDEBAR CARRIES THE ROW, and it opens the list. */
+    public function testTheSidebarOpensTheList(): void
     {
         $page = $this->open(self::TYPES);
 
-        self::assertGreaterThan(0, $page->filter('a[href="'.self::OVERVIEW.'"]')->count(), 'The shell mounts a row that opens the first screen.');
+        self::assertGreaterThan(0, $page->filter('a[href="'.self::PATROLS.'"]')->count(), 'The shell mounts a row that opens the first screen.');
     }
 
-    /** THE STRIP OF FACTS IS THE AREAS', ADDED — and only the areas running the module. */
-    public function testTheOverviewsFactsAreTheAreasAdded(): void
+    /** THE MODULE LANDS ON THE LIST: the bar above it, the foot below, no strip of facts. */
+    public function testTheModuleLandsOnTheList(): void
     {
-        $org = self::facts($this->open(self::OVERVIEW));
+        $page = $this->open(self::PATROLS);
 
-        self::assertSame('2', $org['Areas'], 'The area with the module switched off is not one of them.');
-        self::assertSame('1', $org['Out now']);
-        self::assertSame('5', $org['Finished today']);
-
-        $summed = ['Out now' => 0, 'Finished today' => 0];
-        foreach ($this->running as $area) {
-            $one = self::facts($this->open(self::OVERVIEW, ['area' => $this->scoped($area)]));
-            self::assertSame('1', $one['Areas']);
-            foreach ($summed as $key => $sum) {
-                $summed[$key] = $sum + (int) $one[$key];
-            }
-        }
-
-        self::assertSame((int) $org['Out now'], $summed['Out now']);
-        self::assertSame((int) $org['Finished today'], $summed['Finished today']);
+        self::assertCount(1, $page->filter('.page form.lfilt'));
+        self::assertCount(1, $page->filter('.page table.tbl'));
+        self::assertCount(1, $page->filter('.page .rdf-foot'));
+        self::assertCount(0, $page->filter('.page .factband'));
     }
 
     /** ATTENTION IS THE BANNER: the silent patrol, named with its area. */
     public function testASilentPatrolIsInTheBanner(): void
     {
-        $banner = $this->open(self::OVERVIEW)->filter('.banner');
+        $banner = $this->open(self::PATROLS)->filter('.banner');
 
         self::assertCount(1, $banner);
         self::assertStringContainsString('north reserve', $banner->text());
@@ -303,24 +295,11 @@ final class OrgPatrolsTest extends WebTestCase
     /** THE AREA THE MODULE IS OFF IN is nowhere, and asking for it narrows to nothing of it. */
     public function testAnAreaWithTheModuleOffIsOnNoScreen(): void
     {
-        foreach ([self::OVERVIEW, self::PATROLS, self::TYPES] as $path) {
+        foreach ([self::PATROLS, self::TYPES] as $path) {
             // The scope control is the shell's and offers every area the reader may open.
-            $content = $this->open($path)->filter('.page .banner, .page .factband, .page .c, .page .kpane');
+            $content = $this->open($path)->filter('.page .banner, .page .c, .page .kpane');
             self::assertGreaterThan(0, $content->count());
             $content->each(static fn (Crawler $part) => self::assertStringNotContainsString('quiet reserve', $part->text(), $path));
         }
-    }
-
-    /**
-     * @return array<string, string> the band's key → its value's leading figure
-     */
-    private static function facts(Crawler $page): array
-    {
-        $facts = [];
-        $page->filter('.factband .f')->each(static function (Crawler $fact) use (&$facts): void {
-            $facts[trim($fact->filter('.k')->text())] = preg_match('/^[\d,.]+|^—/u', trim($fact->filter('.v')->text()), $m) ? $m[0] : '';
-        });
-
-        return $facts;
     }
 }

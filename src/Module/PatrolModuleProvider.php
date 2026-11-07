@@ -87,14 +87,13 @@ final class PatrolModuleProvider implements ModuleProviderInterface, OrgPagesInt
      */
 
     /**
-     * THE SAME THREE SCREENS AN AREA HAS, read across every area the module
-     * is switched on in. The shell mounts them in the sidebar and draws their
-     * strip; the first is the one the row opens.
+     * THE AREA'S LIST AND ITS PATROL TYPES, read across every area the
+     * module is switched on in. The shell mounts them in the sidebar and draws
+     * their strip; the first is the one the row opens.
      */
     public function orgPages(): array
     {
         return [
-            new OrgPage('overview', 'Overview', PatrolOrgController::OVERVIEW_ROUTE),
             new OrgPage('patrols', 'Patrols', PatrolOrgController::PATROLS_ROUTE),
             new OrgPage('types', 'Patrol types', PatrolOrgController::TYPES_ROUTE),
         ];

@@ -1061,8 +1061,8 @@ final class UhifadhiPatrolBundle extends AbstractBundle
             ->tag(OrgOverviewContributorInterface::TAG);
 
         /*
-         * THE ORGANIZATION-LEVEL SCREENS — the area module's three, one scope
-         * wider. 'patrol.org' folds what the per-area services answer; the
+         * THE ORGANIZATION-LEVEL SCREENS — the area module's list and types, one
+         * scope wider. 'patrol.org' folds what the per-area services answer; the
          * controller sits inside the security guard because every one of its
          * routes states its pair with #[IsGranted].
          */
@@ -1071,7 +1071,6 @@ final class UhifadhiPatrolBundle extends AbstractBundle
                 service(AreaOfInterestRepository::class),
                 service('registry.area_modules'),
                 service('patrol.overview'),
-                service('patrol.figure_service'),
                 service(PatrolRepository::class),
                 service(PatrolTypeRepository::class),
                 service('patrol.list'),

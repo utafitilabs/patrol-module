@@ -31,8 +31,9 @@ use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Service\PatrolOrgService;
 
 /**
- * PATROLS AT ORGANIZATION SCOPE — the area module's three screens, read
- * across every area it is switched on in.
+ * PATROLS AT ORGANIZATION SCOPE — the area module's list and its patrol
+ * types, read across every area it is switched on in. The module lands on
+ * the list.
  *
  * THE SHELL DRAWS THE CHROME. The sidebar row, the tab strip and the scope
  * control are mounted from what {@see PatrolModuleProvider::orgPages()}
@@ -58,7 +59,6 @@ use Uhifadhi\Patrol\Service\PatrolOrgService;
 #[Route(defaults: [RegistryBundle::MODULE_ROUTE_DEFAULT => PatrolModuleProvider::SLUG])]
 final readonly class PatrolOrgController
 {
-    public const string OVERVIEW_ROUTE = 'patrol_org_overview';
     public const string PATROLS_ROUTE = 'patrol_org_patrols';
     public const string TYPES_ROUTE = 'patrol_org_types';
 
@@ -74,20 +74,7 @@ final readonly class PatrolOrgController
     ) {
     }
 
-    #[Route('/patrols', name: self::OVERVIEW_ROUTE, methods: ['GET'])]
-    #[IsGranted('areas.read')]
-    public function overview(): Response
-    {
-        [$scope, $areas, $now] = $this->reading();
-
-        return new Response($this->twig->render('@UhifadhiPatrol/org/overview.html.twig', [
-            'scope' => $scope,
-            'facts' => $this->org->facts($areas, $now),
-            'silent' => $this->org->silent($areas, $now),
-        ]));
-    }
-
-    #[Route('/patrols/patrols', name: self::PATROLS_ROUTE, methods: ['GET'])]
+    #[Route('/patrols', name: self::PATROLS_ROUTE, methods: ['GET'])]
     #[IsGranted('areas.read')]
     public function patrols(Request $request): Response
     {
@@ -165,7 +152,7 @@ final readonly class PatrolOrgController
     }
 
     /**
-     * WHAT EVERY ONE OF THE THREE READS — one scope, its areas, one instant.
+     * WHAT BOTH SCREENS READ — one scope, its areas, one instant.
      *
      * @return array{0: Scope, 1: list<AreaOfInterest>, 2: \DateTimeImmutable}
      */
