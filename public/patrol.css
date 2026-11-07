@@ -152,40 +152,28 @@
 .patrol-coverage-plate { --map-plate-height: min(56vh, 540px); }
 
 /* ---- the card a plate lives in ----------------------------------------- */
-/* A RECORD PAGE IS ONE GRID and that grid is the shell's `.recgrid`: the two
-   columns, their ratio and their gap are stated there, once, for every record
-   page in the product, and nothing about them is restated here. What is this
-   module's is the card the plate sits in.
-
-   A card holding a plate is a column — the plate is its last row — and pulls up
+/* A card holding a plate is a column — the plate is its last row — and pulls up
    tight under the floating tab, exactly as the design's `.c.plate-fill` does
    (padding: 14px 14px 16px): the shell card's 24px top clears the tab on a text
    card and reads as a gap over a map. The padding is scoped to cards that
-   actually hold a plate, so the observation and photo cards keep the shell
-   card's own padding, as the design leaves them. */
+   actually hold a plate, so the other cards keep the shell card's own padding. */
 .patrol-plate { display: flex; flex-direction: column; }
 .patrol-plate:has(.map-plate) { padding: 14px 14px 16px; }
 
-/* A RECORD PAGE'S IMAGERY IS 400px TALL — the design's `.recgrid >
-   .c.plate-fill`, whose viewer is `flex: none; height: 400px`, in a 748px column.
-   Imagery is a fixed plate rather than a column of facts, so the column beside it
-   runs as long as it needs to and the map stays the size it was drawn at.
+/* A RECORD PAGE'S IMAGERY IS THE HOUSE RECORD PLATE — the design's `.pp-main >
+   .c.plate-fill`, whose viewer is `flex: none; height: min(58vh, 560px)` in the
+   one column under the index.
 
    `--map-plate-height` sizes the PLATE, and the plate is the imagery plus
    everything stacked above it inside: this module's caption row, and the offset
-   the atlas sets the imagery frame at. So the height adds all three — a bare
-   400px here is 400px of plate and less than that of map — and each part is
-   named, so a reader can see what the sum is made of. The caption row's own
-   height is stated by .patrol-cap above rather than left to a font's default
-   line box, which is what makes the sum a number instead of a guess.
+   the atlas sets the imagery frame at. So the height adds all three, each part
+   named. The caption row's own height is stated by .patrol-cap above rather
+   than left to a font's default line box.
 
    NO `align-self` HERE. The card stacks in a flex COLUMN, where align-self is a
-   cross-axis instruction: it would shrink the card to the width of its own
-   content instead of holding the column's width. The plate refuses to stretch on
-   its own account — the atlas gives it both a real height and an align-self of
-   its own — so the card needs to say nothing. */
-.recgrid .patrol-plate-fill {
-    --patrol-plate-imagery: 400px;
+   cross-axis instruction and would shrink the card to its content's width. */
+.onpage-main > .patrol-plate-fill {
+    --patrol-plate-imagery: min(58vh, 560px);
     /* 14px line box + 3px padding + 1px border, top and bottom. */
     --patrol-cap-row: 22px;
     /* The atlas sets the imagery frame 8px below whatever precedes it. */

@@ -19,8 +19,8 @@
 | Widget dashboard (Overview tab) | `patrol_dashboard` |
 | Every patrol (Patrols tab) | `patrol_list` |
 | Widget library (configure section) | `patrol_widgets` |
-| Patrol detail | `patrol_show` |
-| Observation detail | `patrol_observation_show` |
+| Patrol detail — the facts strip, then the index over one column: Track, Observations, The patrol, History | `patrol_show` |
+| Observation detail — the facts strip, then the index over one column: Location, Note, Photos, Amendments, History | `patrol_observation_show` |
 | Export a recorded track as GPX | `patrol_export_gpx` |
 | Export the filtered log (`csv`) or its tracks (`gpx`) | `patrol_export` |
 | Log a patrol — the one entry flow | `patrol_log` |

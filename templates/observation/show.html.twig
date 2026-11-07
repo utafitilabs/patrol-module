@@ -1,9 +1,7 @@
-{# One observation (settled design: the patrols module, main-screen direction
-   "observation"): one record grid — the location plate with the field
-   photographs stacked under it, and the note + history column beside them; then
-   the amendments trail and the rules that govern it in a second grid.
-
-   View-only — the design carries no edit or upload controls here. #}
+{# One observation (settled design: areas/…/modules/patrols/observation.html):
+   the facts strip as the record's own overview, then the index over one
+   column — the location, the note, the photographs, the amendments and the
+   history. #}
 {% extends '@UhifadhiPatrol/base.html.twig' %}
 
 {% import '@UhifadhiPatrol/_ui.html.twig' as ui %}
@@ -80,28 +78,53 @@
     <a class="more" href="{{ path('patrol_show', {uuid: area.uuid, patrol: patrol.uuid}) }}">The patrol &rarr;</a>
 </div>
 
-{# THE RECORD IS ONE GRID — the shell's own .recgrid, the same two columns for
-   every row of every record page in the product. The plate card is first in the
-   left column and the field photographs sit directly under the map; the note as
-   it was typed and the observation's history run down the column beside them.
+{# THE INDEX, one row per card, over one column of full-width cards: where it
+   was, the note as typed, the field photographs, the amendments trail and the
+   history. A synced observation is closed: a correction is a NEW entry under
+   the words the ranger typed, which stay visible above it, because the
+   observation is the provenance of any incident filed from it.
 
-   A map is a fixed plate of imagery rather than a column of facts, so the column
-   beside it is free to run past it, and the card under the map starts where the
-   map ends. #}
-<div class="recgrid">
-    <div class="col">
-        <div class="c patrol-plate patrol-plate-fill" data-patrol-location>
-            <span class="tab">Location<span class="src">· on the {{ patrol.ref }} track · satellite · live</span></span>
-            <span class="lib">observation</span>
+   The Amendments card renders the state this record is actually in: the trail,
+   or the plain statement that nothing was corrected; and the form only when
+   the Amend button opened it. #}
+{% set historyCount = 1 + amendments|length %}
+{% embed '@Shell/_onpage.html.twig' with {label: 'On this page', rows: [
+    {id: 'location', label: 'Location'},
+    {id: 'note', label: 'Note'},
+    {id: 'photos', label: 'Photos', count: photoCount},
+    {id: 'amendments', label: 'Amendments', count: amendments|length},
+    {id: 'history', label: 'History', count: historyCount},
+]} %}
+    {% import '@UhifadhiPatrol/_ui.html.twig' as ui %}
+    {% import '@UhifadhiStorage/overlay/_preview.html.twig' as preview %}
+    {% block shell_onpage_main %}
+        <div id="location" class="c patrol-plate patrol-plate-fill" data-patrol-location>
+            <span class="tab">Location<span class="src">· on the {{ patrol.ref }} track · satellite</span></span>
             {{ ui.plate(
                 map,
                 'Observation ' ~ n ~ ' on patrol ' ~ patrol.ref,
                 'obs ' ~ n ~ ' · ' ~ categoryLabel|lower ~ (observation.loggedAt ? ' · ' ~ observation.loggedAt|date('H:i') : ''),
-                'satellite · live · track shown for context'
+                'satellite · track shown for context'
             ) }}
         </div>
 
-        <div class="c" data-patrol-photos>
+        <div id="note" class="c" data-patrol-note>
+            <span class="tab">Note<span class="src">· field record · verbatim</span></span>
+            <div class="patrol-quote">{% if observation.note %}&ldquo;{{ observation.note }}&rdquo;{% else %}No note was recorded with this observation.{% endif %}</div>
+            {# NEVER A SILENTLY STALE NOTE. These are the words as typed; the
+               fact that they were corrected later belongs BESIDE them, not only
+               further down the page — a reader who never scrolls to the trail
+               must still be told the record was added to.
+
+               And it says the corrections are APPENDED, not applied: the line
+               would otherwise read as "this text is out of date", which is the
+               opposite of what the trail guarantees. #}
+            {% if observation.isAmended %}
+                <div class="use patrol-amd-count"><b>Corrected {{ amendmentCountWord }} since.</b> These words are unchanged and always will be &mdash; the corrections are appended under <b>Amendments</b> below.</div>
+            {% endif %}
+        </div>
+
+        <div id="photos" class="c" data-patrol-photos>
             <span class="tab">Photos<span class="src">{% if photoCount %}· {{ photoCount }} {% endif %}· from the field</span></span>
             {# The real photographs the field app synced. Every one of them comes
                back out through storage-module's authenticated route and nowhere
@@ -183,29 +206,163 @@
             {% endif %}
             <div class="use">{% if photoCount %}Photographs are stored on the observation and travel with it when it is filed as an incident.{% else %}Photos taken at an observation attach here and travel with it when it is filed as an incident.{% endif %}</div>
         </div>
-    </div>
 
-    <div class="col">
-        <div class="c" data-patrol-note>
-            <span class="tab">Note<span class="src">· field record · verbatim</span></span>
-            <div class="patrol-quote">{% if observation.note %}&ldquo;{{ observation.note }}&rdquo;{% else %}No note was recorded with this observation.{% endif %}</div>
-            {# NEVER A SILENTLY STALE NOTE. These are the words as typed; the
-               fact that they were corrected later belongs BESIDE them, not only
-               further down the page — a reader who never scrolls to the trail
-               must still be told the record was added to.
+        <div id="amendments" class="c" data-patrol-amendments>
+            <span class="tab">Amendments<span class="src">{% if amendments|length %}· {{ amendments|length }} {% endif %}· append-only</span></span>
 
-               And it says the corrections are APPENDED, not applied: the line
-               would otherwise read as "this text is out of date", which is the
-               opposite of what the trail guarantees. #}
-            {% if observation.isAmended %}
-                <div class="use patrol-amd-count"><b>Corrected {{ amendmentCountWord }} since.</b> These words are unchanged and always will be &mdash; the corrections are appended under <b>Amendments</b> below.</div>
+            {% if amendments|length %}
+                <div class="use patrol-amd-intro">{{ amendmentCountWord|capitalize }} {{ amendments|length == 1 ? 'thing was' : 'things were' }} corrected after this observation synced. {{ amendments|length == 1 ? 'It is' : 'They are' }} shown here, under the words that were actually typed in the field &mdash; which have not changed and will not.</div>
+
+                <div class="patrol-amd">
+                    {# THE ANCHOR: the record as it was taken. Everything below hangs
+                       under it, and it is drawn first so the trail is read in the
+                       order it happened rather than newest-first. #}
+                    <div class="patrol-amd-item patrol-amd-orig">
+                        <span class="patrol-amd-t">{{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }} · <span class="who">{% if observation.recordedBy %}{{ ui.person_name(observation.recordedBy) }}{% else %}unattributed{% endif %}</span> · as recorded</span>
+                        <span class="patrol-amd-b">{% if observation.note %}&ldquo;{{ observation.note }}&rdquo;{% else %}No note was recorded with this observation.{% endif %}<em>recorded in the field · closed on sync</em></span>
+                    </div>
+
+                    {% for amendment in amendments %}
+                        <div class="patrol-amd-item{% if amendment.kind.isAttachment %} patrol-amd-att{% endif %}">
+                            <span class="patrol-amd-t">{{ ui.log_stamp(amendment.writtenAt) }} · {# The LIVE author where the user row is still there, so a signature reads in
+       the same style as every other name on this page; the frozen copy only where
+       the person has gone. Both are the same person — one is just formatted like
+       the rest of the screen. #}<span class="who">{% if amendment.author %}{{ ui.person_name(amendment.author) }}{% else %}{{ amendment.signature }}{% endif %}</span></span>
+                            <span class="patrol-amd-b"><span class="patrol-amd-what">{{ amendment.kind.pillLabel }}</span>{{ amendment.body }}
+                                {% if amendment.supersededValue %}
+                                    {# THE SUPERSEDED VALUE, QUOTED, NEVER STRUCK. A
+                                       strikethrough reads as "this was wrong and has
+                                       been removed"; the whole point of the trail is
+                                       that the original is still the record. So the
+                                       old words are quoted under a plain label, at
+                                       full strength, beside the new ones. #}
+                                    <span class="patrol-amd-was"><b>as it was recorded</b>&ldquo;{{ amendment.supersededValue }}&rdquo;</span>
+                                {% endif %}
+                                <em>signed by {% if amendment.author %}{{ ui.person_name(amendment.author) }}{% else %}{{ amendment.signature }}{% endif %}</em></span>
+
+                            {% if amendment.photo %}
+                                {# Attached to THIS amendment, not to the field
+                                   photographs above: different evidence, taken later,
+                                   by somebody who may not have been there. #}
+                                <div class="patrol-phrow patrol-amd-phrow">
+                                    <div class="patrol-ph" role="button" tabindex="0"
+                                         title="Look at the photograph attached to this amendment"
+                                         {{ preview.attrs({
+                                             name: amendment.photo.storagePath|split('/')|last,
+                                             key: amendment.photo.storagePath,
+                                             mime: amendment.photo.mimeType,
+                                             size: amendment.photo.byteSize ? amendment.photo.byteSize|storage_bytes : '—',
+                                             thumbUrl: path('storage_evidence_show', {key: amendment.photo.displayKey}),
+                                             originalUrl: path('storage_evidence_show', {key: amendment.photo.storagePath}),
+                                             detailUrl: '',
+                                             ownerLabel: observation.ref,
+                                             ownerUrl: path('patrol_observation_show', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}),
+                                             moduleSlug: 'patrols',
+                                             moduleLabel: 'Patrols',
+                                             takenAt: '—',
+                                             arrivedAt: amendment.photo.createdAt|date('D j M Y')|lower ~ ' · ' ~ amendment.photo.createdAt|date('H:i'),
+                                             thumbState: amendment.photo.thumbKey ? 'made' : 'failed',
+                                             caption: 'Attached to an amendment, not to the field photographs.',
+                                             kind: 'photo',
+                                             area: area.name,
+                                         }) }}>
+                                        <img src="{{ path('storage_evidence_show', {key: amendment.photo.displayKey}) }}" alt="Photograph attached to an amendment of observation {{ n }}" loading="lazy">
+                                        <i>{{ amendment.photo.storagePath|split('/')|last }}</i>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {# PL·07 — worth saying out loud rather than showing an empty box. On
+                   a record that may be read back to somebody, "never corrected" is a
+                   fact about the record, not an absence of one. #}
+                {# The mark is lucide's, drawn through ux-icons from this bundle's own
+                   `patrol:` set — never typed into the page, so a module template
+                   carries no `<svg>` of its own. #}
+                <div class="patrol-amd-empty">{{ ux_icon('patrol:file-check') }}<div><b>Nothing has been corrected.</b> This observation reads exactly as it was recorded in the field on {{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }}.</div></div>
+            {% endif %}
+
+            {% if canAmend %}
+                {% if amending %}
+                    {# PL·08 — THE FORM, OPEN, IN PLACE. Never a modal: you have to be
+                       able to read the original while you write the correction, and a
+                       dialog would put the thing being corrected behind the thing
+                       correcting it. Plain HTML throughout — a reusable bundle must
+                       not require a Stimulus controller before a record can be put
+                       right. #}
+                    <form class="patrol-amd-form" method="post" enctype="multipart/form-data"
+                          data-patrol-amend-form
+                          action="{{ path('patrol_observation_amend', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}) }}">
+                        <input type="hidden" name="_token" value="{{ amendToken }}">
+                        <div class="hd">Add an amendment</div>
+
+                        {# PLAIN FIELD LANGUAGE. The chips name the thing on the page a
+                           ranger is looking at — the note, where it was, when it was —
+                           not "field", "attribute" or "property". A radio group, so one
+                           is always chosen and it submits without a line of JavaScript. #}
+                        <div class="patrol-frow">
+                            <label>correcting</label>
+                            <div class="patrol-amd-chips">
+                                {% for kind in amendmentKinds %}
+                                    <label class="mchip patrol-amd-chip">
+                                        <input type="radio" name="kind" value="{{ kind.value }}"{{ loop.first ? ' checked' : '' }}>
+                                        <span>{{ kind.chipLabel }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="patrol-frow">
+                            <label for="patrol-amd-body">what is right</label>
+                            <textarea class="fld" id="patrol-amd-body" name="body" rows="4" required
+                                      placeholder="Say what is right, in your own words. The original stays as it is."></textarea>
+                        </div>
+
+                        {# Optional, and only where the amender is correcting a value
+                           rather than adding one: what they quote here is shown under
+                           "as it was recorded". Typed rather than derived, because only
+                           the amender knows which sentence they are correcting. #}
+                        <div class="patrol-frow">
+                            <label for="patrol-amd-was">as it was recorded</label>
+                            <input class="fld" type="text" id="patrol-amd-was" name="supersedes"
+                                   placeholder="Optional — the words this corrects, quoted beside yours.">
+                        </div>
+
+                        <div class="patrol-frow">
+                            <label for="patrol-amd-photo">photo</label>
+                            <input class="fld" type="file" id="patrol-amd-photo" name="photo" accept="image/*">
+                        </div>
+
+                        <div class="patrol-frow">
+                            <label>signed</label>
+                            <div class="patrol-amd-signed">{{ ui.person_name(app.user) }} · <span class="mono"><time datetime="{{ 'now'|date('c') }}" data-localtime-format="date">{{ 'now'|date('D j M Y')|lower }}</time></span></div>
+                        </div>
+
+                        <div class="patrol-amd-keep"><span>The original note, its position, its time and its photographs are not touched. This is added underneath them and signed with your name.</span></div>
+
+                        <div class="staddrow">
+                            <a class="tgl" href="{{ path('patrol_observation_show', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}) }}">Cancel</a>
+                            <button class="cta" type="submit">Add amendment</button>
+                        </div>
+                    </form>
+                {% else %}
+                    {# THE AFFORDANCE. One button, at the END of the trail, where the
+                       next entry will appear — so the control sits where its effect
+                       will. #}
+                    <div class="patrol-amd-act">
+                        <a class="mchip ghost" data-patrol-amend
+                           href="{{ path('patrol_observation_show', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}) }}?amend=1#amendments">Amend</a>
+                    </div>
+                {% endif %}
             {% endif %}
         </div>
 
-        {# DEFERRED(audit-trail): as on the patrol detail — no audit-log entity
-           yet, so only the entry derivable from the record itself is shown. #}
-        <div class="c" data-patrol-history>
-            <span class="tab">History<span class="src">· audit trail · append-only</span></span>
+        {# No audit-log entity yet: the entry derivable from the record itself,
+           then one line per amendment. #}
+        <div id="history" class="c" data-patrol-history>
+            <span class="tab">History<span class="src">· audit trail · append-only · {{ historyCount }}</span></span>
             <div class="rln">
                 <span class="d">{{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }}</span>
                 <span>observation logged en route{% if observation.recordedBy %} by {{ ui.person_name(observation.recordedBy) }}{% endif %}</span>
@@ -220,191 +377,6 @@
                 </div>
             {% endfor %}
         </div>
-    </div>
-</div>
-
-{# ═══════════════════════════════════════════════════════════════════════════
-   AMENDMENTS (PL·06–PL·09). A synced observation is closed: the field record is
-   what the ranger typed, where they typed it, and it is never rewritten. A
-   correction is a NEW entry underneath it — who, when, what was corrected, in
-   their own words — and the original stays visible above it.
-
-   WHY, in one line: the observation is the provenance of any incident filed
-   from it, and an incident can be read out in a hearing. A note that could be
-   quietly changed afterwards proves nothing there.
-
-   PL·06 AND PL·07 ARE ONE CARD IN TWO STATES. The design draws them side by
-   side to show both; a real observation is either corrected or it is not, so
-   the page renders the state this record is actually in. Same for PL·08: the
-   form is what the Amend button opens, not a second card that is always there.
-   ═════════════════════════════════════════════════════════════════════════ #}
-<div class="recgrid">
-    <div class="c" id="patrol-amd" data-patrol-amendments>
-        <span class="tab">Amendments<span class="src">{% if amendments|length %}· {{ amendments|length }} {% endif %}· append-only</span></span>
-
-        {% if amendments|length %}
-            <div class="use patrol-amd-intro">{{ amendmentCountWord|capitalize }} {{ amendments|length == 1 ? 'thing was' : 'things were' }} corrected after this observation synced. {{ amendments|length == 1 ? 'It is' : 'They are' }} shown here, under the words that were actually typed in the field &mdash; which have not changed and will not.</div>
-
-            <div class="patrol-amd">
-                {# THE ANCHOR: the record as it was taken. Everything below hangs
-                   under it, and it is drawn first so the trail is read in the
-                   order it happened rather than newest-first. #}
-                <div class="patrol-amd-item patrol-amd-orig">
-                    <span class="patrol-amd-t">{{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }} · <span class="who">{% if observation.recordedBy %}{{ ui.person_name(observation.recordedBy) }}{% else %}unattributed{% endif %}</span> · as recorded</span>
-                    <span class="patrol-amd-b">{% if observation.note %}&ldquo;{{ observation.note }}&rdquo;{% else %}No note was recorded with this observation.{% endif %}<em>recorded in the field · closed on sync</em></span>
-                </div>
-
-                {% for amendment in amendments %}
-                    <div class="patrol-amd-item{% if amendment.kind.isAttachment %} patrol-amd-att{% endif %}">
-                        <span class="patrol-amd-t">{{ ui.log_stamp(amendment.writtenAt) }} · {# The LIVE author where the user row is still there, so a signature reads in
-   the same style as every other name on this page; the frozen copy only where
-   the person has gone. Both are the same person — one is just formatted like
-   the rest of the screen. #}<span class="who">{% if amendment.author %}{{ ui.person_name(amendment.author) }}{% else %}{{ amendment.signature }}{% endif %}</span></span>
-                        <span class="patrol-amd-b"><span class="patrol-amd-what">{{ amendment.kind.pillLabel }}</span>{{ amendment.body }}
-                            {% if amendment.supersededValue %}
-                                {# THE SUPERSEDED VALUE, QUOTED, NEVER STRUCK. A
-                                   strikethrough reads as "this was wrong and has
-                                   been removed"; the whole point of the trail is
-                                   that the original is still the record. So the
-                                   old words are quoted under a plain label, at
-                                   full strength, beside the new ones. #}
-                                <span class="patrol-amd-was"><b>as it was recorded</b>&ldquo;{{ amendment.supersededValue }}&rdquo;</span>
-                            {% endif %}
-                            <em>signed by {% if amendment.author %}{{ ui.person_name(amendment.author) }}{% else %}{{ amendment.signature }}{% endif %}</em></span>
-
-                        {% if amendment.photo %}
-                            {# Attached to THIS amendment, not to the field
-                               photographs above: different evidence, taken later,
-                               by somebody who may not have been there. #}
-                            <div class="patrol-phrow patrol-amd-phrow">
-                                <div class="patrol-ph" role="button" tabindex="0"
-                                     title="Look at the photograph attached to this amendment"
-                                     {{ preview.attrs({
-                                         name: amendment.photo.storagePath|split('/')|last,
-                                         key: amendment.photo.storagePath,
-                                         mime: amendment.photo.mimeType,
-                                         size: amendment.photo.byteSize ? amendment.photo.byteSize|storage_bytes : '—',
-                                         thumbUrl: path('storage_evidence_show', {key: amendment.photo.displayKey}),
-                                         originalUrl: path('storage_evidence_show', {key: amendment.photo.storagePath}),
-                                         detailUrl: '',
-                                         ownerLabel: observation.ref,
-                                         ownerUrl: path('patrol_observation_show', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}),
-                                         moduleSlug: 'patrols',
-                                         moduleLabel: 'Patrols',
-                                         takenAt: '—',
-                                         arrivedAt: amendment.photo.createdAt|date('D j M Y')|lower ~ ' · ' ~ amendment.photo.createdAt|date('H:i'),
-                                         thumbState: amendment.photo.thumbKey ? 'made' : 'failed',
-                                         caption: 'Attached to an amendment, not to the field photographs.',
-                                         kind: 'photo',
-                                         area: area.name,
-                                     }) }}>
-                                    <img src="{{ path('storage_evidence_show', {key: amendment.photo.displayKey}) }}" alt="Photograph attached to an amendment of observation {{ n }}" loading="lazy">
-                                    <i>{{ amendment.photo.storagePath|split('/')|last }}</i>
-                                </div>
-                            </div>
-                        {% endif %}
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            {# PL·07 — worth saying out loud rather than showing an empty box. On
-               a record that may be read back to somebody, "never corrected" is a
-               fact about the record, not an absence of one. #}
-            {# The mark is lucide's, drawn through ux-icons from this bundle's own
-               `patrol:` set — never typed into the page, so a module template
-               carries no `<svg>` of its own. #}
-            <div class="patrol-amd-empty">{{ ux_icon('patrol:file-check') }}<div><b>Nothing has been corrected.</b> This observation reads exactly as it was recorded in the field on {{ ui.log_stamp(observation.loggedAt ?: observation.createdAt) }}.</div></div>
-        {% endif %}
-
-        {% if canAmend %}
-            {% if amending %}
-                {# PL·08 — THE FORM, OPEN, IN PLACE. Never a modal: you have to be
-                   able to read the original while you write the correction, and a
-                   dialog would put the thing being corrected behind the thing
-                   correcting it. Plain HTML throughout — a reusable bundle must
-                   not require a Stimulus controller before a record can be put
-                   right. #}
-                <form class="patrol-amd-form" method="post" enctype="multipart/form-data"
-                      data-patrol-amend-form
-                      action="{{ path('patrol_observation_amend', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}) }}">
-                    <input type="hidden" name="_token" value="{{ amendToken }}">
-                    <div class="hd">Add an amendment</div>
-
-                    {# PLAIN FIELD LANGUAGE. The chips name the thing on the page a
-                       ranger is looking at — the note, where it was, when it was —
-                       not "field", "attribute" or "property". A radio group, so one
-                       is always chosen and it submits without a line of JavaScript. #}
-                    <div class="patrol-frow">
-                        <label>correcting</label>
-                        <div class="patrol-amd-chips">
-                            {% for kind in amendmentKinds %}
-                                <label class="mchip patrol-amd-chip">
-                                    <input type="radio" name="kind" value="{{ kind.value }}"{{ loop.first ? ' checked' : '' }}>
-                                    <span>{{ kind.chipLabel }}</span>
-                                </label>
-                            {% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="patrol-frow">
-                        <label for="patrol-amd-body">what is right</label>
-                        <textarea class="fld" id="patrol-amd-body" name="body" rows="4" required
-                                  placeholder="Say what is right, in your own words. The original stays as it is."></textarea>
-                    </div>
-
-                    {# Optional, and only where the amender is correcting a value
-                       rather than adding one: what they quote here is shown under
-                       "as it was recorded". Typed rather than derived, because only
-                       the amender knows which sentence they are correcting. #}
-                    <div class="patrol-frow">
-                        <label for="patrol-amd-was">as it was recorded</label>
-                        <input class="fld" type="text" id="patrol-amd-was" name="supersedes"
-                               placeholder="Optional — the words this corrects, quoted beside yours.">
-                    </div>
-
-                    <div class="patrol-frow">
-                        <label for="patrol-amd-photo">photo</label>
-                        <input class="fld" type="file" id="patrol-amd-photo" name="photo" accept="image/*">
-                    </div>
-
-                    <div class="patrol-frow">
-                        <label>signed</label>
-                        <div class="patrol-amd-signed">{{ ui.person_name(app.user) }} · <span class="mono"><time datetime="{{ 'now'|date('c') }}" data-localtime-format="date">{{ 'now'|date('D j M Y')|lower }}</time></span></div>
-                    </div>
-
-                    <div class="patrol-amd-keep"><span>The original note, its position, its time and its photographs are not touched. This is added underneath them and signed with your name.</span></div>
-
-                    <div class="staddrow">
-                        <a class="tgl" href="{{ path('patrol_observation_show', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}) }}">Cancel</a>
-                        <button class="cta" type="submit">Add amendment</button>
-                    </div>
-                </form>
-            {% else %}
-                {# THE AFFORDANCE. One button, at the END of the trail, where the
-                   next entry will appear — so the control sits where its effect
-                   will. #}
-                <div class="patrol-amd-act">
-                    <a class="mchip ghost" data-patrol-amend
-                       href="{{ path('patrol_observation_show', {uuid: area.uuid, patrol: patrol.uuid, observation: observation.uuid}) }}?amend=1#patrol-amd">Amend</a>
-                </div>
-            {% endif %}
-        {% endif %}
-    </div>
-
-    {# PL·09 — the rules, plainly, on the page they govern. Written here rather
-       than in a help article because somebody about to correct an evidence
-       record should not have to go looking for what a correction can and cannot
-       do. #}
-    <div class="c">
-        <span class="tab">What an amendment may not do<span class="src">· the rules, plainly</span></span>
-        <div class="rln"><span>edit the original</span><span class="mono">never</span></div>
-        <div class="rln"><span>delete an amendment</span><span class="mono">never</span></div>
-        <div class="rln"><span>go in unsigned</span><span class="mono">never</span></div>
-        <div class="rln"><span>be back-dated</span><span class="mono">never</span></div>
-        <div class="rln"><span>amend an amendment</span><span class="mono acc">yes &mdash; a new entry</span></div>
-        <div class="rln"><span>who may amend</span><span class="mono">anyone who may edit the patrol</span></div>
-        <div class="use">A wrong amendment is corrected the same way everything else is: by another one. Nothing on this page has a delete.</div>
-        <div class="use"><b>Filing carries them.</b> An observation filed as an incident arrives with its original note <b>and</b> its amendments &mdash; the incident&rsquo;s timeline opens with the whole trail, not with the tidied version.</div>
-    </div>
-</div>
+    {% endblock %}
+{% endembed %}
 {% endblock %}

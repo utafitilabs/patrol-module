@@ -1,6 +1,7 @@
-{# One patrol (settled design: the patrols module, main-screen direction
-   "detail"): one record grid — the track plate with the observations logged en
-   route stacked under it, and the meta + history column beside them.
+{# One patrol (settled design: areas/…/modules/patrols/detail.html): the facts
+   strip as the record's own overview, then the index over one column — the
+   track, the observations logged en route, the patrol's own facts and its
+   history.
 
    View-only — the design carries no edit controls here. Every
    binding comes from the Patrol/Observation entities and the deployment's
@@ -101,28 +102,46 @@
     </div>
 {% endif %}
 
-{# THE RECORD IS ONE GRID — the shell's own .recgrid, the same two columns for
-   every row of every record page in the product. The plate card is first in the
-   left column and the observations logged en route sit directly under the map;
-   the patrol's own facts and its history run down the column beside them.
+{# THE FACTS STRIP is the record's own overview: what the patrol was, who led
+   it, from where, how far and how long, and what it brought back. A fact this
+   patrol does not know is left out, never drawn empty. The team size beside the
+   lead counts the rangers the handset named; a patrol logged on the web names
+   none, so it shows no number. #}
+{% set teamSize = patrol.teamRangerIds|length %}
+{% set stationUrl = patrol.stationRecord ? patrol_url('area_station_show', {uuid: area.uuid, station: patrol.stationRecord.uuid}) : null %}
+<div class="factband">
+    <span class="f"><span class="k">Type</span><span class="v">{{ typeLabel|lower }}{% if patrol.startedAt %}<em><time datetime="{{ patrol.startedAt|date('c') }}" data-localtime-format="day">{{ patrol.startedAt|date('D j M')|lower }}</time></em>{% endif %}</span></span>
+    <span class="f"><span class="k">Lead</span><span class="v">{{ ui.person_name(patrol.lead) }}{% if teamSize %}<em>+{{ teamSize }}</em>{% endif %}</span></span>
+    {% if patrol.station %}<span class="f"><span class="k">Station</span><span class="v">{{ patrol.station }}</span></span>{% endif %}
+    {% if patrol.distanceKm is not null %}<span class="f"><span class="k">Distance</span><span class="v">{{ patrol.distanceKm|number_format(1) }} km{% if avgSpeedKmh is not null %}<em>{{ avgSpeedKmh|number_format(1) }} km/h</em>{% endif %}</span></span>{% endif %}
+    {% if patrol.startedAt and patrol.endedAt %}<span class="f"><span class="k">Duration</span><span class="v">{{ ui.duration(patrol) }}<em><time datetime="{{ patrol.startedAt|date('c') }}" data-localtime-format="time">{{ patrol.startedAt|date('H:i') }}</time>–<time datetime="{{ patrol.endedAt|date('c') }}" data-localtime-format="time">{{ patrol.endedAt|date('H:i') }}</time></em></span></span>{% endif %}
+    <span class="f"><span class="k">Observations</span><span class="v">{{ observations|length }}{% if photoCount %}<em>{{ photoCount }} photo{{ photoCount == 1 ? '' : 's' }}</em>{% endif %}</span></span>
+    {% if stationUrl %}<span class="sp"></span><a class="more" href="{{ stationUrl }}">{{ patrol.station }} station &rarr;</a>{% endif %}
+</div>
 
-   A map is a fixed plate of imagery rather than a column of facts, so the column
-   beside it is free to run past it, and the card under the map starts where the
-   map ends. #}
-<div class="recgrid">
-    <div class="col">
-        <div class="c patrol-plate patrol-plate-fill" data-patrol-track>
-            <span class="tab">Track plate<span class="src">· {{ patrol.ref }} · satellite · live</span></span>
-            <span class="lib">{{ patrol.source.value == 'gpx' ? 'gpx track' : (patrol.source.value == 'api' ? 'api track' : 'sketched route') }}</span>
+{# THE INDEX, one row per card, over one column of full-width cards. History
+   counts its entries: the hold where one stands, every event, and the record's
+   own beginning. #}
+{% set historyCount = patrol.events|length + (patrol.held ? 2 : 1) %}
+{% embed '@Shell/_onpage.html.twig' with {rows: [
+    {id: 'track', label: 'Track'},
+    {id: 'observations', label: 'Observations', count: observations|length},
+    {id: 'patrol', label: 'The patrol'},
+    {id: 'history', label: 'History', count: historyCount},
+], patrol: patrol, area: area, map: map, observations: observations, categories: categories, typeLabel: typeLabel} only %}
+    {% import '@UhifadhiPatrol/_ui.html.twig' as ui %}
+    {% block shell_onpage_main %}
+        <div id="track" class="c patrol-plate patrol-plate-fill" data-patrol-track>
+            <span class="tab">Track<span class="src">· {{ patrol.ref }} · satellite</span></span>
             {{ ui.plate(
                 map,
                 'Patrol ' ~ patrol.ref ~ ' track',
                 patrol.ref ~ ' · ' ~ (patrol.station ?: '—') ~ ' · ' ~ typeLabel|lower,
-                'satellite · live · numbered markers = observations'
+                'satellite · numbered markers = observations'
             ) }}
         </div>
 
-        <div class="c" data-patrol-observations>
+        <div id="observations" class="c" data-patrol-observations>
             <span class="tab">Observations<span class="src">· {{ observations|length }} · logged en route</span></span>
             {% for row in observations %}
                 <div class="patrol-obs-r">
@@ -130,11 +149,9 @@
                     <span class="patrol-obs-t">{% if row.observation.loggedAt %}<time datetime="{{ row.observation.loggedAt|date('c') }}" data-localtime-format="time">{{ row.observation.loggedAt|date('H:i') }}</time>{% else %}—{% endif %}</span>
                     <span class="patrol-obs-bd">
                         <span class="chip warn patrol-obs-chip">{{ ui.category_label(row.observation.category, categories) }}</span>{{ row.observation.note }}
-                        {# The design's sub-line ends "· 2 photos". HELD photographs,
-                           never the number the phone promised: this row is read as a
-                           claim about what the patrol brought back. An observation
-                           with none says nothing at all rather than "0 photos",
-                           exactly as the design's rows do. #}
+                        {# HELD photographs, never the number the phone promised;
+                           an observation with none says nothing rather than
+                           "0 photos". #}
                         {% set rowPhotos = row.observation.photos|length %}
                         <em>{{ row.dms ?: 'no position recorded' }}{% if rowPhotos %} · {{ rowPhotos }} photo{{ rowPhotos == 1 ? '' : 's' }}{% endif %}</em>
                     </span>
@@ -146,45 +163,14 @@
                 </div>
             {% endfor %}
         </div>
-    </div>
 
-    <div class="col">
-        {# The patrol's own history, in the settled discard design's D4 grammar:
-           NEWEST FIRST, each entry a title with "time · actor · detail" beneath
-           it, and nothing on it editable or removable. "The web shows the same
-           story" — these are the very events the phone recorded, synced through
-           §9A, not a second web-side log of them.
-
-           Three sources, in the order a reader meets them:
-             · the hold, where one stands — a web-side power the phone cannot
-               raise, so it is derived from the columns it wrote rather than
-               from an event;
-             · every PatrolEvent, latest first;
-             · the record's own beginning, which no event describes.
-
-           STILL PARTIAL, and honestly so: imports, transcriptions and incident
-           links are not events yet. What is rendered is what actually happened
-           and is actually stored — never a placeholder for what is not. #}
-        {# THE PATROL'S OWN FACTS (the settled design's PL·02), in a card above
-           the history rather than in a band across the top. A band is for facts
-           that never change; half of these are counts of what this patrol
-           BROUGHT BACK, and they belong beside the story of it. A row with no
-           value is omitted, never rendered empty. #}
-        <div class="c" data-patrol-facts>
+        {# What the strip does not carry: the team, the gaps and where the record
+           came from, then the observations with a door each. The design names
+           each gap's length; this module counts gaps but does not store their
+           durations, so the row states the count. #}
+        <div id="patrol" class="c" data-patrol-facts>
             <span class="tab">The patrol<span class="src">· what it was, and what it brought back</span></span>
-            <div class="rln"><span>Type</span><span class="mono d">{{ typeLabel|lower }}</span></div>
-            {% if patrol.station %}<div class="rln"><span>Station</span><span class="mono d">{{ patrol.station }}</span></div>{% endif %}
-            <div class="rln"><span>Lead</span><span class="mono d">{{ ui.person_name(patrol.lead) }}</span></div>
             {% if patrol.team %}<div class="rln"><span>Team</span><span class="mono d">{{ patrol.team }}</span></div>{% endif %}
-            {% if patrol.startedAt %}<div class="rln"><span>Started</span><span class="mono d">{{ ui.stamp(patrol.startedAt) }}</span></div>{% endif %}
-            {% if patrol.endedAt %}<div class="rln"><span>Ended</span><span class="mono d">{{ ui.stamp(patrol.endedAt) }}</span></div>{% endif %}
-            {% if patrol.startedAt and patrol.endedAt %}<div class="rln"><span>Duration</span><span class="mono d">{{ ui.duration(patrol) }}</span></div>{% endif %}
-            {% if patrol.distanceKm is not null %}
-                <div class="rln"><span>Distance</span><span class="mono d">{{ patrol.distanceKm|number_format(1) }} km{% if avgSpeedKmh is not null %} · {{ avgSpeedKmh|number_format(1) }} km/h{% endif %}</span></div>
-            {% endif %}
-            {# The design names each gap's length; this module counts gaps but
-               does not store their durations, so the row states the count it
-               actually has rather than a number it would have to invent. #}
             <div class="rln"><span>Gaps</span><span class="mono {{ patrol.gapCount ? 'w' : 'd' }}">{{ patrol.gapCount }}</span></div>
             <div class="rln"><span>Source</span><span class="mono d">
                 {%- if patrol.source.value == 'gpx' -%}GPX import
@@ -192,10 +178,8 @@
                 {%- else -%}manual
                 {%- endif -%}
             </span></div>
-            {% if patrol.pointCount is not null %}<div class="rln"><span>GPS points</span><span class="mono d">{{ patrol.pointCount|number_format }}</span></div>{% endif %}
-            <div class="rln"><span>Photos</span><span class="mono d">{{ photoCount }}</span></div>
 
-            <div class="use" style="margin:12px 2px 2px">A gap is minutes with no fix, drawn broken on the plate and never smoothed over. <b>Source</b> is one of three — <span class="mono">handset sync</span>, <span class="mono">GPX import</span> or <span class="mono">manual</span> — and a manually logged patrol never claims a measured distance.</div>
+            <div class="use" style="margin:12px 2px 2px">A gap is minutes with no fix, drawn broken on the map and never smoothed over. <b>Source</b> is one of three — <span class="mono">handset sync</span>, <span class="mono">GPX import</span> or <span class="mono">manual</span> — and a manually logged patrol never claims a measured distance.</div>
 
             <div class="rln" style="margin-top:6px"><span>Observations</span><span class="mono d">{{ observations|length }}</span></div>
             {% for row in observations %}
@@ -206,8 +190,15 @@
             {% endfor %}
         </div>
 
-        <div class="c" data-patrol-history>
-            <span class="tab">History<span class="src">· {{ patrol.events|length + (patrol.held ? 2 : 1) }} · append-only</span></span>
+        {# The patrol's own history, NEWEST FIRST, each entry a title with
+           "time · actor · detail" beneath it, nothing on it editable. Three
+           sources, in the order a reader meets them: the hold, where one stands
+           (a web-side power derived from the columns it wrote); every
+           PatrolEvent, latest first; and the record's own beginning, which no
+           event describes. Imports, transcriptions and incident links are not
+           events yet, so they are not drawn. #}
+        <div id="history" class="c" data-patrol-history>
+            <span class="tab">History<span class="src">· audit trail · append-only</span></span>
 
             {% if patrol.held %}
                 <div class="rln patrol-hist-r">
@@ -216,10 +207,8 @@
                 </div>
             {% endif %}
 
-            {# Reversed for the design's newest-first reading. The collection is
-               stored oldest-first because that is the order the story happened
-               in and the order the retention clock reads it; the reversal is a
-               presentation choice and lives here. #}
+            {# Stored oldest-first, the order the retention clock reads it;
+               newest-first is a presentation choice and lives here. #}
             {% for event in patrol.events|reverse %}
                 <div class="rln patrol-hist-r">
                     <span class="d">{{ ui.log_stamp(event.at) }}</span>
@@ -233,12 +222,11 @@
                 </div>
             {% endfor %}
 
-            {# The one entry no event describes: how this record came to exist. #}
             <div class="rln patrol-hist-r">
                 <span class="d">{{ ui.log_stamp(patrol.createdAt) }}</span>
                 <span><b>{{ patrol.source.value == 'gpx' ? 'Track imported from GPX' : (patrol.source.value == 'api' ? 'Received through the ingest API' : 'Logged manually') }}</b></span>
             </div>
         </div>
-    </div>
-</div>
+    {% endblock %}
+{% endembed %}
 {% endblock %}

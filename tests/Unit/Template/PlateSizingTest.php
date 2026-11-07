@@ -42,18 +42,18 @@ final class PlateSizingTest extends TestCase
         );
     }
 
-    /** The height of a record page's IMAGERY in the design — 748 × 400. */
-    private const string RECORD_HEIGHT = '400px';
+    /** The height of a record page's IMAGERY in the design: the house record plate. */
+    private const string RECORD_HEIGHT = 'min(58vh, 560px)';
 
     /**
-     * A RECORD PAGE'S IMAGERY IS 400px TALL — the design's `.recgrid >
-     * .c.plate-fill`, whose viewer is `flex: none; height: 400px`. A map is a
-     * fixed-size plate of imagery, not a column of facts, so the facts beside it
-     * are free to run past it rather than dragging the imagery down with them.
+     * A RECORD PAGE'S IMAGERY IS THE HOUSE RECORD PLATE — the design's
+     * `.pp-main > .c.plate-fill`, whose viewer is `flex: none; height:
+     * min(58vh, 560px)` in the one column under the index. A map is a
+     * fixed-size plate of imagery, not a column of facts.
      *
      * `--map-plate-height` sizes the PLATE, which is the imagery plus everything
      * the plate stacks above it, so the design's one number is not the whole
-     * height: a bare 400px is 400px of plate and less than that of map. The
+     * height: a bare height is that much plate and less than that of map. The
      * height therefore adds the caption row this module puts in the plate's
      * filter slot and the offset the atlas sets the imagery frame at — each a
      * named part, so a reader can see what the sum is made of.
@@ -63,12 +63,12 @@ final class PlateSizingTest extends TestCase
         $sheet = self::stylesheet();
 
         self::assertMatchesRegularExpression(
-            '/\.recgrid \.patrol-plate-fill \{[^}]*--patrol-plate-imagery: '.preg_quote(self::RECORD_HEIGHT, '/').'/',
+            '/\.onpage-main > \.patrol-plate-fill \{[^}]*--patrol-plate-imagery: '.preg_quote(self::RECORD_HEIGHT, '/').'/',
             $sheet,
             'the design\'s imagery height is stated, and by name.',
         );
         self::assertMatchesRegularExpression(
-            '/\.recgrid \.patrol-plate-fill \{[^}]*--map-plate-height: calc\('
+            '/\.onpage-main > \.patrol-plate-fill \{[^}]*--map-plate-height: calc\('
             .'[^)]*var\(--patrol-plate-imagery\)'
             .'[^;]*var\(--patrol-cap-row\)'
             .'[^;]*var\(--patrol-plate-frame-offset\)/',
@@ -76,7 +76,7 @@ final class PlateSizingTest extends TestCase
             'the plate is as tall as the imagery plus everything drawn above it.',
         );
         self::assertDoesNotMatchRegularExpression(
-            '/\.recgrid \.patrol-plate-fill \{[^}]*min-height/',
+            '/\.onpage-main > \.patrol-plate-fill \{[^}]*min-height/',
             $sheet,
             'A floor under a fixed height is a floor that can only fight it.',
         );

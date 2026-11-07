@@ -216,41 +216,40 @@ final class ObservationDetailPageTest extends WebTestCase
     }
 
     /**
-     * ONE RECORD GRID, AND THE PLATE KEEPS ITS OWN COLUMN.
-     *
-     * The record is a single two-column grid: the plate card first in the left
-     * column and the photographs directly beneath the map; the note and the
-     * history beside them on the right. A second row below the first starts the
-     * photos under the FULL height of the note-and-history column, which over a
-     * 400px map is a hole as tall as the history is long. The amendments trail is
-     * the record's own second grid and stays one.
+     * THE RECORD IS ITS FACTS STRIP, THE INDEX AND ONE COLUMN: the location,
+     * the note, the photographs, the amendments and the history, one row per
+     * card. The rules of an amendment are not a card on the record.
      */
-    public function testTheRecordIsOneGridWhoseLeftColumnStacksThePlateThenThePhotos(): void
+    public function testTheRecordIsAnIndexOverOneColumnOfCards(): void
     {
         $crawler = $this->client->request('GET', $this->url($this->area, $this->patrol, $this->observation));
 
         self::assertResponseIsSuccessful();
+        self::assertCount(0, $crawler->filter('.recgrid'));
 
-        $columns = $crawler->filter('.recgrid > .col');
-        self::assertCount(2, $columns);
+        $rows = $crawler->filter('.onpage-nav .onpage-row');
+        self::assertSame(
+            ['#location', '#note', '#photos', '#amendments', '#history'],
+            $rows->each(static fn (Crawler $row): ?string => $row->attr('href')),
+        );
+        self::assertSame(
+            ['Location', 'Note', 'Photos', 'Amendments', 'History'],
+            $rows->filter('.onpage-l')->each(static fn (Crawler $l): string => $l->text()),
+        );
+        self::assertSame('0', $rows->eq(2)->filter('.onpage-n')->text());
+        self::assertSame('0', $rows->eq(3)->filter('.onpage-n')->text());
+        self::assertSame('1', $rows->eq(4)->filter('.onpage-n')->text());
 
-        $left = $columns->eq(0)->children('.c');
-        self::assertCount(2, $left);
-        self::assertNotNull($left->eq(0)->attr('data-patrol-location'));
-        self::assertNotNull($left->eq(1)->attr('data-patrol-photos'));
+        self::assertSame(
+            ['location', 'note', 'photos', 'amendments', 'history'],
+            $crawler->filter('.onpage-main > .c')->each(static fn (Crawler $c): ?string => $c->attr('id')),
+        );
+        self::assertNotNull($crawler->filter('#amendments')->attr('data-patrol-amendments'));
 
-        $right = $columns->eq(1)->children('.c');
-        self::assertCount(2, $right);
-        self::assertNotNull($right->eq(0)->attr('data-patrol-note'));
-        self::assertNotNull($right->eq(1)->attr('data-patrol-history'));
-
-        // The trail and the rules that govern it are the second grid, and the
-        // only other one: PL·06–PL·09 are one card in the state this record is
-        // actually in, beside the rules.
-        $grids = $crawler->filter('.recgrid');
-        self::assertCount(2, $grids);
-        self::assertCount(2, $grids->eq(1)->children('.c'));
-        self::assertNotNull($grids->eq(1)->children('.c')->eq(0)->attr('data-patrol-amendments'));
+        self::assertStringNotContainsString('live', $crawler->filter('#location > .tab')->text());
+        self::assertCount(0, $crawler->filter('#location .lib'));
+        self::assertSame('History· audit trail · append-only · 1', $crawler->filter('#history > .tab')->text());
+        self::assertStringNotContainsString('What an amendment may not do', $crawler->filter('.onpage-main')->text());
     }
 
     /**
