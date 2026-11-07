@@ -622,6 +622,7 @@ return static function (ContainerConfigurator $container): void {
             service('patrol.list'),
             service('patrol.screen_access'),
             service(PatrolTypeRepository::class),
+            service('shell.table_page'),
             param('patrol.discard_retention_days'),
         ])
         ->public();

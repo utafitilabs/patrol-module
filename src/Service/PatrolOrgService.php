@@ -175,7 +175,7 @@ final readonly class PatrolOrgService
             $types = $this->types->findVocabularyByArea($area);
             $patrols = $this->patrols->findByAreaStartedBetweenLatestFirst($area, $from, $until);
             $zones = $this->patrols->zonesForPatrols($area, $from, $until);
-            $answer = $this->list->build($patrols, $zones, $types, $filter, 1);
+            $answer = $this->list->build($patrols, $zones, $types, $filter);
 
             $areaCounts[] = ['uuid' => (string) $area->getUuidString(), 'name' => (string) $area->getName(), 'count' => $answer->totalCount];
 

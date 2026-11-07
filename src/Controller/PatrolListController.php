@@ -22,6 +22,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Twig\Environment;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
 use Uhifadhi\Bundle\RegistryBundle\RegistryBundle;
+use Uhifadhi\Bundle\ShellBundle\Service\TablePageService;
 use Uhifadhi\Patrol\Model\PatrolFilter;
 use Uhifadhi\Patrol\Module\PatrolModuleProvider;
 use Uhifadhi\Patrol\Repository\PatrolRepository;
@@ -56,6 +57,7 @@ final readonly class PatrolListController
         private PatrolListService $list,
         private PatrolScreenAccessService $screens,
         private PatrolTypeRepository $types,
+        private TablePageService $pages,
         private int $retentionDays,
     ) {
     }
@@ -73,6 +75,19 @@ final readonly class PatrolListController
         // filter menu offers and a row is labelled from is the one the types section edits.
         $types = $this->types->findVocabularyByArea($area);
 
+        $list = $this->list->build(
+            $this->patrols->findByAreaStartedBetweenLatestFirst($area, $monthStart, $nextMonth),
+            // The ZONE each patrol set out in — the same live spatial join
+            // the dashboard reads, so the zone a row names here and the zone
+            // the map draws it under are one answer.
+            $this->patrols->zonesForPatrols($area, $monthStart, $nextMonth),
+            $types,
+            $filter,
+        );
+        // `?page` and `?per` are untrusted like every query field: the pager
+        // falls back to the first page and twenty rows rather than failing.
+        $table = $this->pages->read($request, $list->totalCount);
+
         return new Response($this->twig->render('@UhifadhiPatrol/list/show.html.twig', [
             'area' => $area,
             'types' => $types,
@@ -84,41 +99,10 @@ final readonly class PatrolListController
             // The design's Log patrol action. Drawn only where the screen exists
             // AND this viewer may open it — never a door that answers with 403.
             'recordScreens' => $this->screens->mayRecord($area),
-            'list' => $this->list->build(
-                $this->patrols->findByAreaStartedBetweenLatestFirst($area, $monthStart, $nextMonth),
-                // The ZONE each patrol set out in — the same live spatial join
-                // the dashboard reads, so the zone a row names here and the zone
-                // the map draws it under are one answer.
-                $this->patrols->zonesForPatrols($area, $monthStart, $nextMonth),
-                $types,
-                $filter,
-                // Untrusted like every query field: an unreadable page is the
-                // first one, and the service clamps a page past the end.
-                self::requestedPage($request),
-            ),
+            'list' => $list,
+            'rows' => $table->slice($list->patrols),
+            'table' => $table,
+            'links' => $this->pages->links($request, $table),
         ]));
-    }
-
-    /**
-     * WHICH PAGE OF THE LOG — AND NEVER A 400.
-     *
-     * The comment above has always said an unreadable page is the first one, and
-     * `InputBag::getInt()` does not keep that promise: it filters with
-     * FILTER_VALIDATE_INT and THROWS a BadRequestException on anything that is
-     * not a whole number. So `?page=` — which is what an emptied field, a
-     * hand-edited address or a link built by string-joining produces — answered
-     * `400 Input value "page" cannot be converted to "int"` instead of the log.
-     *
-     * A page number is navigation, not an instruction: the worst a bad one can
-     * mean is "start at the beginning", and that is what it now means. Above the
-     * end is the service's to clamp, as it already did.
-     *
-     * @see vendor/symfony/http-foundation/InputBag.php — getInt()
-     */
-    private static function requestedPage(Request $request): int
-    {
-        $page = filter_var($request->query->getString('page'), \FILTER_VALIDATE_INT);
-
-        return false === $page ? 1 : max(1, $page);
     }
 }

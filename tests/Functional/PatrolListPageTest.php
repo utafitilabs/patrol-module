@@ -18,16 +18,17 @@ use Doctrine\ORM\Tools\SchemaTool;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Uhifadhi\Bundle\AreaBundle\Entity\AreaOfInterest;
+use Uhifadhi\Bundle\ShellBundle\Model\TablePage;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
 use Uhifadhi\Patrol\Entity\Observation;
 use Uhifadhi\Patrol\Entity\Patrol;
-use Uhifadhi\Patrol\Service\PatrolListService;
 use Uhifadhi\Patrol\Tests\Fixtures\Vocabulary;
 
 /**
  * THE FULL LOG — every patrol the month holds, one page at a time, driven by one
- * GET: the filter row's chips, the search box and the pager all carry the same
- * question, and the count in the caption is the count of the rows under it.
+ * GET: the filter row's chips, the search box and the register foot all carry
+ * the same question, and the count in the caption is the count of the rows
+ * under it.
  */
 final class PatrolListPageTest extends WebTestCase
 {
@@ -35,6 +36,8 @@ final class PatrolListPageTest extends WebTestCase
     use SomebodyIsSignedIn;
 
     private const int PATROL_COUNT = 25;
+
+    private const int PER_PAGE = 20;
 
     private KernelBrowser $client;
     private EntityManagerInterface $em;
@@ -122,21 +125,88 @@ final class PatrolListPageTest extends WebTestCase
     {
         $crawler = $this->client->request('GET', $this->url());
 
-        self::assertCount(PatrolListService::PER_PAGE, $crawler->filter('table.tbl tbody tr'));
-        self::assertCount(PatrolListService::PER_PAGE, $crawler->filter('table.tbl tbody tr a.open-btn'));
+        self::assertCount(self::PER_PAGE, $crawler->filter('table.tbl tbody tr'));
+        self::assertCount(self::PER_PAGE, $crawler->filter('table.tbl tbody tr a.open-btn'));
         self::assertSame('Open →', trim($crawler->filter('table.tbl tbody tr a.open-btn')->first()->text()));
     }
 
-    public function testThePagerCarriesTheRestOfTheAnswer(): void
+    /** The house bar: every axis a chip with its count, the search at the right end. */
+    public function testTheBarIsTheHouseChipsWithCountsAndTheSearch(): void
     {
         $crawler = $this->client->request('GET', $this->url());
 
-        self::assertStringContainsString('1–20 of '.(self::PATROL_COUNT + 1), $crawler->filter('.pgr .cnt')->text());
+        $chips = $crawler->filter('.lfilt > details.i-dd > summary.mchip.i-ddt');
+        self::assertCount(4, $chips);
+        self::assertSame('all · '.(self::PATROL_COUNT + 1), trim($chips->first()->filter('.i-ddval')->text()));
+        self::assertSame(['All types · 26', 'boat · 5', 'walking round · 21'], $crawler->filter('.lfilt > details.i-dd')->first()->filter('a.i-ddopt')->each(
+            static fn ($a) => trim($a->filter('.i-ddopt-l')->text()).' · '.trim($a->filter('.i-ddopt-n')->text()),
+        ));
+        self::assertCount(1, $crawler->filter('.lfilt > form.lsearch input[name="q"]'));
+    }
 
+    /** Rows in the house shape: the date on the cell's `.sub` line, the door in its own cell. */
+    public function testRowsAreTheHouseTableShape(): void
+    {
+        $crawler = $this->client->request('GET', $this->url());
+
+        $row = $crawler->filter('table.tbl tbody tr')->first();
+        self::assertCount(1, $row->filter('td')->first()->filter('.sub'));
+        self::assertCount(1, $row->filter('td.door a.open-btn'));
+        self::assertCount(0, $crawler->filter('.patrol-rowsub, td.patrol-right'));
+    }
+
+    /** The Shell foot replaces the pager: the count, the size chooser and the page. */
+    public function testTheFootStatesTheCountTheSizeAndThePage(): void
+    {
+        $crawler = $this->client->request('GET', $this->url(['type' => 'walk']));
+
+        self::assertCount(0, $crawler->filter('.pgr'));
+        $foot = $crawler->filter('.c > .rdf-foot');
+        self::assertCount(1, $foot);
+        self::assertStringStartsWith('21 patrols · 20 per page', trim($foot->filter('span')->first()->text()));
+        self::assertStringContainsString('page 1 of 2', $foot->filter('.rdf-page')->text());
+
+        $sizes = $foot->filter('details.rdf-size a.i-ddopt');
+        self::assertSame(TablePage::SIZES, $sizes->each(static fn ($a) => strtolower(trim($a->text()))));
+        foreach ($sizes as $a) {
+            \assert($a instanceof \DOMElement);
+            self::assertStringContainsString('type=walk', $a->getAttribute('href'), 'A new size keeps the filter.');
+            self::assertStringNotContainsString('page=', $a->getAttribute('href'), 'A new size starts again at page 1.');
+        }
+
+        $next = $foot->filter('.rdf-page a[aria-label="Next page"]');
+        self::assertCount(1, $next);
+        self::assertCount(0, $foot->filter('.rdf-page a[aria-label="Previous page"]'));
+
+        $crawler = $this->client->request('GET', (string) $next->attr('href'));
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('table.tbl tbody tr'));
+        self::assertStringContainsString('page 2 of 2', $crawler->filter('.rdf-page')->text());
+        self::assertCount(1, $crawler->filter('.rdf-page a[aria-label="Previous page"]'));
+    }
+
+    public function testTheChooserShowsEveryPatrolOnOnePage(): void
+    {
+        $crawler = $this->client->request('GET', $this->url(['per' => 'all']));
+
+        self::assertResponseIsSuccessful();
+        self::assertCount(self::PATROL_COUNT + 1, $crawler->filter('table.tbl tbody tr'));
+        self::assertStringContainsString('all on one page', $crawler->filter('.rdf-foot')->text());
+        self::assertStringContainsString('page 1 of 1', $crawler->filter('.rdf-page')->text());
+
+        $crawler = $this->client->request('GET', $this->url(['per' => '50']));
+
+        self::assertCount(self::PATROL_COUNT + 1, $crawler->filter('table.tbl tbody tr'));
+        self::assertStringContainsString('50 per page', $crawler->filter('.rdf-foot')->text());
+    }
+
+    public function testTheSecondPageCarriesTheRestOfTheAnswer(): void
+    {
         $crawler = $this->client->request('GET', $this->url(['page' => 2]));
 
         self::assertResponseIsSuccessful();
-        self::assertCount(self::PATROL_COUNT + 1 - PatrolListService::PER_PAGE, $crawler->filter('table.tbl tbody tr'));
+        self::assertCount(self::PATROL_COUNT + 1 - self::PER_PAGE, $crawler->filter('table.tbl tbody tr'));
     }
 
     /** The search reads the observation notes, exactly as the caption promises. */
@@ -198,8 +268,8 @@ final class PatrolListPageTest extends WebTestCase
         $crawler = $this->client->request('GET', $this->url().'?page='.$page);
 
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('1–20 of '.(self::PATROL_COUNT + 1), $crawler->filter('.pgr .cnt')->text());
-        self::assertCount(PatrolListService::PER_PAGE, $crawler->filter('table.tbl tbody tr'));
+        self::assertStringContainsString('page 1 of 2', $crawler->filter('.rdf-page')->text());
+        self::assertCount(self::PER_PAGE, $crawler->filter('table.tbl tbody tr'));
     }
 
     /** @return iterable<string, array{string}> */

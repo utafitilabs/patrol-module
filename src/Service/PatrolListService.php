@@ -18,12 +18,13 @@ use Uhifadhi\Patrol\Model\PatrolFilter;
 use Uhifadhi\Patrol\Model\PatrolList;
 
 /**
- * THE FULL LOG, ANSWERED SERVER-SIDE — the rows one page shows, the counts
- * beside every option, and where in the answer the reader is.
+ * THE FULL LOG, ANSWERED SERVER-SIDE — every row the filter leaves and the
+ * counts beside every option. Cutting the rows into pages is the Shell's
+ * pager's, under the register foot.
  *
  * ONE GET DRIVES EVERYTHING. Narrowing in the browser would make the counts
  * describe a set nobody is looking at, lose the choice on reload and leave the
- * pager counting rows it cannot see. So this takes the month's patrols and one
+ * foot counting rows it cannot see. So this takes the month's patrols and one
  * {@see PatrolFilter}, and every number on the page comes back out of here.
  *
  * IT IS PURE. No clock, no repository, no request: the caller loads the month
@@ -32,27 +33,18 @@ use Uhifadhi\Patrol\Model\PatrolList;
  */
 final readonly class PatrolListService
 {
-    /** How many rows a page of the full log shows, as the design's pager says. */
-    public const int PER_PAGE = 20;
-
     /**
      * @param list<Patrol>                        $patrols     the month's patrols, newest first
      * @param array<string, string>               $patrolZones patrol uuid → the zone its track set out in
      * @param array<string, array{label: string}> $types       the deployment's patrol vocabulary
      */
-    public function build(array $patrols, array $patrolZones, array $types, PatrolFilter $filter, int $page): PatrolList
+    public function build(array $patrols, array $patrolZones, array $types, PatrolFilter $filter): PatrolList
     {
         $matched = $this->filtered($patrols, $patrolZones, $filter);
 
-        $total = \count($matched);
-        $pageCount = max(1, (int) ceil($total / self::PER_PAGE));
-        $page = max(1, min($page, $pageCount));
-        $offset = ($page - 1) * self::PER_PAGE;
-        $rows = \array_slice($matched, $offset, self::PER_PAGE);
-
         return new PatrolList(
-            patrols: $rows,
-            totalCount: $total,
+            patrols: $matched,
+            totalCount: \count($matched),
             /*
              * WHAT CLEARING ONE AXIS WOULD SHOW. Each option's count is the
              * answer with its OWN axis replaced and every other axis left
@@ -81,10 +73,6 @@ final readonly class PatrolListService
             stations: $stations,
             zones: $zones,
             patrolZones: $patrolZones,
-            page: $page,
-            pageCount: $pageCount,
-            firstIndex: 0 === $total ? 0 : $offset + 1,
-            lastIndex: $offset + \count($rows),
         );
     }
 
