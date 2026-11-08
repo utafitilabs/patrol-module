@@ -85,7 +85,7 @@ package that command must report no changes; if it wants to create a
 
 ### What it requires
 
-This module requires the core (`uhifadhi/uhifadhi` 0.2) and the evidence store (`uhifadhi/storage-module` 0.4); both are on Packagist and resolve from the caret constraints in this package's manifest, so an installation names nothing.
+This module requires the core (`uhifadhi/uhifadhi` 0.3) and the evidence store (`uhifadhi/storage-module` 0.4); both are on Packagist and resolve from the caret constraints in this package's manifest, so an installation names nothing.
 
 ### The worker
 

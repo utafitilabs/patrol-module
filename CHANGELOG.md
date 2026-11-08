@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * THE MODULE RUNS ON CORE 0.3 (`uhifadhi/uhifadhi` `^0.3`), the line whose Atlas draws every Chart.js kind: the dashboard's charts name their kind with the Contracts enum, `Uhifadhi\Contracts\Performance\ChartKind`, since `Uhifadhi\Bundle\AtlasBundle\Model\ChartKind` is gone from the core. The weekly chart's value axis is scaled from the counts collected while its series are built.
+
  * Patrol types and Observation kinds name the permission editing needs as the Permissions screens do: Configure on Patrol types, Configure on Observation kinds (`patrol-types.configure`, `observation-kinds.configure`), and Record on Patrols for logging one.
 
  * PATROLS AT ORGANIZATION SCOPE: two screens, Patrols (`/patrols`, where the module lands) and Patrol types (`/patrols/types`), the area module's own read across every area it is switched on in. `PatrolModuleProvider` implements `OrgPagesInterface` and is tagged `shell.org_pages`, so the shell mounts the sidebar row, the strip and the scope control. `Service\PatrolOrgService` folds the per-area readings (`PatrolOverviewService`, `PatrolListService`, the type repository); the routes ask `areas.read` and read only the areas where the viewer holds `patrols.read`. Attention is the shell's banner (silent patrols; types with no base set); the list and the matrix are `table.tbl` under the house bar of the shell's dropdowns and over the shell's foot. A new Stimulus controller, `query`, carries a dropdown's choice into the bar's GET form: an installation that keeps its own `assets/controllers.json` adds `"query": {"enabled": true, "fetch": "eager"}` under `@uhifadhi/patrol-module`. The module's icon is namespaced, `patrol:footprints`, as the shell draws it in the sidebar.

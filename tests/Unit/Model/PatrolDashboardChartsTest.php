@@ -16,9 +16,9 @@ namespace Uhifadhi\Patrol\Tests\Unit\Model;
 use PHPUnit\Framework\TestCase;
 use Uhifadhi\Bundle\AtlasBundle\Model\AxisScale;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartFigures;
-use Uhifadhi\Bundle\AtlasBundle\Model\ChartKind;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartLegend;
 use Uhifadhi\Bundle\TeamBundle\Entity\User;
+use Uhifadhi\Contracts\Performance\ChartKind;
 use Uhifadhi\Patrol\Model\PatrolDashboard;
 
 /**

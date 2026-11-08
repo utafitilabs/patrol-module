@@ -16,11 +16,11 @@ namespace Uhifadhi\Patrol\Model;
 use Uhifadhi\Bundle\AtlasBundle\Model\AtlasChart;
 use Uhifadhi\Bundle\AtlasBundle\Model\AxisScale;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartFigures;
-use Uhifadhi\Bundle\AtlasBundle\Model\ChartKind;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartLegend;
 use Uhifadhi\Bundle\AtlasBundle\Model\ChartSeries;
 use Uhifadhi\Contracts\Entity\UserInterface;
 use Uhifadhi\Contracts\Facts\Fact;
+use Uhifadhi\Contracts\Performance\ChartKind;
 use Uhifadhi\Patrol\Entity\Patrol;
 
 /**
@@ -110,13 +110,16 @@ final readonly class PatrolDashboard
         }
 
         $series = [];
+        $counts = [];
         foreach ($keys as $key) {
+            $points = array_map(
+                static fn (array $week): float => (float) ($week['counts'][$key] ?? 0),
+                $this->weeklySeries,
+            );
+            $counts = [...$counts, ...$points];
             $series[] = new ChartSeries(
                 label: mb_strtolower($types[$key]['label'] ?? $key),
-                points: array_map(
-                    static fn (array $week): float => (float) ($week['counts'][$key] ?? 0),
-                    $this->weeklySeries,
-                ),
+                points: $points,
                 cat: $typeCat[$key] ?? null,
             );
         }
@@ -129,7 +132,7 @@ final readonly class PatrolDashboard
             $labels,
             $series,
             unit: 'patrols',
-            axis: self::axis(array_merge(...array_map(static fn (ChartSeries $s): array => $s->points, $series))),
+            axis: self::axis($counts),
             legend: ChartLegend::Chips,
         );
     }
