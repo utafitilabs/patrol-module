@@ -27,7 +27,7 @@ use Uhifadhi\Patrol\Tests\Integration\Fixtures\FixedRecordVoter;
  * THE AREA-SCOPED PATROL TAXONOMY ADMIN, over HTTP. One route, two data
  * conditions — the empty first-run start and the populated two-pane manager —
  * plus the ruled invariants: area scope, deactivate-never-delete, per-area
- * uniqueness, the "patrols.manage" gate on every write, and CSRF. The
+ * uniqueness, the "observation-kinds.configure" gate on every write, and CSRF. The
  * copy-from-another-area picker is asserted ABSENT, since it is deferred.
  */
 final class TaxonomyAdminPageTest extends WebTestCase
@@ -110,6 +110,24 @@ final class TaxonomyAdminPageTest extends WebTestCase
         $this->client->request('GET', $this->kindsUrl($area));
 
         self::assertResponseStatusCodeSame(403);
+    }
+
+    /**
+     * THE PAGE NAMES THE PERMISSION EVERY WRITE ASKS, in the words the
+     * Permissions screens use for it: the "Configure" column of the
+     * "Observation kinds" row.
+     */
+    public function testThePageNamesThePermissionEditingNeeds(): void
+    {
+        $area = $this->anArea();
+        $this->client->loginUser($this->aManager());
+
+        $crawler = $this->client->request('GET', $this->kindsUrl($area));
+
+        $say = $crawler->filter('.tx-say')->text();
+        self::assertStringContainsString('Editing needs Configure on Observation kinds', $say);
+        self::assertStringContainsString('Being able to log a patrol (Record on Patrols) is not enough.', $say);
+        self::assertStringNotContainsString('patrols.manage', $say);
     }
 
     // ── the populated manager ────────────────────────────────────────────────

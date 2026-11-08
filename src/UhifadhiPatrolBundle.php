@@ -566,7 +566,7 @@ final class UhifadhiPatrolBundle extends AbstractBundle
 
             /*
              * THE AREA-SCOPED OBSERVATION-TAXONOMY ADMIN. A writing screen: every
-             * route on it rides on "patrols.manage", so like the entry flow
+             * route on it needs "observation-kinds.configure", so like the entry flow
              * it exists only where SecurityBundle can enforce that. Its logic
              * (patrol.taxonomy_admin) is unconditional; only this door is guarded.
              */

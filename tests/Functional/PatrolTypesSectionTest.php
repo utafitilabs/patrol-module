@@ -266,7 +266,23 @@ final class PatrolTypesSectionTest extends ConfigureSectionTestCase
         );
     }
 
-    /** Editing what this area patrols on rides on `patrols.manage`. */
+    /**
+     * THE SECTION NAMES THE PERMISSION THE SAVE ASKS, in the words the
+     * Permissions screens use for it: the "Configure" column of the
+     * "Patrol types" row.
+     */
+    public function testTheSectionNamesThePermissionEditingNeeds(): void
+    {
+        $this->signInAsManager();
+        $crawler = $this->client->request('GET', $this->sectionUrl());
+
+        $say = $crawler->filter('.tx-say')->text();
+        self::assertStringContainsString('Editing needs Configure on Patrol types', $say);
+        self::assertStringContainsString('Being able to log a patrol (Record on Patrols) is not enough.', $say);
+        self::assertStringNotContainsString('patrols.manage', $say);
+    }
+
+    /** Editing what this area patrols on needs `patrol-types.configure`. */
     public function testSomebodyWhoMayNotManageCannotSaveTheSection(): void
     {
         $this->signInAsRecorder();

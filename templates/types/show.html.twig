@@ -43,8 +43,8 @@
    read. #}
 <div class="tx-say">{{ ux_icon('patrol:shield', {width: 17, height: 17}) }}<div><b>These patrol types are {{ area.name }}&rsquo;s own.</b>
     Each area keeps its own, so a type added here reaches only the handsets patrolling {{ area.name }}.
-    Editing rides on <span class="mono">patrols.manage</span> — the authority over the words everybody else must
-    use. Being able to log a patrol (<span class="mono">patrols.record</span>) is not enough.</div></div>
+    Editing needs <b>Configure</b> on <b>Patrol types</b> — the authority over the words everybody else must
+    use. Being able to log a patrol (<b>Record</b> on <b>Patrols</b>) is not enough.</div></div>
 
 {% if save %}<form method="post" action="{{ save }}">
 <input type="hidden" name="_token" value="{{ csrfToken }}">{% endif %}

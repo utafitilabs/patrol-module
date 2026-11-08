@@ -57,7 +57,7 @@ use Uhifadhi\Patrol\Service\TaxonomyAdminService;
  * A plain class, not AbstractController — a reusable bundle defines its services
  * explicitly, patterned on FrameworkBundle's TemplateController. Registered only
  * under the SecurityBundle guard (see UhifadhiPatrolBundle), because every write
- * here rides on `patrols.manage` and there is nobody to grant it without a
+ * here needs `observation-kinds.configure` and there is nobody to grant it without a
  * firewall. The class-level route default tags every route with the module slug,
  * so parking Patrols in an area closes these routes with the rest of the module.
  *
